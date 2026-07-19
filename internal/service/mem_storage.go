@@ -5,10 +5,17 @@ import (
 	"regexp"
 )
 
+/*
+MetricStorage - интерфейс по работе с хранилищем метрик
+скорее всего этот интерфейс надо разделить на два:
+- для counter
+- для gauge
+*/
 type MetricStorage interface {
 	GaugeUpdate(name string, value float64) error
 	GaugeByName(name string) (float64, error)
 	Gauge() map[string]float64
+	GaugeSize() int
 	CounterAdd(name string, value int64) error
 	CounterByName(name string) ([]int64, error)
 	Counter() map[string][]int64
@@ -32,6 +39,8 @@ TODO: в будущем, скорее всего стоит добавить р�
   - ms.counter = make(map[string][]int64)
     Чтобы при можно было изначально ориентироваться на известный размер (кол-во метрик) для оптимизации работы с памятью при добавлении метрик:
     func NewMemStorage(gaugeSize int64, counterSize int64) *MemStorage{...}
+
+TODO наверное, надо будет добавить mutex для обработки ситуации с гонкой данных.
 */
 func NewMemStorage() *MemStorage {
 
@@ -70,6 +79,10 @@ func (ms *MemStorage) GaugeByName(name string) (float64, error) {
 func (ms *MemStorage) Gauge() map[string]float64 {
 	ms.gaugeInit()
 	return ms.gauge
+}
+
+func (ms *MemStorage) GaugeSize() int {
+	return len(ms.gauge)
 }
 
 func (ms *MemStorage) CounterAdd(name string, value int64) error {
@@ -144,3 +157,10 @@ func (ms *MemStorage) validateName(name string) error {
 	}
 	return nil
 }
+
+/*
+TODO проверки на максимальные/минимальные значения для int64, float64
+	а так же, саму валидацию имени метрики имеет смыл вынести в отдельный пакет валидации, чтобы не перегружать данный пакет (SRP принцип):
+	- какое имя метрики и его значение дали MetricStorage, с тем он и работает
+	- а валидное ли имя метрики и/или ее значения - не задача MetricStorage
+*/
