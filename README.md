@@ -31,6 +31,11 @@ git fetch template && git checkout template/v2 .github
 
 Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
 
+### на локальной машине (mac os)
+```bash
+./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration1$ -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
+```
+
 ## Структура проекта
 
 Приведённая в этом репозитории структура проекта является рекомендуемой, но не обязательной.
