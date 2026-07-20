@@ -11,11 +11,11 @@ MetricStorage - интерфейс по работе с хранилищем м�
 - для gauge
 */
 type MetricStorage interface {
-	GaugeUpdate(name string, value float64) error
+	GaugeUpdate(name string, value float64)
 	GaugeByName(name string) (float64, error)
 	Gauge() map[string]float64
 	GaugeSize() int
-	CounterAdd(name string, value int64) error
+	CounterAdd(name string, value int64)
 	CounterByName(name string) ([]int64, error)
 	Counter() map[string][]int64
 	CounterSize() int
@@ -49,11 +49,9 @@ func NewMemStorage() *MemStorage {
 	return memStorage
 }
 
-func (ms *MemStorage) GaugeUpdate(name string, value float64) error {
-
+func (ms *MemStorage) GaugeUpdate(name string, value float64) {
 	ms.gaugeInit()
 	ms.gauge[name] = value
-	return nil
 }
 
 func (ms *MemStorage) GaugeByName(name string) (float64, error) {
@@ -75,7 +73,7 @@ func (ms *MemStorage) GaugeSize() int {
 	return len(ms.gauge)
 }
 
-func (ms *MemStorage) CounterAdd(name string, value int64) error {
+func (ms *MemStorage) CounterAdd(name string, value int64) {
 
 	ms.counterInit()
 	if _, ok := ms.counter[name]; !ok {
@@ -83,7 +81,6 @@ func (ms *MemStorage) CounterAdd(name string, value int64) error {
 	}
 
 	ms.counter[name] = append(ms.counter[name], value)
-	return nil
 }
 
 func (ms *MemStorage) CounterByName(name string) ([]int64, error) {

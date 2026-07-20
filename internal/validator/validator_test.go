@@ -226,6 +226,11 @@ func TestValidator_ValidateValueFloat64(t *testing.T) {
 			err:              nil,
 		},
 		{
+			inputValue:       "1.",
+			expectedOutValue: 1,
+			err:              nil,
+		},
+		{
 			inputValue:       "123",
 			expectedOutValue: 123,
 			err:              nil,
@@ -342,6 +347,11 @@ func TestValidator_ValidateValueFloat64(t *testing.T) {
 		},
 		{
 			inputValue:       "123string",
+			expectedOutValue: 0,
+			err:              ErrValueFloat64,
+		},
+		{
+			inputValue:       "1.#",
 			expectedOutValue: 0,
 			err:              ErrValueFloat64,
 		},

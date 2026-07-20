@@ -121,9 +121,7 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 				counter: tt.counterMapInit,
 			}
 
-			err := memStorage.CounterAdd(tt.counterMetricName, tt.counterMetricValue)
-
-			assert.NoError(t, err, "CounterAdd should not return an error")
+			memStorage.CounterAdd(tt.counterMetricName, tt.counterMetricValue)
 			assert.Equal(t, memStorage.CounterSize(), tt.lenCounterAfterAdd)
 			assert.Equal(t, memStorage.CounterSizeByName(tt.counterMetricName), tt.lenCounterMetricNameAfterAdd)
 			assert.Equal(t, tt.counterMapInit, memStorage.Counter())
@@ -139,7 +137,6 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 		gaugeMetricName      string
 		gaugeMetricValue     float64
 		gaugeSizeAfterUpdate int
-		err                  error
 	}{
 		{
 			name:         "update to empty gauge map with valid metric name",
@@ -150,7 +147,6 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMetricName:      "validMetricName",
 			gaugeMetricValue:     1,
 			gaugeSizeAfterUpdate: 1,
-			err:                  nil,
 		},
 		{
 			name: "update exists metric",
@@ -163,7 +159,6 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMetricName:      "validMetricName",
 			gaugeMetricValue:     2,
 			gaugeSizeAfterUpdate: 1,
-			err:                  nil,
 		},
 		{
 			name: "add new metric",
@@ -177,7 +172,6 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMetricName:      "validMetricNameNew",
 			gaugeMetricValue:     2,
 			gaugeSizeAfterUpdate: 2,
-			err:                  nil,
 		},
 	}
 
@@ -187,15 +181,9 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 				gauge: tt.gaugeMapInit,
 			}
 
-			err := memStorage.GaugeUpdate(tt.gaugeMetricName, tt.gaugeMetricValue)
+			memStorage.GaugeUpdate(tt.gaugeMetricName, tt.gaugeMetricValue)
 
-			if tt.err != nil {
-				assert.ErrorIs(t, err, tt.err, "GaugeUpdate should return an error for name: %s", tt.gaugeMetricName)
-				assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
-			} else {
-				assert.NoError(t, err, "GaugeUpdate should not return an error for name: %s", tt.gaugeMetricName)
-			}
-
+			assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
 			assert.Equal(t, memStorage.GaugeSize(), tt.gaugeSizeAfterUpdate)
 			assert.Equal(t, memStorage.Gauge(), tt.gaugeMapAfterUpdate)
 		})
