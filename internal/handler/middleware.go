@@ -8,10 +8,15 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
 
+/*
+Для информации.
+Данный код добавлен для практики реализации и работы с Middleware
+*/
+
 type Middleware func(http.Handler) http.Handler
 
 /*
-MiddlewarePipeLine - пайплан обработки запросов, используя список "мидлварь"
+MiddlewarePipeLine - пайплан обработки запросов, используя список "Middleware"
 
 Важно: MiddlewarePipeLine(handler, middleware1, middleware2, ..., middlewareN)
 мидлвари будут применяться в обратном порядке их добавления, то есть:

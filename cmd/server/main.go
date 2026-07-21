@@ -11,11 +11,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	handlerMetricUpdate := handler.MiddlewarePipeLine(http.HandlerFunc(h.Metric.Update), handler.MiddlewareValidator, handler.MiddlewareContentTypeTextPlain, handler.MiddlewareIsPostRequest)
-	mux.Handle("/update/{metric_type}/{metric_name}/{metric_value}", handlerMetricUpdate)
-	mux.Handle("/update/{metric_type}/{metric_name}", handlerMetricUpdate)
-	mux.Handle("/update/{metric_type}", handlerMetricUpdate)
-	mux.Handle("/update", handlerMetricUpdate)
+	mux.Handle("/update/{metric_type}/{metric_name}/{metric_value}", h.MetricUpdate)
+	mux.Handle("/update/{metric_type}/{metric_name}", h.MetricUpdate)
+	mux.Handle("/update/{metric_type}", h.MetricUpdate)
+	mux.Handle("/update", h.MetricUpdate)
 
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {

@@ -1,15 +1,22 @@
 package handler
 
-import "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+import (
+	"net/http"
+
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+)
 
 type Handlers struct {
-	Metric *Metric
+	MetricUpdate http.Handler
 }
 
-var memStorage = service.NewMemStorage()
+var metricStorage = service.NewMemStorage()
 
 func New() *Handlers {
+
+	metric := NewMetric(metricStorage)
+
 	return &Handlers{
-		Metric: NewMetric(memStorage),
+		MetricUpdate: MiddlewarePipeLine(http.HandlerFunc(metric.Update), MiddlewareValidator, MiddlewareContentTypeTextPlain, MiddlewareIsPostRequest),
 	}
 }

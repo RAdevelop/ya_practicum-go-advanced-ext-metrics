@@ -32,6 +32,13 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	metricValue := r.PathValue("metric_value")
 
 	validateValue := validator.New()
+	/*
+		Здесь конечно же надо проверять тоже параметры запроса для метрик.
+		Так как middleware с валидацией может быть как добавлен, так и удален из цепочки выполнения запроса.
+		И если его не будет, то данный обработчик обновления метрик будет работать не корректно.
+		Например, если покрыть тестами только данный обработчик, его не корректная работа сразу проявится.
+		Это не сделано, для практики реализации цепочки middleware
+	*/
 	switch metricType {
 	case models.Counter:
 
@@ -41,6 +48,9 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	case models.Gauge:
 		mValue, _ := validateValue.ValidateValueFloat64(metricValue)
 		m.storage.GaugeUpdate(metricName, mValue)
+	default:
+		http.Error(w, "Metric type not supported", http.StatusBadRequest)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -54,9 +64,9 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	sb.WriteString("\n")
 	sb.WriteString(fmt.Sprintf("metricValue: %s", metricValue))
 	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("memStorage.Gauge(): %v", memStorage.Gauge()))
+	sb.WriteString(fmt.Sprintf("memStorage.Gauge(): %v", metricStorage.Gauge()))
 	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("memStorage.Counter(): %v\n", memStorage.Counter()))
+	sb.WriteString(fmt.Sprintf("memStorage.Counter(): %v\n", metricStorage.Counter()))
 	sb.WriteString("\n")
 
 	_, err := w.Write([]byte(sb.String()))
