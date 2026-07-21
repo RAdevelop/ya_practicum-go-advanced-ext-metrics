@@ -1,13 +1,15 @@
 package agent
 
 import (
-	"bytes"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Мок-клиент для тестов
@@ -21,83 +23,124 @@ func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
 
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
+	h := handler.New()
+	r := router.New(h)
+	mockServer := httptest.NewServer(r)
+	defer mockServer.Close()
+
+	// Создаем resty-клиент с тестовым URL
+	client := resty.New()
+	client.SetBaseURL(mockServer.URL)
+	agent := New(client)
+
+	type want struct {
+		statusCode int
+	}
+
 	tests := []struct {
-		name           string
-		metric         MetricIn
-		mockResponse   *http.Response
-		mockError      error
-		expectedStatus int
-		expectedError  bool
+		name  string
+		given MetricIn
+		want  want
 	}{
 		{
-			name: "successful update",
-			metric: MetricIn{
+			name: "gauge StatusOK",
+			given: MetricIn{
 				Type:  "gauge",
-				Name:  "testMetric",
-				Value: "42.5",
+				Name:  "test",
+				Value: "42.42",
 			},
-			mockResponse: &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBufferString(`ok`)),
+			want: want{
+				statusCode: http.StatusOK,
 			},
-			expectedStatus: http.StatusOK,
-			expectedError:  false,
 		},
 		{
-			name: "server error",
-			metric: MetricIn{
-				Type:  "wrongType", // StatusBadRequest
-				Name:  "testMetric",
-				Value: "42.5",
+			name: "counter StatusOK",
+			given: MetricIn{
+				Type:  "counter",
+				Name:  "test",
+				Value: "42",
 			},
-			mockResponse: &http.Response{
-				StatusCode: http.StatusBadRequest,
-				Body:       io.NopCloser(bytes.NewBufferString(`error`)),
+			want: want{
+				statusCode: http.StatusOK,
 			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  false,
 		},
 		{
-			name: "client error",
-			metric: MetricIn{
-				Type:  "gauge",
-				Name:  "testMetric",
-				Value: "42.5",
+			name: "gauge WrongType StatusBadRequest",
+			given: MetricIn{
+				Type:  "gaugeWrongType",
+				Name:  "test",
+				Value: "42.42",
 			},
-			mockError:     assert.AnError,
-			expectedError: true,
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter WrongType StatusBadRequest",
+			given: MetricIn{
+				Type:  "counterWrongType",
+				Name:  "test",
+				Value: "42",
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "gauge WrongValue StatusBadRequest",
+			given: MetricIn{
+				Type:  "gaugeWrongType",
+				Name:  "test",
+				Value: "42.42WrongValue",
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter WrongValue StatusBadRequest",
+			given: MetricIn{
+				Type:  "counterWrongType",
+				Name:  "test",
+				Value: "42WrongValue",
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "gauge WrongName StatusBadRequest",
+			given: MetricIn{
+				Type:  "gaugeWrongType",
+				Name:  "-WrongName",
+				Value: "42.42WrongValue",
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter WrongName StatusBadRequest",
+			given: MetricIn{
+				Type:  "counterWrongType",
+				Name:  "12WrongName",
+				Value: "42",
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Создаем мок-клиент
-			mock := &mockClient{
-				DoFunc: func(req *http.Request) (*http.Response, error) {
-					// Проверяем URL
-					expectedURL := "http://localhost:8080/update/" + tt.metric.Type + "/" + tt.metric.Name + "/" + tt.metric.Value
-					assert.Equal(t, expectedURL, req.URL.String())
+			resp, err := agent.Update(tt.given)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 
-					// Проверяем Content-Type
-					assert.Equal(t, "text/plain", req.Header.Get("Content-Type"))
-
-					return tt.mockResponse, tt.mockError
-				},
-			}
-
-			// Создаем агента с моком
-			agent := New(mock)
-
-			// Выполняем запрос
-			resp, err := agent.Update(tt.metric)
-
-			if tt.expectedError {
-				assert.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+			_, err = io.Copy(io.Discard, resp.Body)
+			assert.NoError(t, err)
+			assert.NoError(t, resp.Body.Close())
 		})
 	}
 }

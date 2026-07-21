@@ -2,6 +2,8 @@ package agent
 
 import (
 	"net/http"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type HTTPClient interface {
@@ -10,7 +12,7 @@ type HTTPClient interface {
 
 // HttpAgent - http клиент для отправки метрик на сервер
 type HttpAgent struct {
-	client HTTPClient
+	client *resty.Client
 }
 
 // MetricIn - данные по метрике, которые надо отправить на сервер
@@ -20,7 +22,7 @@ type MetricIn struct {
 	Value string
 }
 
-func New(client HTTPClient) *HttpAgent {
+func New(client *resty.Client) *HttpAgent {
 	return &HttpAgent{
 		client: client,
 	}
@@ -29,14 +31,16 @@ func New(client HTTPClient) *HttpAgent {
 func (a HttpAgent) Update(metric MetricIn) (*http.Response, error) {
 
 	//TODO хардкод адреса, стоит вынести в настройки на уровень конфига
-	url := "http://localhost:8080/update/" + metric.Type + "/" + metric.Name + "/" + metric.Value
+	url := "/update/" + metric.Type + "/" + metric.Name + "/" + metric.Value
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	resp, err := a.client.R().
+		SetHeader("Content-Type", "text/plain").
+		SetDoNotParseResponse(true).
+		Post(url)
+
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "text/plain")
-
-	return a.client.Do(req)
+	return resp.RawResponse, nil
 }

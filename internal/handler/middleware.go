@@ -62,7 +62,7 @@ func MiddlewareValidator(next http.Handler) http.Handler {
 		// При попытке передать запрос с некорректным типом метрики возвращать http.StatusBadRequest.
 		if metricType != models.Counter && metricType != models.Gauge {
 
-			errMsg := fmt.Sprintf("Metric type %s is not supported.", metricType)
+			errMsg := fmt.Sprintf("Metric type \"%s\" is not supported.", metricType)
 			errMsg += fmt.Sprintf("\nUse one of the supported metric types: %v", []string{models.Counter, models.Gauge})
 
 			http.Error(w, errMsg, http.StatusBadRequest)

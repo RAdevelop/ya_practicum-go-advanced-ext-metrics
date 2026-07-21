@@ -5,12 +5,12 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/go-resty/resty/v2"
 )
 
 // runtimeMetrics - карта с метриками, которые будет обновлять и отправлять на сервер
@@ -18,7 +18,9 @@ var runtimeMetrics map[string]any
 var PollCount int64
 
 func main() {
-	httpClient := &http.Client{}
+	httpClient := resty.New()
+	httpClient.SetBaseURL("http://localhost:8080")
+
 	httpAgent := agent.New(httpClient)
 
 	pollInterval := time.NewTicker(2 * time.Second)
@@ -44,7 +46,8 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) {
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
-		log.Printf("Error updating metric: %v\n, err: %v\n", metric, err)
+		log.Printf("Error updating metric: %v\n err: %v\n", metric, err)
+		log.Printf("Error type: %T\n", err)
 		return
 	}
 	defer func() {

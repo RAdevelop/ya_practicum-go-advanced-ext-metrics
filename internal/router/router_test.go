@@ -1,4 +1,4 @@
-package handler
+package router
 
 import (
 	"io"
@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -303,30 +305,37 @@ func TestMetric_Update(t *testing.T) {
 		},
 	}
 
-	handlers := New()
+	h := handler.New()
+	r := New(h)
+	mockServer := httptest.NewServer(r)
+	defer mockServer.Close()
+
+	// Создаем resty-клиент с тестовым URL
+	client := resty.New()
+	client.SetBaseURL(mockServer.URL)
+
+	var result *resty.Response
+	var err error
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(tt.given.method, tt.given.reqParams.url, nil)
-			if err != nil {
-				t.Fatal(err)
+
+			req := client.R().
+				SetHeader("Content-Type", tt.given.contentType).
+				SetDoNotParseResponse(true)
+
+			switch tt.given.method {
+			case http.MethodPost:
+				result, err = req.Post(tt.given.reqParams.url)
+			case http.MethodGet:
+				result, err = req.Get(tt.given.reqParams.url)
 			}
-			req.Header.Set("Content-Type", tt.given.contentType)
-			req.SetPathValue("metric_type", tt.given.reqParams.metricType)
-			req.SetPathValue("metric_name", tt.given.reqParams.metricName)
-			req.SetPathValue("metric_value", tt.given.reqParams.metricValue)
 
-			resWriter := httptest.NewRecorder()
-
-			handlers.MetricUpdate.ServeHTTP(resWriter, req)
-
-			result := resWriter.Result()
-
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.statusCode, result.StatusCode())
 			// io.Discard выступает в качестве приёмника ненужных данных
-			_, err = io.Copy(io.Discard, result.Body)
+			_, err = io.Copy(io.Discard, result.RawResponse.Body)
 			assert.NoError(t, err)
-			assert.NoError(t, result.Body.Close())
+			assert.NoError(t, result.RawResponse.Body.Close())
 		})
 	}
 }
