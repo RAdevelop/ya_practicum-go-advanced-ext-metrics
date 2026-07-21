@@ -32,10 +32,19 @@ git fetch template && git checkout template/v2 .github
 Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
 
 ### на локальной машине (mac os)
+
+### inter1
 ```bash
 go build -o ./cmd/server/server ./cmd/server/main.go \
 && go build -o ./cmd/agent/agent ./cmd/agent/main.go \
 && ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration1$ -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
+```
+
+### inter2
+```bash
+go build -o ./cmd/server/server ./cmd/server/main.go \
+&& go build -o ./cmd/agent/agent ./cmd/agent/main.go \
+&& ./metricstest_v2-darwin-amd64 -test.v -test.run="^TestIteration2[AB]*$" -source-path=. -agent-binary-path=cmd/agent/agent
 ```
 
 ## Структура проекта
