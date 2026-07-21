@@ -11,12 +11,12 @@ import (
 )
 
 type Metric struct {
-	storage service.MetricStorage
+	metricService *service.MetricService
 }
 
-func NewMetric(storage service.MetricStorage) *Metric {
+func NewMetric(metricService *service.MetricService) *Metric {
 	return &Metric{
-		storage: storage,
+		metricService: metricService,
 	}
 }
 
@@ -43,11 +43,11 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	case models.Counter:
 
 		mValue, _ := validateValue.ValidateValueInt64(metricValue)
-		m.storage.CounterAdd(metricName, mValue)
+		m.metricService.CounterAdd(metricName, mValue)
 
 	case models.Gauge:
 		mValue, _ := validateValue.ValidateValueFloat64(metricValue)
-		m.storage.GaugeUpdate(metricName, mValue)
+		m.metricService.GaugeUpdate(metricName, mValue)
 	default:
 		http.Error(w, "Metric type not supported", http.StatusBadRequest)
 		return

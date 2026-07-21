@@ -33,7 +33,9 @@ git fetch template && git checkout template/v2 .github
 
 ### на локальной машине (mac os)
 ```bash
-./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration1$ -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
+go build -o ./cmd/server/server ./cmd/server/main.go \
+&& go build -o ./cmd/agent/agent ./cmd/agent/main.go \
+&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration1$ -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
 ```
 
 ## Структура проекта

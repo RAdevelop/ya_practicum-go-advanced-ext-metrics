@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -322,6 +323,9 @@ func TestMetric_Update(t *testing.T) {
 			result := resWriter.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			// io.Discard выступает в качестве приёмника ненужных данных
+			_, err = io.Copy(io.Discard, result.Body)
+			assert.NoError(t, err)
 			assert.NoError(t, result.Body.Close())
 		})
 	}
