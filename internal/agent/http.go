@@ -6,10 +6,6 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
 // HttpAgent - http клиент для отправки метрик на сервер
 type HttpAgent struct {
 	client *resty.Client

@@ -12,15 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Мок-клиент для тестов
-type mockClient struct {
-	DoFunc func(req *http.Request) (*http.Response, error)
-}
-
-func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
-	return m.DoFunc(req)
-}
-
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
 	h := handler.New()
