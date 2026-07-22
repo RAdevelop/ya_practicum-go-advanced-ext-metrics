@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -17,13 +18,24 @@ var runtimeMetrics map[string]any
 var PollCount int64
 
 func main() {
+	srvAddress := &serverAddress{
+		host: "localhost",
+		port: 8080,
+	}
+	_ = flag.Value(srvAddress)
+
+	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
+	rInterval := flag.Int("r", 10, `The frequency of sending metrics to the server in seconds`)
+	pInterval := flag.Int("p", 2, `The frequency of metrics polling in seconds`)
+	flag.Parse()
+
 	httpClient := resty.New()
-	httpClient.SetBaseURL("http://localhost:8080")
+	httpClient.SetBaseURL(srvAddress.String())
 
 	httpAgent := agent.New(httpClient)
 
-	pollInterval := time.NewTicker(2 * time.Second)
-	reportInterval := time.NewTicker(10 * time.Second)
+	pollInterval := time.NewTicker(time.Duration(*pInterval) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(*rInterval) * time.Second)
 
 	defer func() {
 		pollInterval.Stop()

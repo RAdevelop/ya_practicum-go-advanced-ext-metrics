@@ -141,7 +141,7 @@ func TestMetric_Update(t *testing.T) {
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForUpdate("gauge", "someMetric", "527.123"),
+				reqParams:   metricBuildParamsForUpdate("gauge", "someMetric", "728.4110804980572"),
 			},
 			want: want{
 				contentType: "text/plain",
