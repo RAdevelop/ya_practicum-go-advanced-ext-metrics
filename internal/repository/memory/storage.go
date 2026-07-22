@@ -11,16 +11,16 @@ type MemStorage struct {
 }
 
 /*
-NewMemStorage - конструктор для структуры хранения метрик
+NewStorage - конструктор для структуры хранения метрик
 TODO: в будущем, скорее всего стоит добавить размер для инициализации карт:
   - ms.gauge = make(map[string]float64)
   - ms.counter = make(map[string][]int64)
     Чтобы при можно было изначально ориентироваться на известный размер (кол-во метрик) для оптимизации работы с памятью при добавлении метрик:
-    func NewMemStorage(gaugeSize int64, counterSize int64) *MemStorage{...}
+    func NewStorage(gaugeSize int64, counterSize int64) *MemStorage{...}
 
 TODO наверное, надо будет добавить mutex для обработки ситуации с гонкой данных.
 */
-func NewMemStorage() *MemStorage {
+func NewStorage() *MemStorage {
 
 	memStorage := &MemStorage{}
 	memStorage.gaugeInit()

@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -54,23 +53,34 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
 
-	var sb strings.Builder
-	sb.Grow(256)
+func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
-	sb.WriteString(fmt.Sprintf("metricType: %s", metricType))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("metricName: %s", metricName))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("metricValue: %s", metricValue))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("metricStorage.Gauge(): %v", metricStorage.Gauge()))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("metricStorage.Counter(): %v\n", metricStorage.Counter()))
-	sb.WriteString("\n")
+	metricType := r.PathValue("metric_type")
+	metricName := r.PathValue("metric_name")
 
-	_, err := w.Write([]byte(sb.String()))
+	var metricValue any
+	var err error
+
+	switch metricType {
+	case models.Counter:
+		metricValue, err = m.metricService.CounterByNameAccumulative(metricName)
+	case models.Gauge:
+		metricValue, err = m.metricService.GaugeByName(metricName)
+	default:
+		http.Error(w, "Metric type not supported", http.StatusNotFound)
+		return
+	}
+
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Metric value not found by name", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+	if err != nil {
+		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }

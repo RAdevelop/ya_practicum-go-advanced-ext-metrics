@@ -13,7 +13,7 @@ func TestMemStorage_NewMemStorage(t *testing.T) {
 		- пустая карта counter (len(...) == 0)
 	*/
 
-	memStorage := NewMemStorage()
+	memStorage := NewStorage()
 	assert.NotNil(t, memStorage)
 	assert.IsType(t, &MemStorage{}, memStorage)
 	assert.Equal(t, map[string]float64{}, memStorage.gauge)

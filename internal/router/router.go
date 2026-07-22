@@ -14,9 +14,15 @@ func New(h *handler.Handlers) http.Handler {
 
 	r.Use(middleware.AllowContentType("text/plain"))
 
-	r.Post("/update/{metric_type}/{metric_name}/{metric_value}", h.MetricUpdate.ServeHTTP)
-	r.Post("/update/{metric_type}/{metric_name}", h.MetricUpdate.ServeHTTP)
-	r.Post("/update/{metric_type}", h.MetricUpdate.ServeHTTP)
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/{metric_type}/{metric_name}/{metric_value}", h.MetricUpdate.ServeHTTP)
+		r.Post("/{metric_type}/{metric_name}", h.MetricUpdate.ServeHTTP)
+		r.Post("/{metric_type}", h.MetricUpdate.ServeHTTP)
+	})
+
+	r.Route("/value", func(r chi.Router) {
+		r.Get("/{metric_type}/{metric_name}", h.MetricGet.ServeHTTP)
+	})
 
 	return r
 }

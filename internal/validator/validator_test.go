@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var validator = New()
+
 func TestValidator_ValidateName(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -69,7 +71,7 @@ func TestValidator_ValidateName(t *testing.T) {
 			},
 		},
 	}
-	validator := New()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -192,7 +194,7 @@ func TestValidator_ValidateValueInt64(t *testing.T) {
 			err:              ErrValueInt64,
 		},
 	}
-	validator := New()
+
 	for _, tt := range tests {
 		t.Run(tt.inputValue, func(t *testing.T) {
 
@@ -357,7 +359,6 @@ func TestValidator_ValidateValueFloat64(t *testing.T) {
 		},
 	}
 
-	validator := New()
 	for _, tt := range tests {
 		t.Run(tt.inputValue, func(t *testing.T) {
 

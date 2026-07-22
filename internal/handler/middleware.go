@@ -79,19 +79,21 @@ func MiddlewareValidator(next http.Handler) http.Handler {
 			return
 		}
 
-		switch metricType {
-		case models.Counter:
-			_, err = validatorValue.ValidateValueInt64(metricValue)
-		case models.Gauge:
-			_, err = validatorValue.ValidateValueFloat64(metricValue)
+		if r.Method == http.MethodPost {
+			switch metricType {
+			case models.Counter:
+				_, err = validatorValue.ValidateValueInt64(metricValue)
+			case models.Gauge:
+				_, err = validatorValue.ValidateValueFloat64(metricValue)
 
-		}
+			}
 
-		// При попытке передать запрос с некорректным значением возвращать http.StatusBadRequest.
-		if err != nil {
-			errMsg := fmt.Sprintf("Metric value \"%s\" is invalid.", metricValue)
-			http.Error(w, errMsg, http.StatusBadRequest)
-			return
+			// При попытке передать запрос с некорректным значением возвращать http.StatusBadRequest.
+			if err != nil {
+				errMsg := fmt.Sprintf("Metric value \"%s\" is invalid.", metricValue)
+				http.Error(w, errMsg, http.StatusBadRequest)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)
