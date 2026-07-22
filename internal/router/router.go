@@ -24,5 +24,7 @@ func New(h *handler.Handlers) http.Handler {
 		r.Get("/{metric_type}/{metric_name}", h.MetricGet.ServeHTTP)
 	})
 
+	r.Get("/", h.MetricList.ServeHTTP)
+
 	return r
 }

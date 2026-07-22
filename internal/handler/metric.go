@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -80,6 +81,47 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+	if err != nil {
+		http.Error(w, "Can't write response", http.StatusInternalServerError)
+	}
+}
+
+func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
+
+	var sb strings.Builder
+	sb.Grow(1024)
+
+	sb.WriteString("<ul>")
+	sb.WriteString("<li><strong>Gauge metrics:</strong></li>")
+
+	gaugeMetrics := m.metricService.Gauge()
+	if len(gaugeMetrics) > 0 {
+		sb.WriteString("<ul>")
+		for name, value := range gaugeMetrics {
+			// Порядок метрик при выводе на страницу будет чаще всего разный всегда из-за перебора по "map"
+			// Но прям требования на этот счет не было. Поэтому оставляю пока так.
+			sb.WriteString("<li>")
+			sb.WriteString(fmt.Sprintf("%s: %v", name, value))
+			sb.WriteString("</li>")
+		}
+		sb.WriteString("</ul>")
+	}
+	sb.WriteString("<li><strong>Counter metrics:</strong></li>")
+	counterMetrics := m.metricService.Counter()
+	if len(counterMetrics) > 0 {
+		sb.WriteString("<ul>")
+		for name, value := range counterMetrics {
+			sb.WriteString("<li>")
+			sb.WriteString(fmt.Sprintf("%s: %v", name, value))
+			sb.WriteString("</li>")
+		}
+		sb.WriteString("</ul>")
+	}
+
+	sb.WriteString("</ul>")
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, err := w.Write([]byte(sb.String()))
 	if err != nil {
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}

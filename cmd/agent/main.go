@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"runtime"
@@ -56,13 +55,6 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) {
 			log.Printf("Error body closing for updating metric: %v, err: %v\n", metric, err)
 		}
 	}()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading response body: %v\n, err: %v\n", metric, err)
-	} else {
-		log.Printf("resp: %v\n", string(body))
-	}
 }
 
 func runtimeMetricSend(httpAgent *agent.HttpAgent) {

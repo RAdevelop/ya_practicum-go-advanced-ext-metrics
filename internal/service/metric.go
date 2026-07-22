@@ -40,3 +40,11 @@ func (ms *MetricService) CounterByNameAccumulative(name string) (int64, error) {
 func (ms *MetricService) GaugeByName(name string) (float64, error) {
 	return ms.storage.GaugeByName(name)
 }
+
+func (ms *MetricService) Gauge() map[string]float64 {
+	return ms.storage.Gauge()
+}
+
+func (ms *MetricService) Counter() map[string][]int64 {
+	return ms.storage.Counter()
+}
