@@ -112,7 +112,7 @@ func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
 
 func (ms *MemStorage) counterAccumulate(name string, value int64) {
 	ms.counterAccumulativeInit()
-	ms.counterAccumulative[name] += value
+	ms.counterAccumulative[name] = value
 }
 
 func (ms *MemStorage) counterInit() {
