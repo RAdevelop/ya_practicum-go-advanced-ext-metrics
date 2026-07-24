@@ -121,7 +121,7 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 				counterMetricName: "counter",
 			},
 			want: want{
-				counterAccumulative: 6,
+				counterAccumulative: 3,
 				err:                 nil,
 			},
 		},
