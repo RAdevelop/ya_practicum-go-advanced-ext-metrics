@@ -7,7 +7,6 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -76,8 +75,6 @@ func validateMetricValue(validator *validator.Validator, mType string, mValue st
 		result.httpStatus = http.StatusBadRequest
 		result.message = fmt.Sprintf("Metric value \"%s\" is invalid.", mValue)
 	}
-
-	log.Printf("in validateMetricValue(): %+v\n", result)
 
 	return result
 }
