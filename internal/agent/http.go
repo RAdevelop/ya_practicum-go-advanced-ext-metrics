@@ -25,8 +25,6 @@ func New(client *resty.Client) *HttpAgent {
 }
 
 func (a HttpAgent) Update(metric MetricIn) (*http.Response, error) {
-
-	//TODO хардкод адреса, стоит вынести в настройки на уровень конфига
 	url := "/update/" + metric.Type + "/" + metric.Name + "/" + metric.Value
 
 	resp, err := a.client.R().

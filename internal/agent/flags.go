@@ -1,4 +1,4 @@
-package main
+package agent
 
 import (
 	"fmt"
@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-type serverAddress struct {
-	host string
-	port int
+type ServerAddress struct {
+	Host string
+	Port int
 }
 
-func (sa *serverAddress) String() string {
-	return fmt.Sprintf("http://%s:%d", sa.host, sa.port)
+func (sa *ServerAddress) String() string {
+	return fmt.Sprintf("http://%s:%d", sa.Host, sa.Port)
 }
 
-func (sa *serverAddress) Set(flagValue string) error {
+func (sa *ServerAddress) Set(flagValue string) error {
 
 	if strings.Contains(flagValue, "//") {
 		return fmt.Errorf("invalid server address format: %s, set host:port without schema", flagValue)
@@ -27,13 +27,13 @@ func (sa *serverAddress) Set(flagValue string) error {
 	}
 
 	var err error
-	sa.port, err = strconv.Atoi(fValue[1])
+	sa.Port, err = strconv.Atoi(fValue[1])
 	if err != nil {
 		return fmt.Errorf("invalid server address port: %s", fValue[1])
 	}
 
 	if fValue[0] != "" {
-		sa.host = fValue[0]
+		sa.Host = fValue[0]
 	}
 
 	return nil

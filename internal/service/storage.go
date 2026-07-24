@@ -10,10 +10,8 @@ type MetricStorage interface {
 	GaugeUpdate(name string, value float64)
 	GaugeByName(name string) (float64, error)
 	Gauge() map[string]float64
-	GaugeSize() int
+
 	CounterAdd(name string, value int64)
-	CounterByName(name string) ([]int64, error)
-	Counter() map[string][]int64
-	CounterSize() int
-	CounterSizeByName(name string) int
+	CounterAccumulative() map[string]int64
+	CounterAccumulativeByName(name string) (int64, error)
 }

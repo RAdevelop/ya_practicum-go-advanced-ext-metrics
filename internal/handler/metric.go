@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
@@ -31,26 +32,24 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	metricName := r.PathValue("metric_name")
 	metricValue := r.PathValue("metric_value")
 
-	validateValue := validator.New()
-	/*
-		Здесь конечно же надо проверять тоже параметры запроса для метрик.
-		Так как middleware с валидацией может быть как добавлен, так и удален из цепочки выполнения запроса.
-		И если его не будет, то данный обработчик обновления метрик будет работать не корректно.
-		Например, если покрыть тестами только данный обработчик, его не корректная работа сразу проявится.
-		Это не сделано, для практики реализации цепочки middleware
-	*/
-	switch metricType {
-	case models.Counter:
-
-		mValue, _ := validateValue.ValidateValueInt64(metricValue)
-		m.metricService.CounterAdd(metricName, mValue)
-
-	case models.Gauge:
-		mValue, _ := validateValue.ValidateValueFloat64(metricValue)
-		m.metricService.GaugeUpdate(metricName, mValue)
-	default:
-		http.Error(w, "Metric type not supported", http.StatusBadRequest)
+	validatorValue := validator.New()
+	validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
+	if validateRes.hasError {
+		http.Error(w, validateRes.message, validateRes.httpStatus)
 		return
+	}
+
+	validateRes = validateMetricValue(validatorValue, metricType, metricValue)
+
+	if validateRes.hasError {
+		http.Error(w, validateRes.message, validateRes.httpStatus)
+		return
+	}
+
+	if metricType == models.Counter {
+		m.metricService.CounterAdd(metricName, validateRes.counter)
+	} else {
+		m.metricService.GaugeUpdate(metricName, validateRes.gauge)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -61,17 +60,20 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	metricType := r.PathValue("metric_type")
 	metricName := r.PathValue("metric_name")
 
+	validatorValue := validator.New()
+	validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
+	if validateRes.hasError {
+		http.Error(w, validateRes.message, validateRes.httpStatus)
+		return
+	}
+
 	var metricValue any
 	var err error
 
-	switch metricType {
-	case models.Counter:
+	if metricType == models.Counter {
 		metricValue, err = m.metricService.CounterByNameAccumulative(metricName)
-	case models.Gauge:
+	} else {
 		metricValue, err = m.metricService.GaugeByName(metricName)
-	default:
-		http.Error(w, "Metric type not supported", http.StatusNotFound)
-		return
 	}
 
 	if err != nil {
@@ -80,7 +82,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+	_, err = w.Write([]byte(converter.NumericToString(metricValue)))
 	if err != nil {
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
@@ -107,7 +109,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 		sb.WriteString("</ul>")
 	}
 	sb.WriteString("<li><strong>Counter metrics:</strong></li>")
-	counterMetrics := m.metricService.Counter()
+	counterMetrics := m.metricService.CounterAccumulative()
 	if len(counterMetrics) > 0 {
 		sb.WriteString("<ul>")
 		for name, value := range counterMetrics {

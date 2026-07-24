@@ -75,7 +75,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "counter metric update with StatusUnsupportedMediaType",
+			name: "counter metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -87,7 +87,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "counter metric update with StatusUnsupportedMediaType",
+			name: "counter metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -99,7 +99,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "counter metric update with StatusUnsupportedMediaType",
+			name: "counter metric update with StatusNotFound",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -111,7 +111,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "counter metric update with StatusUnsupportedMediaType",
+			name: "counter metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -161,7 +161,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "gauge metric update with StatusUnsupportedMediaType",
+			name: "gauge metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -173,7 +173,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "gauge metric update with StatusUnsupportedMediaType",
+			name: "gauge metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -185,7 +185,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "gauge metric update with StatusUnsupportedMediaType",
+			name: "gauge metric update with StatusNotFound",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -197,7 +197,7 @@ func TestMetric_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "gauge metric update with StatusUnsupportedMediaType",
+			name: "gauge metric update with StatusBadRequest",
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodPost,
@@ -238,7 +238,7 @@ func TestMetric_Update(t *testing.T) {
 				result, err = req.Get(tt.given.reqParams.url)
 			}
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode())
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "tt.given.reqParams: %v", tt.given.reqParams)
 			// io.Discard выступает в качестве приёмника ненужных данных
 			_, err = io.Copy(io.Discard, result.RawResponse.Body)
 			assert.NoError(t, err)

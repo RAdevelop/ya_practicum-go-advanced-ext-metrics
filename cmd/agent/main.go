@@ -2,25 +2,25 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"runtime"
 	"time"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/go-resty/resty/v2"
 )
 
-// runtimeMetrics - карта с метриками, которые будет обновлять и отправлять на сервер
-var runtimeMetrics map[string]any
-var PollCount int64
-
 func main() {
-	srvAddress := &serverAddress{
-		host: "localhost",
-		port: 8080,
+	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
+	var runtimeMetrics map[string]any
+	var pollCount int64
+
+	srvAddress := &agent.ServerAddress{
+		Host: "localhost",
+		Port: 8080,
 	}
 	_ = flag.Value(srvAddress)
 
@@ -45,10 +45,11 @@ func main() {
 	for {
 		select {
 		case <-pollInterval.C: // Обновлять метрики из пакета `runtime` с заданной частотой: `pollInterval` — 2 секунды.
-			PollCount++
+			// - `PollCount` (тип counter) — счётчик, увеличивающийся на 1 при каждом обновлении метрики из пакета `runtime` (на каждый `pollInterval`).
+			pollCount++
 			runtimeMetrics = collectRuntimeMetrics()
 		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(httpAgent)
+			runtimeMetricSend(httpAgent, pollCount, runtimeMetrics)
 		}
 	}
 }
@@ -69,12 +70,20 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) {
 	}()
 }
 
-func runtimeMetricSend(httpAgent *agent.HttpAgent) {
+func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
+	/*
+		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
+		Поэтому, метрики без данных не отправляем.
+	*/
+	if len(runtimeMetrics) == 0 {
+		return
+	}
+
 	for name, value := range runtimeMetrics {
 		m := agent.MetricIn{
 			Type:  models.Gauge,
 			Name:  name,
-			Value: fmt.Sprintf("%v", value),
+			Value: converter.NumericToString(value),
 		}
 
 		metricUpdate(httpAgent, m)
@@ -85,14 +94,14 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent) {
 		Name: "RandomValue",
 		Value: (func(min, max float64) string {
 			rnd := min + rand.Float64()*(max-min)
-			return fmt.Sprintf("%v", rnd)
+			return converter.NumericToString(rnd)
 		})(0, 1000),
 	})
 
 	metricUpdate(httpAgent, agent.MetricIn{
 		Type:  models.Counter,
 		Name:  "PollCount",
-		Value: fmt.Sprintf("%v", PollCount),
+		Value: converter.NumericToString(pollCount),
 	})
 }
 

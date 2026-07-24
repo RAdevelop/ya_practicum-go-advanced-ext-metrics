@@ -13,13 +13,13 @@ func TestMemStorage_NewMemStorage(t *testing.T) {
 		- пустая карта counter (len(...) == 0)
 	*/
 
-	memStorage := NewStorage()
-	assert.NotNil(t, memStorage)
-	assert.IsType(t, &MemStorage{}, memStorage)
-	assert.Equal(t, map[string]float64{}, memStorage.gauge)
-	assert.Equal(t, map[string][]int64{}, memStorage.counter)
-	assert.Len(t, memStorage.gauge, 0)
-	assert.Len(t, memStorage.counter, 0)
+	storage := NewStorage()
+	assert.NotNil(t, storage)
+	assert.IsType(t, &MemStorage{}, storage)
+	assert.Equal(t, map[string]float64{}, storage.gauge)
+	assert.Equal(t, map[string][]int64{}, storage.counter)
+	assert.Len(t, storage.gauge, 0)
+	assert.Len(t, storage.counter, 0)
 
 }
 
@@ -71,60 +71,155 @@ func TestMemStorage_CounterByName(t *testing.T) {
 
 }
 
-func TestMemStorage_CounterAdd(t *testing.T) {
+func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
+
+	type got struct {
+		counters          []int64
+		counterMetricName string
+	}
+
+	type want struct {
+		counterAccumulative int64
+		err                 error
+	}
 
 	tests := []struct {
-		name                         string
-		counterMapInit               map[string][]int64
-		counterMetricName            string
-		counterMetricValue           int64
+		name string
+		got  got
+		want want
+	}{
+		{
+			name: "counter accumulative empty",
+			got: got{
+				counters:          []int64{},
+				counterMetricName: "counter",
+			},
+			want: want{
+				counterAccumulative: 0,
+				err:                 ErrNotFoundName,
+			},
+		},
+		{
+			name: "counter accumulative none empty",
+			got: got{
+				counters: []int64{
+					0,
+				},
+				counterMetricName: "counter",
+			},
+			want: want{
+				counterAccumulative: 0,
+				err:                 nil,
+			},
+		},
+		{
+			name: "counter accumulative none empty",
+			got: got{
+				counters: []int64{
+					0, 1, 2, 3,
+				},
+				counterMetricName: "counter",
+			},
+			want: want{
+				counterAccumulative: 6,
+				err:                 nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			memStorage := NewStorage()
+
+			for _, counter := range tt.got.counters {
+				memStorage.CounterAdd(tt.got.counterMetricName, counter)
+			}
+
+			counterAccumulative, err := memStorage.CounterAccumulativeByName(tt.got.counterMetricName)
+			if tt.want.err != nil {
+				assert.ErrorIs(t, err, tt.want.err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.want.counterAccumulative, counterAccumulative)
+		})
+	}
+}
+
+func TestMemStorage_CounterAdd(t *testing.T) {
+
+	type got struct {
+		counterMapInit     map[string][]int64
+		counterMetricName  string
+		counterMetricValue int64
+	}
+
+	type want struct {
 		lenCounterAfterAdd           int
 		lenCounterMetricNameAfterAdd int
 		hasError                     bool
+	}
+
+	tests := []struct {
+		name string
+		got  got
+		want want
 	}{
 		{
-			name:                         "add to empty counter map",
-			counterMapInit:               map[string][]int64{},
-			counterMetricName:            "counter",
-			counterMetricValue:           123,
-			lenCounterAfterAdd:           1,
-			lenCounterMetricNameAfterAdd: 1,
-			hasError:                     false,
+			name: "add to empty counter map",
+			got: got{
+				counterMapInit:     map[string][]int64{},
+				counterMetricName:  "counter",
+				counterMetricValue: 123,
+			},
+			want: want{
+				lenCounterAfterAdd:           1,
+				lenCounterMetricNameAfterAdd: 1,
+				hasError:                     false,
+			},
 		},
 		{
 			name: "add to none empty counter map",
-			counterMapInit: map[string][]int64{
-				"counter": {1, 2, 3},
+			got: got{
+				counterMapInit: map[string][]int64{
+					"counter": {1, 2, 3},
+				},
+				counterMetricName:  "counter",
+				counterMetricValue: 123,
 			},
-			counterMetricName:            "counter",
-			counterMetricValue:           123,
-			lenCounterAfterAdd:           1,
-			lenCounterMetricNameAfterAdd: 4,
-			hasError:                     false,
+			want: want{
+				lenCounterAfterAdd:           1,
+				lenCounterMetricNameAfterAdd: 4,
+				hasError:                     false,
+			},
 		},
 		{
 			name: "add to none empty counter map with another metric",
-			counterMapInit: map[string][]int64{
-				"counter": {1, 2, 3},
+			got: got{
+				counterMapInit: map[string][]int64{
+					"counter": {1, 2, 3},
+				},
+				counterMetricName:  "anotherCounter",
+				counterMetricValue: 123,
 			},
-			counterMetricName:            "anotherCounter",
-			counterMetricValue:           123,
-			lenCounterAfterAdd:           2,
-			lenCounterMetricNameAfterAdd: 1,
-			hasError:                     false,
+			want: want{
+				lenCounterAfterAdd:           2,
+				lenCounterMetricNameAfterAdd: 1,
+				hasError:                     false,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
 			memStorage := &MemStorage{
-				counter: tt.counterMapInit,
+				counter: tt.got.counterMapInit,
 			}
 
-			memStorage.CounterAdd(tt.counterMetricName, tt.counterMetricValue)
-			assert.Equal(t, memStorage.CounterSize(), tt.lenCounterAfterAdd)
-			assert.Equal(t, memStorage.CounterSizeByName(tt.counterMetricName), tt.lenCounterMetricNameAfterAdd)
-			assert.Equal(t, tt.counterMapInit, memStorage.Counter())
+			memStorage.CounterAdd(tt.got.counterMetricName, tt.got.counterMetricValue)
+			assert.Equal(t, memStorage.CounterSize(), tt.want.lenCounterAfterAdd)
+			assert.Equal(t, memStorage.CounterSizeByName(tt.got.counterMetricName), tt.want.lenCounterMetricNameAfterAdd)
 		})
 	}
 }

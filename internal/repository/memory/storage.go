@@ -6,25 +6,39 @@ var ErrNotFoundName = errors.New("metric not found by name")
 
 // MemStorage - хранилище метрик в памяти
 type MemStorage struct {
-	gauge   map[string]float64
-	counter map[string][]int64
+	gauge               map[string]float64
+	counter             map[string][]int64
+	counterAccumulative map[string]int64
 }
 
 /*
-NewStorage - конструктор для структуры хранения метрик
-TODO: в будущем, скорее всего стоит добавить размер для инициализации карт:
-  - ms.gauge = make(map[string]float64)
-  - ms.counter = make(map[string][]int64)
-    Чтобы при можно было изначально ориентироваться на известный размер (кол-во метрик) для оптимизации работы с памятью при добавлении метрик:
-    func NewStorage(gaugeSize int64, counterSize int64) *MemStorage{...}
+Пояснение к:
+	Вызов такой функции для каждого запроса -- не очень эффективное решение. В Go принято инициализировать используемые структуры в "конструкторе" объекта, один раз
 
-TODO наверное, надо будет добавить mutex для обработки ситуации с гонкой данных.
+Инициализировать структуру же можно же и без конструктора: &MemStorage{...}
+В этом случае будут ошибки вида: "assignment to entry in nil map".
+Ведь, перед добавлением значений в карту - надо же проверять ее на nil. Чтобы не дублировать код, сделал *Init() методы.
+Ведь, ревью кода не гарантирует, что на это обратят внимание.
+
+И чтобы, например, в тех же тестах, каждый раз явно не создать нужные карты для структуры.
+При этом понимаю, что var counter map[string][]int64 и var counter = make(map[string][]int64) по памяти будет разное (в первом случае меньше, чем во втором)
+Если все же напишите, что надо исправить - исправлю. :)
+
+А делать конструктор, который возвращает не экспортируемую структуру уж точно будет выглядеть странно.
+
+PS. А вообще, спасибо за дельные советы. Лучше помогает изучать Go.
+Это мой, можно сказать, "второй код/проект" написанный на Go. "Первый" пишу в практикуме по "Кафка".
+*/
+
+/*
+NewStorage - конструктор для структуры хранения метрик
 */
 func NewStorage() *MemStorage {
 
 	memStorage := &MemStorage{}
 	memStorage.gaugeInit()
 	memStorage.counterInit()
+	memStorage.counterAccumulativeInit()
 
 	return memStorage
 }
@@ -35,8 +49,6 @@ func (ms *MemStorage) GaugeUpdate(name string, value float64) {
 }
 
 func (ms *MemStorage) GaugeByName(name string) (float64, error) {
-
-	ms.gaugeInit()
 	if value, ok := ms.gauge[name]; ok {
 		return value, nil
 	}
@@ -61,11 +73,10 @@ func (ms *MemStorage) CounterAdd(name string, value int64) {
 	}
 
 	ms.counter[name] = append(ms.counter[name], value)
+	ms.counterAccumulate(name, value)
 }
 
 func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
-
-	ms.counterInit()
 	if value, ok := ms.counter[name]; ok {
 		return value, nil
 	}
@@ -73,25 +84,35 @@ func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
 	return nil, ErrNotFoundName
 }
 
-func (ms *MemStorage) Counter() map[string][]int64 {
+func (ms *MemStorage) CounterAccumulative() map[string]int64 {
 	ms.counterInit()
-	return ms.counter
+	return ms.counterAccumulative
 }
 
 func (ms *MemStorage) CounterSize() int {
-	ms.counterInit()
 	return len(ms.counter)
 }
 
 func (ms *MemStorage) CounterSizeByName(name string) int {
-
-	ms.counterInit()
 
 	if _, ok := ms.counter[name]; !ok {
 		return 0
 	}
 
 	return len(ms.counter[name])
+}
+
+func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
+
+	if value, ok := ms.counterAccumulative[name]; ok {
+		return value, nil
+	}
+	return 0, ErrNotFoundName
+}
+
+func (ms *MemStorage) counterAccumulate(name string, value int64) {
+	ms.counterAccumulativeInit()
+	ms.counterAccumulative[name] += value
 }
 
 func (ms *MemStorage) counterInit() {
@@ -103,5 +124,11 @@ func (ms *MemStorage) counterInit() {
 func (ms *MemStorage) gaugeInit() {
 	if ms.gauge == nil {
 		ms.gauge = make(map[string]float64)
+	}
+}
+
+func (ms *MemStorage) counterAccumulativeInit() {
+	if ms.counterAccumulative == nil {
+		ms.counterAccumulative = make(map[string]int64)
 	}
 }
