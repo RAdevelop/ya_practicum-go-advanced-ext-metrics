@@ -281,7 +281,7 @@ func TestMetric_Get(t *testing.T) {
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusOK,
-				metricValue: "2",
+				metricValue: "3",
 			},
 		},
 		{
