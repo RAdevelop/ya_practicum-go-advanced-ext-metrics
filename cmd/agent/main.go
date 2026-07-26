@@ -62,7 +62,7 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) (err error)
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
-		err = fmt.Errorf("Error updating metric: %v\n err: %v\n", metric, err)
+		err = fmt.Errorf("Error updating metric: %v\n err: %w\n", metric, err)
 		return err
 	}
 	defer func() {
