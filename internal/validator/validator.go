@@ -23,7 +23,7 @@ func New() *Validator {
 
 func (v Validator) ValidateName(name string) error {
 	if !nameRegexp.MatchString(name) {
-		return fmt.Errorf("%w: %q", ErrNameInvalid, name)
+		return fmt.Errorf("%w: name: %q", ErrNameInvalid, name)
 	}
 	return nil
 }

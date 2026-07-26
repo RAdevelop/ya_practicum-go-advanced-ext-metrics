@@ -54,7 +54,7 @@ func (ms *MemStorage) GaugeByName(name string) (float64, error) {
 		return value, nil
 	}
 
-	return 0, fmt.Errorf("%w: %q", ErrNotFoundName, name)
+	return 0, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
 func (ms *MemStorage) Gauge() map[string]float64 {
@@ -79,7 +79,7 @@ func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
 		return value, nil
 	}
 
-	return nil, fmt.Errorf("%w: %q", ErrNotFoundName, name)
+	return nil, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
 func (ms *MemStorage) CounterAccumulative() map[string]int64 {
@@ -104,7 +104,7 @@ func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
 	if value, ok := ms.counterAccumulative[name]; ok {
 		return value, nil
 	}
-	return 0, fmt.Errorf("%w: %q", ErrNotFoundName, name)
+	return 0, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
 func (ms *MemStorage) counterAccumulate(name string, value int64) {
