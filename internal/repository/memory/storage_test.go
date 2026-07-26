@@ -150,7 +150,7 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 func TestMemStorage_CounterAdd(t *testing.T) {
 
 	type got struct {
-		counterMapInit     map[string][]int64
+		memStorage         MemStorage
 		counterMetricName  string
 		counterMetricValue int64
 	}
@@ -169,7 +169,11 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 		{
 			name: "add to empty counter map",
 			got: got{
-				counterMapInit:     map[string][]int64{},
+				memStorage: MemStorage{
+					counter:             map[string][]int64{},
+					gauge:               map[string]float64{},
+					counterAccumulative: map[string]int64{},
+				},
 				counterMetricName:  "counter",
 				counterMetricValue: 123,
 			},
@@ -182,8 +186,12 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 		{
 			name: "add to none empty counter map",
 			got: got{
-				counterMapInit: map[string][]int64{
-					"counter": {1, 2, 3},
+				memStorage: MemStorage{
+					counter: map[string][]int64{
+						"counter": {1, 2, 3},
+					},
+					gauge:               map[string]float64{},
+					counterAccumulative: map[string]int64{},
 				},
 				counterMetricName:  "counter",
 				counterMetricValue: 123,
@@ -197,8 +205,12 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 		{
 			name: "add to none empty counter map with another metric",
 			got: got{
-				counterMapInit: map[string][]int64{
-					"counter": {1, 2, 3},
+				memStorage: MemStorage{
+					counter: map[string][]int64{
+						"counter": {1, 2, 3},
+					},
+					gauge:               map[string]float64{},
+					counterAccumulative: map[string]int64{},
 				},
 				counterMetricName:  "anotherCounter",
 				counterMetricValue: 123,
@@ -213,9 +225,7 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			memStorage := &MemStorage{
-				counter: tt.got.counterMapInit,
-			}
+			memStorage := &tt.got.memStorage
 
 			memStorage.CounterAdd(tt.got.counterMetricName, tt.got.counterMetricValue)
 			assert.Equal(t, memStorage.CounterSize(), tt.want.lenCounterAfterAdd)

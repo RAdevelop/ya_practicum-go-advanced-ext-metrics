@@ -38,16 +38,14 @@ NewStorage - конструктор для структуры хранения �
 */
 func NewStorage() *MemStorage {
 
-	memStorage := &MemStorage{}
-	memStorage.gaugeInit()
-	memStorage.counterInit()
-	memStorage.counterAccumulativeInit()
-
-	return memStorage
+	return &MemStorage{
+		gauge:               make(map[string]float64),
+		counter:             make(map[string][]int64),
+		counterAccumulative: make(map[string]int64),
+	}
 }
 
 func (ms *MemStorage) GaugeUpdate(name string, value float64) {
-	ms.gaugeInit()
 	ms.gauge[name] = value
 }
 
@@ -60,7 +58,6 @@ func (ms *MemStorage) GaugeByName(name string) (float64, error) {
 }
 
 func (ms *MemStorage) Gauge() map[string]float64 {
-	ms.gaugeInit()
 	return ms.gauge
 }
 
@@ -69,8 +66,6 @@ func (ms *MemStorage) GaugeSize() int {
 }
 
 func (ms *MemStorage) CounterAdd(name string, value int64) {
-
-	ms.counterInit()
 	if _, ok := ms.counter[name]; !ok {
 		ms.counter[name] = make([]int64, 0)
 	}
@@ -88,7 +83,6 @@ func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
 }
 
 func (ms *MemStorage) CounterAccumulative() map[string]int64 {
-	ms.counterInit()
 	return ms.counterAccumulative
 }
 
@@ -114,24 +108,5 @@ func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
 }
 
 func (ms *MemStorage) counterAccumulate(name string, value int64) {
-	ms.counterAccumulativeInit()
 	ms.counterAccumulative[name] += value
-}
-
-func (ms *MemStorage) counterInit() {
-	if ms.counter == nil {
-		ms.counter = make(map[string][]int64)
-	}
-}
-
-func (ms *MemStorage) gaugeInit() {
-	if ms.gauge == nil {
-		ms.gauge = make(map[string]float64)
-	}
-}
-
-func (ms *MemStorage) counterAccumulativeInit() {
-	if ms.counterAccumulative == nil {
-		ms.counterAccumulative = make(map[string]int64)
-	}
 }

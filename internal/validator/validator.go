@@ -23,7 +23,7 @@ func New() *Validator {
 
 func (v Validator) ValidateName(name string) error {
 	if !nameRegexp.MatchString(name) {
-		return ErrNameInvalid
+		return fmt.Errorf("%w: %q", ErrNameInvalid, name)
 	}
 	return nil
 }
@@ -33,7 +33,7 @@ func (v Validator) ValidateValueInt64(value string) (int64, error) {
 	value = strings.TrimSpace(value)
 	val, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("%w: %w", ErrValueInt64, err)
+		return 0, fmt.Errorf("value: %q, %w: %w", value, ErrValueInt64, err)
 	}
 	return val, nil
 }
@@ -42,7 +42,7 @@ func (v Validator) ValidateValueFloat64(value string) (float64, error) {
 	value = strings.TrimSpace(value)
 	val, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		return 0, fmt.Errorf("%w: %w", ErrValueFloat64, err)
+		return 0, fmt.Errorf("value: %q, %w: %w", value, ErrValueFloat64, err)
 	}
 	return val, nil
 }
