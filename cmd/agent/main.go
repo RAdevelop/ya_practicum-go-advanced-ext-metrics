@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -57,18 +58,20 @@ func main() {
 	}
 }
 
-func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) {
+func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) (err error) {
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
-		log.Printf("Error updating metric: %v\n err: %v\n", metric, err)
-		log.Printf("Error type: %T\n", err)
-		return
+		err = fmt.Errorf("Error updating metric: %v\n err: %v\n", metric, err)
+		return err
 	}
 	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			log.Printf("Error body closing for updating metric: %v, err: %v\n", metric, err)
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			if err != nil {
+				err = fmt.Errorf("%w; close body error: %w", err, closeErr)
+			} else {
+				err = fmt.Errorf("close body error: %w", closeErr)
+			}
 		}
 	}()
 
@@ -76,8 +79,9 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) {
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
 	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		log.Printf("Error body reading for updating metric: %v, err: %v\n", metric, err)
+		return fmt.Errorf("error body reading for updating metric: %v, err: %w\n", metric, err)
 	}
+	return nil
 }
 
 func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
@@ -89,6 +93,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 		return
 	}
 
+	var err error
 	for name, value := range runtimeMetrics {
 		m := agent.MetricIn{
 			Type:  models.Gauge,
@@ -96,23 +101,34 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 			Value: converter.NumericToString(value),
 		}
 
-		metricUpdate(httpAgent, m)
+		err = metricUpdate(httpAgent, m)
+		if err != nil {
+			log.Printf("Error updating metric: %v, err: %v\n", m, err)
+		}
 	}
 
-	metricUpdate(httpAgent, agent.MetricIn{
+	m := agent.MetricIn{
 		Type: models.Gauge,
 		Name: "RandomValue",
 		Value: (func(min, max float64) string {
 			rnd := min + rand.Float64()*(max-min)
 			return converter.NumericToString(rnd)
 		})(0, 1000),
-	})
+	}
 
-	metricUpdate(httpAgent, agent.MetricIn{
+	err = metricUpdate(httpAgent, m)
+	if err != nil {
+		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+	}
+	m = agent.MetricIn{
 		Type:  models.Counter,
 		Name:  metricNamePollCount,
 		Value: converter.NumericToString(pollCount),
-	})
+	}
+	err = metricUpdate(httpAgent, m)
+	if err != nil {
+		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+	}
 }
 
 func collectRuntimeMetrics() map[string]any {
