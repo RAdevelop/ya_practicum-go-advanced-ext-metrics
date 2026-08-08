@@ -1,0 +1,55 @@
+package agent
+
+import (
+	"net/http"
+
+	"github.com/go-resty/resty/v2"
+)
+
+// HttpAgent - http клиент для отправки метрик на сервер
+type HttpAgent struct {
+	client *resty.Client
+}
+
+// MetricIn - данные по метрике, которые надо отправить на сервер
+type MetricIn struct {
+	Type  string
+	Name  string
+	Value string
+}
+
+func New(client *resty.Client) *HttpAgent {
+	return &HttpAgent{
+		client: client,
+	}
+}
+
+func (a HttpAgent) Update(metric MetricIn) (*http.Response, error) {
+	url := "/update/" + metric.Type + "/" + metric.Name + "/" + metric.Value
+
+	resp, err := a.client.R().
+		SetHeader("Content-Type", "text/plain").
+		SetDoNotParseResponse(true).
+		Post(url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.RawResponse, nil
+}
+
+func (a HttpAgent) Get(metric MetricIn) (*http.Response, error) {
+	url := "/value/" + metric.Type + "/" + metric.Name
+
+	resp, err := a.client.R().
+		SetHeader("Content-Type", "text/plain").
+		SetDoNotParseResponse(true).
+		Get(url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.RawResponse, nil
+}
