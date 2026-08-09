@@ -1,11 +1,13 @@
-package server
+package agent
 
 import (
 	"github.com/caarlos0/env/v11"
 )
 
 type Env struct {
-	Addr string `env:"ADDRESS"`
+	Addr           string `env:"ADDRESS"`
+	IntervalReport uint   `env:"REPORT_INTERVAL"`
+	IntervalPoll   uint   `env:"POLL_INTERVAL"`
 }
 
 func NewEnv() (*Env, error) {
@@ -32,4 +34,12 @@ func NewEnvWithOptions(opts *env.Options) (*Env, error) {
 
 func (env *Env) Address() string {
 	return env.Addr
+}
+
+func (env *Env) ReportInterval() uint {
+	return env.IntervalReport
+}
+
+func (env *Env) PollInterval() uint {
+	return env.IntervalPoll
 }

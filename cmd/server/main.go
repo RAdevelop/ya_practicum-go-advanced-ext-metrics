@@ -18,7 +18,13 @@ func main() {
 	var metricService = service.NewMetricService(metricStorage)
 
 	var serverConfig configServer.ConfigProvider
-	serverConfig = configServer.New(configServer.NewEnv())
+
+	configServerEnv, err := configServer.NewEnv()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	serverConfig = configServer.New(configServerEnv)
 
 	srvAddress := flag.String("a", "localhost:8080", `Server address pattern: "host:port"`)
 	flag.Parse()
@@ -29,16 +35,10 @@ func main() {
 		serverAddress = serverConfig.Address()
 	}
 
-	//TODO del
-	log.Println("serverConfig.Address()", serverConfig.Address())
-	log.Println("flag srvAddress", *srvAddress)
-	log.Println("serverAddress", serverAddress)
-	//	return
-
 	h := handler.New(metricService)
 	r := router.New(h)
 
-	err := http.ListenAndServe(serverAddress, r)
+	err = http.ListenAndServe(serverAddress, r)
 	if err != nil {
 		log.Fatal(err)
 	}

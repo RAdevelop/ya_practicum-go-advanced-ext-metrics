@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
+	configAgent "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/go-resty/resty/v2"
@@ -28,18 +29,42 @@ func main() {
 	_ = flag.Value(srvAddress)
 
 	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	rInterval := flag.Int("r", 10, `The frequency of sending metrics to the server in seconds`)
-	pInterval := flag.Int("p", 2, `The frequency of metrics polling in seconds`)
+	rInterval := flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
+	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
 	flag.Parse()
 
+	var agentConfig configAgent.ConfigProvider
+
+	configAgentEnv, err := configAgent.NewEnv()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	agentConfig = configAgent.New(configAgentEnv)
+
+	serverAddress := srvAddress.String()
+	intervalReport := *rInterval
+	intervalPoll := *pInterval
+
+	if agentConfig.Address() != "" {
+		serverAddress = agentConfig.Address()
+	}
+
+	if agentConfig.ReportInterval() > 0 {
+		intervalReport = agentConfig.ReportInterval()
+	}
+	if agentConfig.PollInterval() > 0 {
+		intervalPoll = agentConfig.PollInterval()
+	}
+
 	httpClient := resty.New()
-	httpClient.SetBaseURL(srvAddress.String())
+	httpClient.SetBaseURL("http://" + serverAddress)
 
 	httpAgent := agent.New(httpClient)
 	var pollCount = int64(0)
 
-	pollInterval := time.NewTicker(time.Duration(*pInterval) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(*rInterval) * time.Second)
+	pollInterval := time.NewTicker(time.Duration(intervalPoll) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(intervalReport) * time.Second)
 
 	defer func() {
 		pollInterval.Stop()
