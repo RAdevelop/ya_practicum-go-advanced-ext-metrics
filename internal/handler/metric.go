@@ -123,6 +123,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	sb.WriteString("</ul>")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(sb.String()))
 	if err != nil {
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
