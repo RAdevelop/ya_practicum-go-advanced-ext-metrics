@@ -38,7 +38,6 @@ func main() {
 	configAgentEnv, err := configAgent.NewEnv()
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 	agentConfig = configAgent.New(configAgentEnv)
 

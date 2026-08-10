@@ -22,7 +22,6 @@ func main() {
 	configServerEnv, err := configServer.NewEnv()
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 	serverConfig = configServer.New(configServerEnv)
 
