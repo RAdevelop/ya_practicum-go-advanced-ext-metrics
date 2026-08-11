@@ -1,12 +1,15 @@
 package router
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/go-resty/resty/v2"
@@ -573,13 +576,102 @@ Use one of the supported metric types: [counter gauge]
 
 			result, err := req.Get(tt.given.reqParams.url)
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode())
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
 
 			metricValue, err := io.ReadAll(result.RawResponse.Body)
 			assert.Equal(t, tt.want.metricValue, string(metricValue))
 
 			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
+		})
+	}
+}
+
+func TestMetric_GetWithJson(t *testing.T) {
+
+	var metricStorage = memory.NewStorage()
+	var metricService = service.NewMetricService(metricStorage)
+
+	type given struct {
+		metric models.Metrics
+	}
+
+	type want struct {
+		contentType string
+		statusCode  int
+		body        string
+	}
+
+	tests := []struct {
+		name  string
+		given given
+		want  want
+	}{
+		{
+			name: "get metric gauge json with StatusOK",
+			given: given{
+				metric: models.Metrics{
+					MType: models.Gauge,
+					ID:    "someMetric",
+					Value: new(1744184459.0),
+				},
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				body:        `{"id":"someMetric","type":"gauge","value":1744184459}`,
+			},
+		},
+		{
+			name: "get metric gauge json with StatusOK",
+			given: given{
+				metric: models.Metrics{
+					MType: models.Counter,
+					ID:    "someMetric",
+					Delta: new(int64(42)),
+				},
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				body:        `{"id":"someMetric","type":"counter","delta":42}`,
+			},
+		},
+	}
+
+	h := handler.New(metricService)
+	r := New(h)
+	mockServer := httptest.NewServer(r)
+	defer mockServer.Close()
+	client := resty.New()
+	client.SetBaseURL(mockServer.URL)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			switch tt.given.metric.MType {
+			case models.Gauge:
+				metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
+			case models.Counter:
+				metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
+			}
+
+			sendBody, _ := json.Marshal(tt.given.metric)
+
+			req := client.R().
+				SetHeader("Content-Type", "application/json").
+				SetDoNotParseResponse(true).
+				SetBody(sendBody)
+			result, err := req.Post("/value")
+
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "status code")
+			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "Content-Type")
+			body, err := io.ReadAll(result.RawResponse.Body)
+			assert.NoError(t, err)
+			assert.NoError(t, result.RawResponse.Body.Close())
+			assert.Equal(t, tt.want.body, strings.TrimSpace(string(body)))
+
 		})
 	}
 }
