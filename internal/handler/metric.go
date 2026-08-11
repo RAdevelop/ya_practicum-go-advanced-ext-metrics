@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -25,12 +24,21 @@ func NewMetric(metricService *service.MetricService) *Metric {
 
 /*
 Update - обновляем данные по метрикам
-TODO обновить описание для POST+JOSN
-Формат url pth: /{metric_type}/{metric_name}/{metric_value}
+
+Формат GET:
+- "Content-Type": "text/plain"
+- url: /update/{metric_type}/{metric_name}/{metric_value}
+Формат POST:
+- "Content-Type": "application/json"
+- url: /update
+- body:
+  - counter: {"id": "metricName","type": "counter","value": 123}
+  - gauge: {"id": "metricName","type": "gauge","value": 123.123}
 */
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
 	metricType, metricName, metricValue, err := metricGetFromRequest(r)
+
 	if err != nil {
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
@@ -73,9 +81,6 @@ func metricGetFromRequest(r *http.Request) (metricType string, metricName string
 		if err != nil {
 			return "", "", "", err
 		}
-
-		//TODO del
-		log.Printf("--- metric %+v", metric)
 
 		metricType = metric.MType
 		metricName = metric.ID

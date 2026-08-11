@@ -300,7 +300,20 @@ func TestMetric_UpdateWithJson(t *testing.T) {
 		{
 			name: "json metric update gauge with StatusBadRequest",
 			given: given{
-				body: `{"id": "LastGC","type": "badMetricNameGauge","value": "0.00000001"}`,
+				body: `{"id": "LastGC","type": "badMetricNameGauge","value": 0.00000001}`,
+			},
+			want: want{
+				body: `Metric type "badMetricNameGauge" is not supported.
+Use one of the supported metric types: [counter gauge]
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "json metric update gauge with StatusBadRequest",
+			given: given{
+				body: `{"id": "LastGC","type": "gauge","value": "0.00000001"}`, //value не надо оборачивать кавычками
 			},
 			want: want{
 				body: `Can't parse request body
@@ -310,9 +323,9 @@ func TestMetric_UpdateWithJson(t *testing.T) {
 			},
 		},
 		{
-			name: "json metric update gauge with StatusOK",
+			name: "json metric update gauge with StatusBadRequest",
 			given: given{
-				body: `{"id": "LastGC","type": "gauge","value": ""}`,
+				body: `{"id": "LastGC","type": "gauge","value": ""}`, //value не надо оборачивать кавычками
 			},
 			want: want{
 				body: `Can't parse request body
