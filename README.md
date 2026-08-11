@@ -107,6 +107,7 @@ go build -o ./cmd/server/server ./cmd/server/*.go \
 -binary-path=cmd/server/server \
 -server-port=$SERVER_PORT \
 -source-path=. \
+-test.failfast \
 && echo $ADDRESS
 ```
 

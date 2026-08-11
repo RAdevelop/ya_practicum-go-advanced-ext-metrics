@@ -131,7 +131,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 		err = metricUpdate(httpAgent, m)
 		if err != nil {
-			log.Printf("Error updating metric: %v, err: %v\n", m, err)
+			log.Printf("%v, err: %v\n", m, err)
 		}
 	}
 
@@ -146,7 +146,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+		log.Printf("%v, err: %v\n", m, err)
 	}
 	m = models.Metrics{
 		MType: models.Counter,
@@ -155,7 +155,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 	}
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+		log.Printf("%v, err: %v\n", m, err)
 	}
 }
 

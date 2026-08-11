@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -67,10 +66,15 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contentType := r.Header.Get("Content-Type")
-	if contentType == "application/json" {
-		w.Header().Set("Content-Type", contentType)
-	}
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
+
+	if contentType == "application/json" {
+		err = json.NewEncoder(w).Encode(metric)
+		if err != nil {
+			http.Error(w, "Can't write response", http.StatusInternalServerError)
+		}
+	}
 }
 
 func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
@@ -78,11 +82,6 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	metric, err := metricGetFromRequest(r)
 
 	if err != nil || metric == nil {
-
-		//TODO del
-		log.Printf("--------------metric: %+v", metric)
-		log.Printf("--------------err: %+v", err)
-
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -177,10 +176,6 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 	case "application/json":
 
 		if r.Body == nil || r.ContentLength == 0 {
-
-			//TODO del
-			log.Printf("-------------- body is empty")
-
 			return nil, fmt.Errorf("body is empty")
 		}
 

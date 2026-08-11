@@ -269,21 +269,10 @@ func TestMetric_UpdateWithJson(t *testing.T) {
 		{
 			name: "json metric update gauge with StatusOK",
 			given: given{
-				body: `{"id": "LastGC","type": "gauge","value": 1744184459}`,
+				body: `{"id":"LastGC","type":"gauge","value":1744184459}`,
 			},
 			want: want{
-				body:        ``,
-				contentType: "application/json",
-				statusCode:  http.StatusOK,
-			},
-		},
-		{
-			name: "json metric update gauge with StatusOK",
-			given: given{
-				body: `{"id": "LastGC","type": "gauge","value": 1744184459}`,
-			},
-			want: want{
-				body:        ``,
+				body:        `{"id":"LastGC","type":"gauge","value":1744184459}`,
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
 			},
@@ -294,8 +283,7 @@ func TestMetric_UpdateWithJson(t *testing.T) {
 				body: `{"id": "LastGC","type": "gauge","value": }`,
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -307,8 +295,7 @@ func TestMetric_UpdateWithJson(t *testing.T) {
 			},
 			want: want{
 				body: `Metric type "badMetricNameGauge" is not supported.
-Use one of the supported metric types: [counter gauge]
-`,
+Use one of the supported metric types: [counter gauge]`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -319,8 +306,7 @@ Use one of the supported metric types: [counter gauge]
 				body: `{"id": "LastGC","type": "gauge","value": "0.00000001"}`, //value не надо оборачивать кавычками
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -331,8 +317,7 @@ Use one of the supported metric types: [counter gauge]
 				body: `{"id": "LastGC","type": "gauge","value": ""}`, //value не надо оборачивать кавычками
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -341,10 +326,10 @@ Use one of the supported metric types: [counter gauge]
 		{
 			name: "counter metric update with StatusOK",
 			given: given{
-				body: `{"id": "someMetric","type": "counter","delta": 527}`,
+				body: `{"id":"someMetric","type":"counter","delta":527}`,
 			},
 			want: want{
-				body:        "",
+				body:        `{"id":"someMetric","type":"counter","delta":527}`,
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
 			},
@@ -355,8 +340,7 @@ Use one of the supported metric types: [counter gauge]
 				body: `{"id": "someMetric","type": "counter","delta": ""}`,
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -367,8 +351,7 @@ Use one of the supported metric types: [counter gauge]
 				body: `{"id": "someMetric","type": "counter","delta": }`,
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -379,8 +362,7 @@ Use one of the supported metric types: [counter gauge]
 				body: `{"id": "someMetric","type": "counter","delta"}`, //не валидный json
 			},
 			want: want{
-				body: `Can't parse request body
-`,
+				body:        `Can't parse request body`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -392,8 +374,7 @@ Use one of the supported metric types: [counter gauge]
 			},
 			want: want{
 				body: `Metric type "badMetricType" is not supported.
-Use one of the supported metric types: [counter gauge]
-`,
+Use one of the supported metric types: [counter gauge]`,
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
 			},
@@ -428,7 +409,7 @@ Use one of the supported metric types: [counter gauge]
 			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "tt.given: %v", tt.given)
 			body, err := io.ReadAll(result.RawResponse.Body)
 			assert.NoErrorf(t, err, "tt.given: %v", tt.given)
-			assert.Equalf(t, tt.want.body, string(body), "tt.given: %v", tt.given)
+			assert.Equalf(t, tt.want.body, strings.TrimSpace(string(body)), "tt.given: %v", tt.given)
 		})
 	}
 }
@@ -593,7 +574,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 	var metricService = service.NewMetricService(metricStorage)
 
 	type given struct {
-		metric models.Metrics
+		metric *models.Metrics
 	}
 
 	type want struct {
@@ -610,7 +591,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 		{
 			name: "get metric gauge json with StatusOK",
 			given: given{
-				metric: models.Metrics{
+				metric: &models.Metrics{
 					MType: models.Gauge,
 					ID:    "someMetric",
 					Value: new(1744184459.0),
@@ -625,7 +606,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 		{
 			name: "get metric gauge json with StatusOK",
 			given: given{
-				metric: models.Metrics{
+				metric: &models.Metrics{
 					MType: models.Counter,
 					ID:    "someMetric",
 					Delta: new(int64(42)),
@@ -635,6 +616,17 @@ func TestMetric_GetWithJson(t *testing.T) {
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
 				body:        `{"id":"someMetric","type":"counter","delta":42}`,
+			},
+		},
+		{
+			name: "get metric gauge json with no body",
+			given: given{
+				metric: nil,
+			},
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+				body:        `Can't parse request body`,
 			},
 		},
 	}
@@ -649,24 +641,29 @@ func TestMetric_GetWithJson(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			switch tt.given.metric.MType {
-			case models.Gauge:
-				metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
-			case models.Counter:
-				metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
-			}
-
-			sendBody, _ := json.Marshal(tt.given.metric)
-
 			req := client.R().
 				SetHeader("Content-Type", "application/json").
-				SetDoNotParseResponse(true).
-				SetBody(sendBody)
+				SetDoNotParseResponse(true)
+
+			if tt.given.metric != nil {
+
+				// сами сначала добавляем значения в хранилище данных
+				switch tt.given.metric.MType {
+				case models.Gauge:
+					metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
+				case models.Counter:
+					metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
+				}
+
+				sendBody, _ := json.Marshal(tt.given.metric)
+				req.SetBody(sendBody)
+			}
+
 			result, err := req.Post("/value")
 
 			assert.NoError(t, err)
-			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "status code")
-			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "Content-Type")
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "wrong status code")
+			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "wrong Content-Type")
 			body, err := io.ReadAll(result.RawResponse.Body)
 			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
