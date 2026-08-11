@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -36,15 +37,15 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		given MetricIn
+		given models.Metrics
 		want  want
 	}{
 		{
 			name: "gauge StatusOK",
-			given: MetricIn{
-				Type:  "gauge",
-				Name:  "test",
-				Value: "42.42",
+			given: models.Metrics{
+				MType: "gauge",
+				ID:    "test",
+				Value: new(42.42),
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -52,10 +53,10 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter StatusOK",
-			given: MetricIn{
-				Type:  "counter",
-				Name:  "test",
-				Value: "42",
+			given: models.Metrics{
+				MType: "counter",
+				ID:    "test",
+				Delta: new(int64(42)),
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -63,10 +64,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "gauge WrongType StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "test",
-				Value: "42.42",
+			given: models.Metrics{
+				MType: "gaugeWrongType",
+				ID:    "test",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -74,43 +74,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongType StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "test",
-				Value: "42",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "gauge WrongValue StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "test",
-				Value: "42.42WrongValue",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "counter WrongValue StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "test",
-				Value: "42WrongValue",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "gauge WrongName StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "-WrongName",
-				Value: "42.42WrongValue",
+			given: models.Metrics{
+				MType: "counterWrongType",
+				ID:    "test",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -118,10 +84,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongName StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "12WrongName",
-				Value: "42",
+			given: models.Metrics{
+				MType: "counterWrongType",
+				ID:    "12WrongName",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,

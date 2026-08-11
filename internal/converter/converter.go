@@ -1,6 +1,9 @@
 package converter
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 /*
 NumericToString - конвертация чисел в строку
@@ -24,4 +27,41 @@ func NumericToString(v any) string {
 	default:
 		return ""
 	}
+}
+
+func ToFloat64(v any) (float64, error) {
+
+	if v == nil {
+		return 0, fmt.Errorf("cannot convert nil to float64")
+	}
+
+	var f float64
+	switch val := v.(type) {
+	case int:
+		f = float64(val)
+	case uint:
+		f = float64(val)
+	case int32:
+		f = float64(val)
+	case uint32:
+		f = float64(val)
+	case int64:
+		f = float64(val)
+	case uint64:
+		f = float64(val)
+	case float32:
+		f = float64(val)
+	case float64:
+		f = val
+	case string:
+		var err error
+		f, err = strconv.ParseFloat(val, 64)
+		if err != nil {
+			return 0, fmt.Errorf("cannot parse string to float64: %w", err)
+		}
+	default:
+		return 0, fmt.Errorf("unsupported type: %T", v)
+	}
+
+	return f, nil
 }

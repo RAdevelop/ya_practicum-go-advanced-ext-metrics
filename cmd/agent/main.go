@@ -82,7 +82,7 @@ func main() {
 	}
 }
 
-func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) (err error) {
+func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error) {
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
@@ -119,10 +119,14 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 	var err error
 	for name, value := range runtimeMetrics {
-		m := agent.MetricIn{
-			Type:  models.Gauge,
-			Name:  name,
-			Value: converter.NumericToString(value),
+		v, errConvert := converter.ToFloat64(value)
+		if errConvert != nil {
+			continue
+		}
+		m := models.Metrics{
+			MType: models.Gauge,
+			ID:    name,
+			Value: new(v),
 		}
 
 		err = metricUpdate(httpAgent, m)
@@ -131,12 +135,12 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 		}
 	}
 
-	m := agent.MetricIn{
-		Type: models.Gauge,
-		Name: "RandomValue",
-		Value: (func(min, max float64) string {
+	m := models.Metrics{
+		MType: models.Gauge,
+		ID:    "RandomValue",
+		Value: (func(min, max float64) *float64 {
 			rnd := min + rand.Float64()*(max-min)
-			return converter.NumericToString(rnd)
+			return new(rnd)
 		})(0, 1000),
 	}
 
@@ -144,10 +148,10 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 	if err != nil {
 		log.Printf("Error updating metric: %v, err: %v\n", m, err)
 	}
-	m = agent.MetricIn{
-		Type:  models.Counter,
-		Name:  metricNamePollCount,
-		Value: converter.NumericToString(pollCount),
+	m = models.Metrics{
+		MType: models.Counter,
+		ID:    metricNamePollCount,
+		Delta: &pollCount,
 	}
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
