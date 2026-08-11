@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -23,14 +25,16 @@ func NewMetric(metricService *service.MetricService) *Metric {
 
 /*
 Update - обновляем данные по метрикам
-
+TODO обновить описание для POST+JOSN
 Формат url pth: /{metric_type}/{metric_name}/{metric_value}
 */
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
-	metricType := r.PathValue("metric_type")
-	metricName := r.PathValue("metric_name")
-	metricValue := r.PathValue("metric_value")
+	metricType, metricName, metricValue, err := metricGetFromRequest(r)
+	if err != nil {
+		http.Error(w, "Can't parse request body", http.StatusBadRequest)
+		return
+	}
 
 	validatorValue := validator.New()
 	validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
@@ -52,7 +56,43 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		m.metricService.GaugeUpdate(metricName, validateRes.gauge)
 	}
 
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		w.Header().Set("Content-Type", contentType)
+	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func metricGetFromRequest(r *http.Request) (metricType string, metricName string, metricValue string, err error) {
+
+	contentType := r.Header.Get("Content-Type")
+	switch contentType {
+	case "application/json":
+		var metric models.Metrics
+		err = json.NewDecoder(r.Body).Decode(&metric)
+		if err != nil {
+			return "", "", "", err
+		}
+
+		//TODO del
+		log.Printf("--- metric %+v", metric)
+
+		metricType = metric.MType
+		metricName = metric.ID
+		switch metricType {
+		case models.Gauge:
+			metricValue = converter.NumericToString(*metric.Value)
+		case models.Counter:
+			metricValue = converter.NumericToString(*metric.Delta)
+		}
+
+	case "text/plain":
+		metricType = r.PathValue("metric_type")
+		metricName = r.PathValue("metric_name")
+		metricValue = r.PathValue("metric_value")
+	}
+
+	return metricType, metricName, metricValue, nil
 }
 
 func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {

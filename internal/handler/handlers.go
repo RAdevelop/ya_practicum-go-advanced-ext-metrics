@@ -18,7 +18,7 @@ func New(metricService *service.MetricService) *Handlers {
 	metric := NewMetric(metricService)
 
 	return &Handlers{
-		MetricUpdate: middleware.WithLogging(MiddlewarePipeLine(http.HandlerFunc(metric.Update), MiddlewareValidator, MiddlewareIsPostRequest)),
+		MetricUpdate: middleware.WithLogging(MiddlewarePipeLine(http.HandlerFunc(metric.Update), MiddlewareIsPostRequest)),
 		MetricGet:    middleware.WithLogging(MiddlewarePipeLine(http.HandlerFunc(metric.Get), MiddlewareValidator)),
 		MetricList:   middleware.WithLogging(http.HandlerFunc(metric.List)),
 	}

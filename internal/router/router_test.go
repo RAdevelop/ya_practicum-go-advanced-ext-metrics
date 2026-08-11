@@ -30,7 +30,7 @@ type given struct {
 	reqParams   params
 }
 
-func TestMetric_Update(t *testing.T) {
+func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	tests := []struct {
 		name  string
@@ -243,6 +243,176 @@ func TestMetric_Update(t *testing.T) {
 			_, err = io.Copy(io.Discard, result.RawResponse.Body)
 			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
+		})
+	}
+}
+
+func TestMetric_UpdateWithJson(t *testing.T) {
+
+	type given struct {
+		body string
+	}
+	type want struct {
+		body        string
+		contentType string
+		statusCode  int
+	}
+	tests := []struct {
+		name  string
+		given given
+		want  want
+	}{
+		//gauge
+		{
+			name: "json metric update gauge with StatusOK",
+			given: given{
+				body: `{"id": "LastGC","type": "gauge","value": 1744184459}`,
+			},
+			want: want{
+				body:        ``,
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+			},
+		},
+		{
+			name: "json metric update gauge with StatusOK",
+			given: given{
+				body: `{"id": "LastGC","type": "gauge","value": 1744184459}`,
+			},
+			want: want{
+				body:        ``,
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+			},
+		},
+		{
+			name: "json metric update gauge with StatusBadRequest",
+			given: given{
+				body: `{"id": "LastGC","type": "gauge","value": }`,
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "json metric update gauge with StatusBadRequest",
+			given: given{
+				body: `{"id": "LastGC","type": "badMetricNameGauge","value": "0.00000001"}`,
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "json metric update gauge with StatusOK",
+			given: given{
+				body: `{"id": "LastGC","type": "gauge","value": ""}`,
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		// counter
+		{
+			name: "counter metric update with StatusOK",
+			given: given{
+				body: `{"id": "someMetric","type": "counter","delta": 527}`,
+			},
+			want: want{
+				body:        "",
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+			},
+		},
+		{
+			name: "counter metric update with StatusBadRequest",
+			given: given{
+				body: `{"id": "someMetric","type": "counter","delta": ""}`,
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter metric update with StatusBadRequest",
+			given: given{
+				body: `{"id": "someMetric","type": "counter","delta": }`,
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter metric update with StatusBadRequest",
+			given: given{
+				body: `{"id": "someMetric","type": "counter","delta"}`, //не валидный json
+			},
+			want: want{
+				body: `Can't parse request body
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+		{
+			name: "counter metric update with StatusBadRequest",
+			given: given{
+				body: `{"id": "someMetric","type": "badMetricType","delta":123}`, //тип метрики не: counter, gauge
+			},
+			want: want{
+				body: `Metric type "badMetricType" is not supported.
+Use one of the supported metric types: [counter gauge]
+`,
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusBadRequest,
+			},
+		},
+	}
+
+	memStorage := memory.NewStorage()
+	metricService := service.NewMetricService(memStorage)
+	h := handler.New(metricService)
+	r := New(h)
+	mockServer := httptest.NewServer(r)
+	defer mockServer.Close()
+
+	// Создаем resty-клиент с тестовым URL
+	client := resty.New()
+	client.SetBaseURL(mockServer.URL)
+
+	var result *resty.Response
+	var err error
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := client.R().
+				SetHeader("Content-Type", "application/json").
+				SetDoNotParseResponse(true).
+				SetBody(tt.given.body)
+
+			result, err = req.Post("/update")
+
+			assert.NoErrorf(t, err, "tt.given: %v", tt.given)
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "tt.given: %v", tt.given)
+			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "tt.given: %v", tt.given)
+			body, err := io.ReadAll(result.RawResponse.Body)
+			assert.NoErrorf(t, err, "tt.given: %v", tt.given)
+			assert.Equalf(t, tt.want.body, string(body), "tt.given: %v", tt.given)
 		})
 	}
 }
