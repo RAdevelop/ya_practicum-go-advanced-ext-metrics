@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
@@ -17,17 +18,15 @@ type validateResult struct {
 	message    string
 	hasError   bool
 	httpStatus int
-	counter    int64
-	gauge      float64
 }
 
-func validateMetricTypeAndName(validator *validator.Validator, mType string, mName string) validateResult {
-	result := validateMetricType(mType)
+func validateMetricTypeAndName(validator *validator.Validator, metric *models.Metrics) validateResult {
+	result := validateMetricType(metric.MType)
 	if result.hasError {
 		return result
 	}
 
-	result = validateMetricName(validator, mName)
+	result = validateMetricName(validator, metric.ID)
 
 	return result
 }
@@ -59,21 +58,21 @@ func validateMetricName(validator *validator.Validator, mName string) validateRe
 	return result
 }
 
-func validateMetricValue(validator *validator.Validator, mType string, mValue string) validateResult {
+func validateMetricValue(validator *validator.Validator, metric *models.Metrics) validateResult {
 
 	result := validateResult{}
 
 	var err error
-	if mType == models.Counter {
-		result.counter, err = validator.ValidateValueInt64(mValue)
+	if metric.MType == models.Counter {
+		_, err = validator.ValidateValueInt64(converter.NumericToString(*metric.Delta))
 	} else {
-		result.gauge, err = validator.ValidateValueFloat64(mValue)
+		_, err = validator.ValidateValueFloat64(converter.NumericToString(*metric.Value))
 	}
 
 	if err != nil {
 		result.hasError = true
 		result.httpStatus = http.StatusBadRequest
-		result.message = fmt.Sprintf("Metric value \"%s\" is invalid.", mValue)
+		result.message = fmt.Sprintf("Metric value \"%+v\" is invalid.", metric)
 	}
 
 	return result

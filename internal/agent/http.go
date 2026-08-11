@@ -46,18 +46,3 @@ func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
 
 	return resp.RawResponse, nil
 }
-
-func (a HttpAgent) Get(metric MetricIn) (*http.Response, error) {
-	url := "/value/" + metric.Type + "/" + metric.ID
-
-	resp, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
-		SetDoNotParseResponse(true).
-		Get(url)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.RawResponse, nil
-}

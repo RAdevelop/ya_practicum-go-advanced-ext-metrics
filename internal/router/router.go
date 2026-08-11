@@ -27,7 +27,8 @@ func New(h *handler.Handlers) http.Handler {
 	})
 
 	r.Route("/value", func(r chi.Router) {
-		r.Get("/{metric_type}/{metric_name}", h.MetricGet.ServeHTTP)
+		r.With(middleware.AllowContentType("application/json")).Post("/", h.MetricGet.ServeHTTP)
+		r.With(middleware.AllowContentType("text/plain")).Get("/{metric_type}/{metric_name}", h.MetricGet.ServeHTTP)
 	})
 
 	r.Get("/", h.MetricList.ServeHTTP)

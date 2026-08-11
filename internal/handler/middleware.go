@@ -2,8 +2,6 @@ package handler
 
 import (
 	"net/http"
-
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
 
 /*
@@ -32,36 +30,6 @@ func MiddlewareIsPostRequest(next http.Handler) http.Handler {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-// MiddlewareValidator - проверка параметров запроса
-func MiddlewareValidator(next http.Handler) http.Handler {
-	// получаем Handler приведением типа http.HandlerFunc
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		metricType := r.PathValue("metric_type")
-		metricName := r.PathValue("metric_name")
-		metricValue := r.PathValue("metric_value")
-
-		validatorValue := validator.New()
-
-		validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
-		if validateRes.hasError {
-			http.Error(w, validateRes.message, validateRes.httpStatus)
-			return
-		}
-
-		if r.Method == http.MethodPost {
-			validateRes = validateMetricValue(validatorValue, metricType, metricValue)
-			if validateRes.hasError {
-				// При попытке передать запрос с некорректным значением возвращать http.StatusBadRequest.
-				http.Error(w, validateRes.message, validateRes.httpStatus)
-				return
-			}
 		}
 
 		next.ServeHTTP(w, r)

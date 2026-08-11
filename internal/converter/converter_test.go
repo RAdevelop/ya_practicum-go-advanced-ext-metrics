@@ -86,9 +86,6 @@ func TestNumericToString(t *testing.T) {
 }
 
 func TestToFloat64(t *testing.T) {
-	type args struct {
-		v any
-	}
 	tests := []struct {
 		name    string
 		value   any

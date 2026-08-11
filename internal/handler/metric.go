@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
@@ -37,31 +39,38 @@ Update - обновляем данные по метрикам
 */
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
-	metricType, metricName, metricValue, err := metricGetFromRequest(r)
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
-	if err != nil {
+	metric, err := metricGetFromRequest(r)
+
+	if err != nil || metric == nil {
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
 
 	validatorValue := validator.New()
-	validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
+	validateRes := validateMetricTypeAndName(validatorValue, metric)
 	if validateRes.hasError {
 		http.Error(w, validateRes.message, validateRes.httpStatus)
 		return
 	}
 
-	validateRes = validateMetricValue(validatorValue, metricType, metricValue)
+	validateRes = validateMetricValue(validatorValue, metric)
 
 	if validateRes.hasError {
 		http.Error(w, validateRes.message, validateRes.httpStatus)
 		return
 	}
 
-	if metricType == models.Counter {
-		m.metricService.CounterAdd(metricName, validateRes.counter)
+	if metric.MType == models.Counter {
+		m.metricService.CounterAdd(metric.ID, *metric.Delta)
 	} else {
-		m.metricService.GaugeUpdate(metricName, validateRes.gauge)
+		m.metricService.GaugeUpdate(metric.ID, *metric.Value)
 	}
 
 	contentType := r.Header.Get("Content-Type")
@@ -71,54 +80,45 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func metricGetFromRequest(r *http.Request) (metricType string, metricName string, metricValue string, err error) {
-
-	contentType := r.Header.Get("Content-Type")
-	switch contentType {
-	case "application/json":
-		var metric models.Metrics
-		err = json.NewDecoder(r.Body).Decode(&metric)
+func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := r.Body.Close()
 		if err != nil {
-			return "", "", "", err
+			log.Println(err)
 		}
+	}()
 
-		metricType = metric.MType
-		metricName = metric.ID
-		switch metricType {
-		case models.Gauge:
-			metricValue = converter.NumericToString(*metric.Value)
-		case models.Counter:
-			metricValue = converter.NumericToString(*metric.Delta)
-		}
+	metric, err := metricGetFromRequest(r)
 
-	case "text/plain":
-		metricType = r.PathValue("metric_type")
-		metricName = r.PathValue("metric_name")
-		metricValue = r.PathValue("metric_value")
+	if err != nil || metric == nil {
+
+		log.Printf("--------------metric: %+v", metric)
+		log.Printf("--------------err: %+v", err)
+
+		http.Error(w, "Can't parse request body", http.StatusBadRequest)
+		return
 	}
 
-	return metricType, metricName, metricValue, nil
-}
-
-func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
-
-	metricType := r.PathValue("metric_type")
-	metricName := r.PathValue("metric_name")
-
 	validatorValue := validator.New()
-	validateRes := validateMetricTypeAndName(validatorValue, metricType, metricName)
+	validateRes := validateMetricTypeAndName(validatorValue, metric)
 	if validateRes.hasError {
 		http.Error(w, validateRes.message, validateRes.httpStatus)
 		return
 	}
 
 	var metricValue any
-	var err error
 
-	if metricType == models.Counter {
-		metricValue, err = m.metricService.CounterByNameAccumulative(metricName)
+	if metric.MType == models.Counter {
+		metricValue, err = m.metricService.CounterByNameAccumulative(metric.ID)
 	} else {
-		metricValue, err = m.metricService.GaugeByName(metricName)
+		metricValue, err = m.metricService.GaugeByName(metric.ID)
+	}
+
+	switch mValue := metricValue.(type) {
+	case float64:
+		metric.Value = &mValue
+	case int64:
+		metric.Delta = &mValue
 	}
 
 	if err != nil {
@@ -126,14 +126,27 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	contentType := r.Header.Get("Content-Type")
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte(converter.NumericToString(metricValue)))
+	if contentType == "application/json" {
+		err = json.NewEncoder(w).Encode(metric)
+	} else {
+		_, err = w.Write([]byte(converter.NumericToString(metricValue)))
+	}
+
 	if err != nil {
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }
 
 func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := r.Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	var sb strings.Builder
 	sb.Grow(1024)
@@ -173,4 +186,37 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
+}
+
+func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
+
+	contentType := r.Header.Get("Content-Type")
+	switch contentType {
+	case "application/json":
+		err = json.NewDecoder(r.Body).Decode(&metric)
+	case "text/plain":
+
+		metric = &models.Metrics{}
+		metric.MType = r.PathValue("metric_type")
+		metric.ID = r.PathValue("metric_name")
+
+		reqMetricValue := r.PathValue("metric_value")
+
+		if reqMetricValue == "" {
+			return metric, nil
+		}
+
+		switch metric.MType {
+		case models.Gauge:
+			var mV float64
+			mV, err = converter.ToFloat64(reqMetricValue)
+			metric.Value = &mV
+		case models.Counter:
+			var mV int64
+			mV, err = strconv.ParseInt(reqMetricValue, 10, 64)
+			metric.Delta = new(mV)
+		}
+	}
+
+	return metric, err
 }
