@@ -180,7 +180,7 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 		}
 
 		err = json.NewDecoder(r.Body).Decode(&metric)
-	case "text/plain":
+	default:
 
 		metric = &models.Metrics{}
 		metric.MType = r.PathValue("metric_type")
