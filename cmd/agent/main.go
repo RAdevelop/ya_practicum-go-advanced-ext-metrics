@@ -86,7 +86,7 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error)
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
-		err = fmt.Errorf("Error updating metric: %v\n err: %w\n", metric, err)
+		err = fmt.Errorf("error updating metric: %v\n err: %w", metric, err)
 		return err
 	}
 	defer func() {
@@ -103,7 +103,7 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error)
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
 	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		return fmt.Errorf("error body reading for updating metric: %v, err: %w\n", metric, err)
+		return fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
 	}
 	return nil
 }

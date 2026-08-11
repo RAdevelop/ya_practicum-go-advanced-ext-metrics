@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -75,12 +74,6 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		err := r.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
 
 	metric, err := metricGetFromRequest(r)
 
@@ -88,7 +81,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 		//TODO del
 		log.Printf("--------------metric: %+v", metric)
-		log.Fatalf("--------------err: %+v", err)
+		log.Printf("--------------err: %+v", err)
 
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return

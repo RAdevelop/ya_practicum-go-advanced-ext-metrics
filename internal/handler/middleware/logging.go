@@ -11,7 +11,7 @@ import (
 
 // responseData - структура для хранения сведений о запросе
 type requestData struct {
-	Uri    string `json:"uri"`
+	URI    string `json:"uri"`
 	Method string `json:"method"`
 	Body   string `json:"body"`
 }
@@ -52,7 +52,7 @@ func WithLogging(h http.Handler) http.Handler {
 		respData.Duration = time.Since(start)
 
 		reqData := requestData{
-			Uri:    r.RequestURI,
+			URI:    r.RequestURI,
 			Method: r.Method,
 			Body:   string(bodyBytes),
 		}
