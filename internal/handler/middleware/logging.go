@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"bytes"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,6 +13,7 @@ import (
 type requestData struct {
 	Uri    string `json:"uri"`
 	Method string `json:"method"`
+	Body   string `json:"body"`
 }
 
 // responseData - структура для хранения сведений об ответе
@@ -24,6 +27,14 @@ type responseData struct {
 func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+
+		// Читаем тело для логирования
+		var bodyBytes []byte
+		if r.Body != nil {
+			bodyBytes, _ = io.ReadAll(r.Body)
+			_ = r.Body.Close()
+			r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
 
 		respData := &responseData{
 			Status: http.StatusOK,
@@ -43,6 +54,7 @@ func WithLogging(h http.Handler) http.Handler {
 		reqData := requestData{
 			Uri:    r.RequestURI,
 			Method: r.Method,
+			Body:   string(bodyBytes),
 		}
 		logging(respData, reqData)
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -38,13 +39,6 @@ Update - обновляем данные по метрикам
   - gauge: {"id": "metricName","type": "gauge","value": 123.123}
 */
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
-
-	defer func() {
-		err := r.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
 
 	metric, err := metricGetFromRequest(r)
 
@@ -92,8 +86,9 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil || metric == nil {
 
+		//TODO del
 		log.Printf("--------------metric: %+v", metric)
-		log.Printf("--------------err: %+v", err)
+		log.Fatalf("--------------err: %+v", err)
 
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
@@ -114,16 +109,16 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 		metricValue, err = m.metricService.GaugeByName(metric.ID)
 	}
 
+	if err != nil {
+		http.Error(w, "Metric value not found by name", http.StatusNotFound)
+		return
+	}
+
 	switch mValue := metricValue.(type) {
 	case float64:
 		metric.Value = &mValue
 	case int64:
 		metric.Delta = &mValue
-	}
-
-	if err != nil {
-		http.Error(w, "Metric value not found by name", http.StatusNotFound)
-		return
 	}
 
 	contentType := r.Header.Get("Content-Type")
@@ -141,12 +136,6 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		err := r.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
 
 	var sb strings.Builder
 	sb.Grow(1024)
@@ -193,6 +182,15 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 	contentType := r.Header.Get("Content-Type")
 	switch contentType {
 	case "application/json":
+
+		if r.Body == nil || r.ContentLength == 0 {
+
+			//TODO del
+			log.Printf("-------------- body is empty")
+
+			return nil, fmt.Errorf("body is empty")
+		}
+
 		err = json.NewDecoder(r.Body).Decode(&metric)
 	case "text/plain":
 
@@ -214,7 +212,7 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 		case models.Counter:
 			var mV int64
 			mV, err = strconv.ParseInt(reqMetricValue, 10, 64)
-			metric.Delta = new(mV)
+			metric.Delta = &mV
 		}
 	}
 
