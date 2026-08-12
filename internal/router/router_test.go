@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -32,6 +33,8 @@ type given struct {
 	method      string
 	reqParams   params
 }
+
+var loggerTest = &logger.LogMeTest{}
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
@@ -215,7 +218,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	memStorage := memory.NewStorage()
 	metricService := service.NewMetricService(memStorage)
-	h := handler.New(metricService)
+	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -383,7 +386,7 @@ Use one of the supported metric types: [counter gauge]`,
 
 	memStorage := memory.NewStorage()
 	metricService := service.NewMetricService(memStorage)
-	h := handler.New(metricService)
+	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -539,7 +542,7 @@ Use one of the supported metric types: [counter gauge]
 		},
 	}
 
-	h := handler.New(metricService)
+	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -631,7 +634,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 		},
 	}
 
-	h := handler.New(metricService)
+	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()

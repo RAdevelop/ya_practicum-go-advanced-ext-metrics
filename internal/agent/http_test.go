@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
@@ -15,13 +16,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var loggerTest = &logger.LogMeTest{}
+
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
 	var metricService = service.NewMetricService(metricStorage)
 
-	h := handler.New(metricService)
+	h := handler.New(metricService, loggerTest)
 	r := router.New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()

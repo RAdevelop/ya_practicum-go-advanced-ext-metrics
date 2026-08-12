@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 
 	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -14,6 +14,8 @@ import (
 
 func main() {
 
+	//logger *logger.Logger
+	logMe := logger.New()
 	var metricStorage = memory.NewStorage()
 	var metricService = service.NewMetricService(metricStorage)
 
@@ -21,7 +23,8 @@ func main() {
 
 	configServerEnv, err := configServer.NewEnv()
 	if err != nil {
-		log.Fatal(err)
+		logMe.Error("error", "err", err)
+		return
 	}
 	serverConfig = configServer.New(configServerEnv)
 
@@ -34,11 +37,11 @@ func main() {
 		serverAddress = serverConfig.Address()
 	}
 
-	h := handler.New(metricService)
+	h := handler.New(metricService, logMe)
 	r := router.New(h)
 
 	err = http.ListenAndServe(serverAddress, r)
 	if err != nil {
-		log.Fatal(err)
+		logMe.Error("error", "err", err)
 	}
 }

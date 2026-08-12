@@ -3,10 +3,10 @@ package middleware
 import (
 	"bytes"
 	"io"
-	"log/slog"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 )
 
 // responseData - структура для хранения сведений о запросе
@@ -24,7 +24,7 @@ type responseData struct {
 }
 
 // WithLogging - добавляет дополнительный код для регистрации сведений о запросе и возвращает новый http.Handler.
-func WithLogging(h http.Handler) http.Handler {
+func WithLogging(logger logger.Logger, h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -56,7 +56,8 @@ func WithLogging(h http.Handler) http.Handler {
 			Method: r.Method,
 			Body:   string(bodyBytes),
 		}
-		logging(respData, reqData)
+
+		logger.Info(reqData.Method, "request", reqData, "response", respData)
 	}
 	return http.HandlerFunc(logFn)
 }
@@ -77,9 +78,4 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.Status = statusCode // захватываем код статуса
-}
-
-func logging(respData *responseData, reqData requestData) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger.Info(reqData.Method, slog.Any("request", reqData), slog.Any("response", respData))
 }

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"runtime"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
 	configAgent "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/go-resty/resty/v2"
 )
@@ -21,6 +21,8 @@ const metricNamePollCount = "PollCount"
 func main() {
 	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
 	var runtimeMetrics map[string]any
+
+	logMe := logger.New()
 
 	srvAddress := &agent.ServerAddress{
 		Host: "localhost",
@@ -37,7 +39,8 @@ func main() {
 
 	configAgentEnv, err := configAgent.NewEnv()
 	if err != nil {
-		log.Fatal(err)
+		logMe.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
+		return
 	}
 	agentConfig = configAgent.New(configAgentEnv)
 
@@ -76,7 +79,7 @@ func main() {
 			runtimeMetrics = collectRuntimeMetrics()
 			pollCount++
 		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(httpAgent, pollCount, runtimeMetrics)
+			runtimeMetricSend(logMe, httpAgent, pollCount, runtimeMetrics)
 			pollCount = 0
 		}
 	}
@@ -108,7 +111,7 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error)
 	return nil
 }
 
-func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
+func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -131,7 +134,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 		err = metricUpdate(httpAgent, m)
 		if err != nil {
-			log.Printf("%v, err: %v\n", m, err)
+			logMe.Warn("error", "err", err)
 		}
 	}
 
@@ -146,7 +149,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("%v, err: %v\n", m, err)
+		logMe.Warn("error", "err", err)
 	}
 	m = models.Metrics{
 		MType: models.Counter,
@@ -155,7 +158,7 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 	}
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("%v, err: %v\n", m, err)
+		logMe.Warn("error", "err", err)
 	}
 }
 

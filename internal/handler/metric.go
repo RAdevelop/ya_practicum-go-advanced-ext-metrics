@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
@@ -15,11 +16,13 @@ import (
 
 type Metric struct {
 	metricService *service.MetricService
+	logger        logger.Logger
 }
 
-func NewMetric(metricService *service.MetricService) *Metric {
+func NewMetric(metricService *service.MetricService, logger logger.Logger) *Metric {
 	return &Metric{
 		metricService: metricService,
+		logger:        logger,
 	}
 }
 
@@ -38,9 +41,12 @@ Update - обновляем данные по метрикам
 */
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
+	defer m.requestBodyClose(r)
+
 	metric, err := metricGetFromRequest(r)
 
-	if err != nil || metric == nil {
+	if err != nil {
+		m.logger.Warn("error", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -72,6 +78,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	if contentType == "application/json" {
 		err = json.NewEncoder(w).Encode(metric)
 		if err != nil {
+			m.logger.Warn("error", "err", err)
 			http.Error(w, "Can't write response", http.StatusInternalServerError)
 		}
 	}
@@ -79,9 +86,12 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
 func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
+	defer m.requestBodyClose(r)
+
 	metric, err := metricGetFromRequest(r)
 
-	if err != nil || metric == nil {
+	if err != nil {
+		m.logger.Warn("error", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -102,6 +112,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		m.logger.Warn("error", "err", err)
 		http.Error(w, "Metric value not found by name", http.StatusNotFound)
 		return
 	}
@@ -123,11 +134,14 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		m.logger.Error("error", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }
 
 func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
+
+	defer m.requestBodyClose(r)
 
 	var sb strings.Builder
 	sb.Grow(1024)
@@ -165,6 +179,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(sb.String()))
 	if err != nil {
+		m.logger.Error("error", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }
@@ -205,4 +220,11 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 	}
 
 	return metric, err
+}
+
+func (m *Metric) requestBodyClose(r *http.Request) {
+	err := r.Body.Close()
+	if err != nil {
+		m.logger.Error("error", "err", err)
+	}
 }
