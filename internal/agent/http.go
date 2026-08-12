@@ -13,14 +13,6 @@ type HttpAgent struct {
 	client *resty.Client
 }
 
-// MetricIn - данные по метрике, которые надо отправить на сервер
-type MetricIn struct {
-	Type  string `json:"type"`
-	ID    string `json:"id"`
-	Value string `json:"value,omitempty"`
-	Delta string `json:"delta,omitempty"`
-}
-
 func New(client *resty.Client) *HttpAgent {
 	return &HttpAgent{
 		client: client,
