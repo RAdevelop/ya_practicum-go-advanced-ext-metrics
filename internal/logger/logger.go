@@ -36,7 +36,12 @@ func (l *LogMe) Error(msg string, args ...any) {
 	l.log.Error(msg, args...)
 }
 
+// LogMeTest - заглушка для логов во время выполнения тестов
 type LogMeTest struct{}
+
+func NewTest() Logger {
+	return &LogMeTest{}
+}
 
 func (l *LogMeTest) Debug(string, ...any) {}
 func (l *LogMeTest) Info(string, ...any)  {}

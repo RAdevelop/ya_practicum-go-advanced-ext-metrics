@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var loggerTest = &logger.LogMeTest{}
+var loggerTest = logger.NewTest()
 
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {

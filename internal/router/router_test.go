@@ -34,7 +34,7 @@ type given struct {
 	reqParams   params
 }
 
-var loggerTest = &logger.LogMeTest{}
+var loggerTest = logger.NewTest()
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
