@@ -147,7 +147,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	sb.Grow(1024)
 
 	sb.WriteString("<ul>")
-	sb.WriteString("<li><strong>Gauge metrics:</strong></li>")
+	sb.WriteString("<li><strong>Gauge metrics:</strong>")
 
 	gaugeMetrics := m.metricService.Gauge()
 	if len(gaugeMetrics) > 0 {
@@ -161,7 +161,9 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 		}
 		sb.WriteString("</ul>")
 	}
-	sb.WriteString("<li><strong>Counter metrics:</strong></li>")
+	sb.WriteString("</li>")
+
+	sb.WriteString("<li><strong>Counter metrics:</strong>")
 	counterMetrics := m.metricService.CounterAccumulative()
 	if len(counterMetrics) > 0 {
 		sb.WriteString("<ul>")
@@ -172,7 +174,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 		}
 		sb.WriteString("</ul>")
 	}
-
+	sb.WriteString("</li>")
 	sb.WriteString("</ul>")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

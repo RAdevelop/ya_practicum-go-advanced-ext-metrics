@@ -217,7 +217,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 	}
 
 	memStorage := memory.NewStorage()
-	metricService := service.NewMetricService(memStorage)
+	metricService := service.NewMetric(memStorage)
 	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
@@ -385,7 +385,7 @@ Use one of the supported metric types: [counter gauge]`,
 	}
 
 	memStorage := memory.NewStorage()
-	metricService := service.NewMetricService(memStorage)
+	metricService := service.NewMetric(memStorage)
 	h := handler.New(metricService, loggerTest)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
@@ -420,7 +420,7 @@ Use one of the supported metric types: [counter gauge]`,
 func TestMetric_Get(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetricService(metricStorage)
+	var metricService = service.NewMetric(metricStorage)
 
 	tests := []struct {
 		name  string
@@ -574,7 +574,7 @@ Use one of the supported metric types: [counter gauge]
 func TestMetric_GetWithJson(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetricService(metricStorage)
+	var metricService = service.NewMetric(metricStorage)
 
 	type given struct {
 		metric *models.Metrics

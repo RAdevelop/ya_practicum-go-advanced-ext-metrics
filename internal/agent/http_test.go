@@ -22,7 +22,7 @@ var loggerTest = logger.NewTest()
 func TestHttpAgent_Update(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetricService(metricStorage)
+	var metricService = service.NewMetric(metricStorage)
 
 	h := handler.New(metricService, loggerTest)
 	r := router.New(h)

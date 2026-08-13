@@ -7,53 +7,125 @@ import (
 )
 
 type TestConfigProvider struct {
-	address func() string
+	address               func() string
+	metricStoreInterval   func() *uint
+	metricFileStoragePath func() string
+	metricRestoreMock     func() *bool
 }
 
-func NewTestConfigProvider(addressMock func() string) *TestConfigProvider {
+func NewTestConfigProvider(addressMock func() string, metricStoreInterval func() *uint, metricFileStoragePath func() string, metricRestoreMock func() *bool) *TestConfigProvider {
 	return &TestConfigProvider{
-		address: addressMock,
+		address:               addressMock,
+		metricStoreInterval:   metricStoreInterval,
+		metricFileStoragePath: metricFileStoragePath,
+		metricRestoreMock:     metricRestoreMock,
 	}
 }
 
 func (tcp *TestConfigProvider) Address() string {
 	return tcp.address()
 }
+func (tcp *TestConfigProvider) StoreInterval() *uint {
+	return tcp.metricStoreInterval()
+}
 
-func TestConfig_Address(t *testing.T) {
+func (tcp *TestConfigProvider) FileStoragePath() string {
+	return tcp.metricFileStoragePath()
+}
+
+func (tcp *TestConfigProvider) Restore() *bool {
+	return tcp.metricRestoreMock()
+}
+
+func TestConfig(t *testing.T) {
+
+	type want struct {
+		address               string
+		metricStoreInterval   *uint
+		metricRestoreMock     *bool
+		metricFileStoragePath string
+	}
 
 	tests := []struct {
-		name        string
-		addressMock func() string
-		want        string
+		name                  string
+		addressMock           func() string
+		metricStoreInterval   func() *uint
+		metricRestoreMock     func() *bool
+		metricFileStoragePath func() string
+		want                  want
 	}{
 		{
-			name: "use empty address",
+			name: "use empty",
 			addressMock: func() string {
 				return ""
 			},
-			want: "",
+			metricStoreInterval: func() *uint {
+				return nil
+			},
+			metricRestoreMock: func() *bool {
+				return nil
+			},
+			metricFileStoragePath: func() string {
+				return ""
+			},
+			want: want{
+				address:               "",
+				metricStoreInterval:   nil,
+				metricRestoreMock:     nil,
+				metricFileStoragePath: "",
+			},
 		},
 		{
 			name: "use ip address",
 			addressMock: func() string {
 				return "127.0.0.1:9090"
 			},
-			want: "127.0.0.1:9090",
+			metricStoreInterval: func() *uint {
+				return new(uint(0))
+			},
+			metricFileStoragePath: func() string {
+				return "path"
+			},
+			metricRestoreMock: func() *bool {
+				return new(true)
+			},
+			want: want{
+				address:               "127.0.0.1:9090",
+				metricStoreInterval:   new(uint(0)),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(true),
+			},
 		},
 		{
 			name: "use localhost address",
 			addressMock: func() string {
 				return "localhost:9090"
 			},
-			want: "localhost:9090",
+			metricStoreInterval: func() *uint {
+				return new(uint(10))
+			},
+			metricFileStoragePath: func() string {
+				return "path"
+			},
+			metricRestoreMock: func() *bool {
+				return new(false)
+			},
+			want: want{
+				address:               "localhost:9090",
+				metricStoreInterval:   new(uint(10)),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(false),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfgProvider := NewTestConfigProvider(tt.addressMock)
+			cfgProvider := NewTestConfigProvider(tt.addressMock, tt.metricStoreInterval, tt.metricFileStoragePath, tt.metricRestoreMock)
 			cfg := New(cfgProvider)
-			assert.Equal(t, tt.want, cfg.Address())
+			assert.Equal(t, tt.want.address, cfg.Address())
+			assert.Equal(t, tt.want.metricRestoreMock, cfg.Restore())
+			assert.Equal(t, tt.want.metricStoreInterval, cfg.StoreInterval())
+			assert.Equal(t, tt.want.metricFileStoragePath, cfg.FileStoragePath())
 		})
 	}
 }

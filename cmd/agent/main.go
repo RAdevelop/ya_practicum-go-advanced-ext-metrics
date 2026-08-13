@@ -18,6 +18,12 @@ import (
 
 const metricNamePollCount = "PollCount"
 
+type agentSettings struct {
+	ServerAddress  string
+	IntervalReport uint
+	IntervalPoll   uint
+}
+
 func main() {
 	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
 	var runtimeMetrics map[string]any
@@ -35,38 +41,24 @@ func main() {
 	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
 	flag.Parse()
 
-	var agentConfig configAgent.ConfigProvider
-
 	configAgentEnv, err := configAgent.NewEnv()
 	if err != nil {
 		logMe.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
 		return
 	}
+	var agentConfig configAgent.ConfigProvider
 	agentConfig = configAgent.New(configAgentEnv)
 
-	serverAddress := srvAddress.String()
-	intervalReport := *rInterval
-	intervalPoll := *pInterval
-
-	if agentConfig.Address() != "" {
-		serverAddress = agentConfig.Address()
-	}
-
-	if agentConfig.ReportInterval() > 0 {
-		intervalReport = agentConfig.ReportInterval()
-	}
-	if agentConfig.PollInterval() > 0 {
-		intervalPoll = agentConfig.PollInterval()
-	}
+	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
 
 	httpClient := resty.New()
-	httpClient.SetBaseURL("http://" + serverAddress)
+	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
 
 	httpAgent := agent.New(httpClient)
 	var pollCount = int64(0)
 
-	pollInterval := time.NewTicker(time.Duration(intervalPoll) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(intervalReport) * time.Second)
+	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
 
 	defer func() {
 		pollInterval.Stop()
@@ -83,6 +75,28 @@ func main() {
 			pollCount = 0
 		}
 	}
+}
+
+func settings(agentConfig configAgent.ConfigProvider, srvAddress string, intervalReport *uint, intervalPoll *uint) agentSettings {
+
+	cfg := agentSettings{
+		ServerAddress:  srvAddress,
+		IntervalReport: *intervalReport,
+		IntervalPoll:   *intervalPoll,
+	}
+
+	if agentConfig.Address() != "" {
+		cfg.ServerAddress = agentConfig.Address()
+	}
+
+	if agentConfig.ReportInterval() > 0 {
+		cfg.IntervalReport = agentConfig.ReportInterval()
+	}
+	if agentConfig.PollInterval() > 0 {
+		cfg.IntervalPoll = agentConfig.PollInterval()
+	}
+
+	return cfg
 }
 
 func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error) {

@@ -5,7 +5,10 @@ import (
 )
 
 type Env struct {
-	Addr string `env:"ADDRESS"`
+	Addr                  string `env:"ADDRESS"`
+	MetricStoreInterval   *uint  `env:"STORE_INTERVAL"`
+	MetricFileStoragePath string `env:"FILE_STORAGE_PATH"`
+	MetricRestore         *bool  `env:"RESTORE"`
 }
 
 func NewEnv() (*Env, error) {
@@ -32,4 +35,13 @@ func NewEnvWithOptions(opts *env.Options) (*Env, error) {
 
 func (env *Env) Address() string {
 	return env.Addr
+}
+func (env *Env) StoreInterval() *uint {
+	return env.MetricStoreInterval
+}
+func (env *Env) FileStoragePath() string {
+	return env.MetricFileStoragePath
+}
+func (env *Env) Restore() *bool {
+	return env.MetricRestore
 }

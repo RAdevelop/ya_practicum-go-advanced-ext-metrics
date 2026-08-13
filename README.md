@@ -128,6 +128,24 @@ go build -o ./cmd/server/server ./cmd/server/*.go \
 && echo $ADDRESS
 ```
 
+### iter9
+
+```bash
+go build -o ./cmd/server/server ./cmd/server/*.go \
+&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
+&& SERVER_PORT=$(jot -r 1 1024 9000) \
+&& ADDRESS="localhost:${SERVER_PORT}" \
+&& TEMP_FILE="iter9.json" \
+&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration9$ \
+-agent-binary-path=cmd/agent/agent \
+-binary-path=cmd/server/server \
+-server-port=$SERVER_PORT \
+-source-path=. \
+-test.failfast \
+-file-storage-path=$TEMP_FILE \
+&& echo $ADDRESS
+```
+
 ## Структура проекта
 
 Приведённая в этом репозитории структура проекта является рекомендуемой, но не обязательной.

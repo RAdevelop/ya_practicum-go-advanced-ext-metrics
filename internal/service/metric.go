@@ -5,7 +5,7 @@ type MetricService struct {
 	storage MetricStorage
 }
 
-func NewMetricService(storage MetricStorage) *MetricService {
+func NewMetric(storage MetricStorage) *MetricService {
 	return &MetricService{
 		storage: storage,
 	}
