@@ -3,6 +3,8 @@ package logger
 import (
 	"log/slog"
 	"os"
+	"runtime"
+	"strconv"
 )
 
 // Logger - интерфейс для логирования
@@ -15,7 +17,9 @@ type Logger interface {
 
 func New() Logger {
 	return &LogMe{
-		log: slog.New(slog.NewJSONHandler(os.Stdout, nil)),
+		log: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})),
 	}
 }
 
@@ -24,16 +28,16 @@ type LogMe struct {
 }
 
 func (l *LogMe) Debug(msg string, args ...any) {
-	l.log.Debug(msg, args...)
+	l.log.Debug(msg, l.withFileLine(args...)...)
 }
 func (l *LogMe) Info(msg string, args ...any) {
-	l.log.Info(msg, args...)
+	l.log.Info(msg, l.withFileLine(args...)...)
 }
 func (l *LogMe) Warn(msg string, args ...any) {
-	l.log.Warn(msg, args...)
+	l.log.Warn(msg, l.withFileLine(args...)...)
 }
 func (l *LogMe) Error(msg string, args ...any) {
-	l.log.Error(msg, args...)
+	l.log.Error(msg, l.withFileLine(args...)...)
 }
 
 // LogMeTest - заглушка для логов во время выполнения тестов
@@ -47,3 +51,16 @@ func (l *LogMeTest) Debug(string, ...any) {}
 func (l *LogMeTest) Info(string, ...any)  {}
 func (l *LogMeTest) Warn(string, ...any)  {}
 func (l *LogMeTest) Error(string, ...any) {}
+
+// withFileLine - добавим ко всем логам путь к файлу и номеру строки, где вызвали метод логирования
+func (l *LogMe) withFileLine(args ...any) []any {
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		file = "unknown_file"
+		line = 0
+	}
+
+	caller := file + ":" + strconv.Itoa(line)
+
+	return append(args, slog.String("caller", caller))
+}

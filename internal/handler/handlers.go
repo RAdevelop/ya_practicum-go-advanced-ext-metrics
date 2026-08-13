@@ -18,9 +18,12 @@ func New(metricService *service.MetricService, logger logger.Logger) *Handlers {
 
 	metric := NewMetric(metricService, logger)
 
+	var metricUpdate = middleware.PipeLine(logger, http.HandlerFunc(metric.Update), middleware.Decompression, middleware.Compression, middleware.WithLogging)
+	var metricGet = middleware.PipeLine(logger, http.HandlerFunc(metric.Get), middleware.Decompression, middleware.Compression, middleware.WithLogging)
+	var metricList = middleware.PipeLine(logger, http.HandlerFunc(metric.List), middleware.Decompression, middleware.Compression, middleware.WithLogging)
 	return &Handlers{
-		MetricUpdate: middleware.WithLogging(logger, http.HandlerFunc(metric.Update)),
-		MetricGet:    middleware.WithLogging(logger, http.HandlerFunc(metric.Get)),
-		MetricList:   middleware.WithLogging(logger, http.HandlerFunc(metric.List)),
+		MetricUpdate: metricUpdate,
+		MetricGet:    metricGet,
+		MetricList:   metricList,
 	}
 }

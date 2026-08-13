@@ -95,6 +95,7 @@ go build -o ./cmd/server/server ./cmd/server/*.go \
 -source-path=. \
 && echo $ADDRESS
 ```
+
 ### iter7
 
 ```bash
@@ -103,6 +104,22 @@ go build -o ./cmd/server/server ./cmd/server/*.go \
 && SERVER_PORT=$(jot -r 1 1024 9000) \
 && ADDRESS="localhost:${SERVER_PORT}" \
 && ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration7$ \
+-agent-binary-path=cmd/agent/agent \
+-binary-path=cmd/server/server \
+-server-port=$SERVER_PORT \
+-source-path=. \
+-test.failfast \
+&& echo $ADDRESS
+```
+
+### iter8
+
+```bash
+go build -o ./cmd/server/server ./cmd/server/*.go \
+&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
+&& SERVER_PORT=$(jot -r 1 1024 9000) \
+&& ADDRESS="localhost:${SERVER_PORT}" \
+&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration8$ \
 -agent-binary-path=cmd/agent/agent \
 -binary-path=cmd/server/server \
 -server-port=$SERVER_PORT \

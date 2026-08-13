@@ -11,9 +11,10 @@ import (
 
 // responseData - структура для хранения сведений о запросе
 type requestData struct {
-	URI    string `json:"uri"`
-	Method string `json:"method"`
-	Body   string `json:"body"`
+	URI     string              `json:"uri"`
+	Method  string              `json:"method"`
+	Body    string              `json:"body"`
+	Headers map[string][]string `json:"headers"`
 }
 
 // responseData - структура для хранения сведений об ответе
@@ -52,9 +53,10 @@ func WithLogging(logger logger.Logger, h http.Handler) http.Handler {
 		respData.Duration = time.Since(start)
 
 		reqData := requestData{
-			URI:    r.RequestURI,
-			Method: r.Method,
-			Body:   string(bodyBytes),
+			URI:     r.RequestURI,
+			Method:  r.Method,
+			Body:    string(bodyBytes),
+			Headers: r.Header,
 		}
 
 		logger.Info(reqData.Method, "request", reqData, "response", respData)
