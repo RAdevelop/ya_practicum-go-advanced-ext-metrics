@@ -72,18 +72,30 @@ func (ms *MetricInitializer) Load() (err error) {
 		return err
 	}
 
-	err = json.NewDecoder(ms.file).Decode(&ms.metrics)
-	if err != nil {
+	decoder := json.NewDecoder(ms.file)
+	// Читаем открывающую скобку массива
+	if _, err = decoder.Token(); err != nil {
 		return err
 	}
+	for decoder.More() {
+		metric := models.Metrics{}
+		err = decoder.Decode(&metric)
 
-	for _, metric := range ms.metrics {
+		if err != nil {
+			return err
+		}
+
 		switch metric.MType {
 		case models.Gauge:
 			ms.metricService.GaugeUpdate(metric.ID, *metric.Value)
 		case models.Counter:
 			ms.metricService.CounterAdd(metric.ID, *metric.Delta)
 		}
+	}
+
+	// Читаем закрывающую скобку массива
+	if _, err = decoder.Token(); err != nil {
+		return err
 	}
 
 	return nil
@@ -151,8 +163,10 @@ func (ms *MetricInitializer) fileExists() bool {
 
 func (ms *MetricInitializer) closeFile() error {
 
-	if ms.file == nil {
-		return nil
+	if ms.file != nil {
+		err := ms.file.Close()
+		ms.file = nil
+		return err
 	}
-	return ms.file.Close()
+	return nil
 }
