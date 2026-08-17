@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -38,7 +39,8 @@ func NewMetricInitializer(fileName string, metricService *MetricService) (*Metri
 func (ms *MetricInitializer) Save() (err error) {
 
 	defer func() {
-		err = ms.closeFile()
+		errCloseFile := ms.closeFile()
+		err = errors.Join(err, errCloseFile)
 	}()
 
 	ms.readFromStorage()
