@@ -103,7 +103,7 @@ func TestConfig(t *testing.T) {
 				return "localhost:9090"
 			},
 			metricStoreInterval: func() *time.Duration {
-				return new(time.Duration(10))
+				return new(time.Duration(10) * time.Second)
 			},
 			metricFileStoragePath: func() string {
 				return "path"
@@ -113,7 +113,7 @@ func TestConfig(t *testing.T) {
 			},
 			want: want{
 				address:               "localhost:9090",
-				metricStoreInterval:   new(time.Duration(10)),
+				metricStoreInterval:   new(time.Duration(10) * time.Second),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
 			},

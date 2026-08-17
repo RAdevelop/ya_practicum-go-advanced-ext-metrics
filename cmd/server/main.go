@@ -26,14 +26,12 @@ func main() {
 	var metricStorage = memory.NewStorage()
 	var metricService = service.NewMetric(metricStorage)
 
-	var serverConfig configServer.ConfigProvider
-
 	configServerEnv, err := configServer.NewEnv()
 	if err != nil {
 		logMe.Error("error", "err", err)
 		return
 	}
-	serverConfig = configServer.New(configServerEnv)
+	serverConfig := configServer.New(configServerEnv)
 
 	srvAddress := flag.String("a", "localhost:8080", `Server address pattern: "host:port"`)
 	srvStoreInterval := flag.Uint("i", 300, `интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск (по умолчанию 300 секунд, значение 0 делает запись синхронной)`)
@@ -42,67 +40,52 @@ func main() {
 
 	flag.Parse()
 
-	servSettings := srvSettings(serverConfig, srvAddress, srvStoreInterval, srvFileStoragePath, srvRestore)
+	if serverConfig.Address() == "" {
+		serverConfig.AddressSet(*srvAddress)
+	}
+
+	if serverConfig.StoreInterval() == nil {
+		serverConfig.StoreIntervalSet(srvStoreInterval)
+	}
+	if serverConfig.FileStoragePath() == "" {
+		serverConfig.FileStoragePathSet(*srvFileStoragePath)
+	}
+
+	if serverConfig.Restore() == nil {
+		serverConfig.RestoreSet(srvRestore)
+	}
 
 	h := handler.New(metricService, logMe)
 	r := router.New(h)
 
-	metricInitializer, err := service.NewMetricInitializer(servSettings.MetricFileStoragePath, metricService)
+	metricInitializer, err := service.NewMetricInitializer(serverConfig.FileStoragePath(), metricService)
 	if err != nil {
 		logMe.Error("error", "err", err)
 		return
 	}
 
-	if servSettings.MetricRestoreFromFile {
+	if serverConfig.Restore() != nil && *serverConfig.Restore() {
 		err = metricInitializer.Load()
 		if err != nil {
 			logMe.Error("metricSaver Load", "err", err)
 		}
 	}
 
-	go saver(metricInitializer, logMe, servSettings)
+	go saver(metricInitializer, logMe, serverConfig)
 
-	err = http.ListenAndServe(servSettings.ServerAddress, r)
+	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
 		logMe.Error("error", "err", err)
 	}
 }
 
-func srvSettings(serverConfig configServer.ConfigProvider, srvAddress *string, srvStoreInterval *uint, srvFileStoragePath *string, srvRestore *bool) serverSettings {
+func saver(metricInitializer *service.MetricInitializer, logger logger.Logger, config configServer.ConfigProvider) {
 
-	var settings = serverSettings{
-		ServerAddress:         *srvAddress,
-		MetricStoreInterval:   time.Duration(*srvStoreInterval) * time.Second,
-		MetricFileStoragePath: *srvFileStoragePath,
-		MetricRestoreFromFile: *srvRestore,
-	}
-
-	if serverConfig.Address() != "" {
-		settings.ServerAddress = serverConfig.Address()
-	}
-
-	if serverConfig.StoreInterval() != nil {
-		settings.MetricStoreInterval = *serverConfig.StoreInterval()
-	}
-
-	if serverConfig.FileStoragePath() != "" {
-		settings.MetricFileStoragePath = serverConfig.FileStoragePath()
-	}
-
-	if serverConfig.Restore() != nil {
-		settings.MetricRestoreFromFile = *serverConfig.Restore()
-	}
-
-	return settings
-}
-
-func saver(metricInitializer *service.MetricInitializer, logger logger.Logger, settings serverSettings) {
-
-	if settings.MetricStoreInterval <= 0 {
+	if config.StoreInterval() == nil || *config.StoreInterval() <= 0 {
 		return
 	}
 
-	metricStoreIntervalTicker := time.NewTicker(settings.MetricStoreInterval)
+	metricStoreIntervalTicker := time.NewTicker(*config.StoreInterval())
 	defer func() {
 		metricStoreIntervalTicker.Stop()
 	}()

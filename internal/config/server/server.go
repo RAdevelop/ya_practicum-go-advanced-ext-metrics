@@ -12,28 +12,64 @@ type ConfigProvider interface {
 
 // Config - настройки для сервера
 type Config struct {
-	cfgProvider ConfigProvider
+	addr                  string
+	metricStoreInterval   *time.Duration
+	metricFileStoragePath string
+	metricRestore         *bool
 }
 
 func New(cfg ConfigProvider) *Config {
-	return &Config{
-		cfgProvider: cfg,
+
+	conf := &Config{}
+
+	conf.AddressSet(cfg.Address())
+	var interval *uint
+	if cfg.StoreInterval() != nil {
+		interval = new(uint((*cfg.StoreInterval()) / time.Second))
 	}
+	conf.StoreIntervalSet(interval)
+
+	conf.FileStoragePathSet(cfg.FileStoragePath())
+	conf.RestoreSet(cfg.Restore())
+
+	return conf
 }
 
 // Address - отвечает за адрес эндпоинта HTTP-сервера.
 func (c *Config) Address() string {
-	return c.cfgProvider.Address()
+	return c.addr
+}
+func (c *Config) AddressSet(addr string) {
+	if addr != "" {
+		c.addr = addr
+	}
 }
 
 func (c *Config) StoreInterval() *time.Duration {
-	return c.cfgProvider.StoreInterval()
+	return c.metricStoreInterval
+}
+func (c *Config) StoreIntervalSet(storeInterval *uint) {
+
+	if storeInterval != nil {
+		c.metricStoreInterval = new(time.Duration(*storeInterval) * time.Second)
+	}
 }
 
 func (c *Config) FileStoragePath() string {
-	return c.cfgProvider.FileStoragePath()
+	return c.metricFileStoragePath
+}
+
+func (c *Config) FileStoragePathSet(fileStoragePath string) {
+	if fileStoragePath != "" {
+		c.metricFileStoragePath = fileStoragePath
+	}
 }
 
 func (c *Config) Restore() *bool {
-	return c.cfgProvider.Restore()
+	return c.metricRestore
+}
+func (c *Config) RestoreSet(metricRestore *bool) {
+	if metricRestore != nil {
+		c.metricRestore = metricRestore
+	}
 }
