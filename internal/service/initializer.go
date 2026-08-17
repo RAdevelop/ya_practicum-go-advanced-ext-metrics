@@ -140,27 +140,12 @@ func (ms *MetricInitializer) readFromStorage() {
 }
 
 func (ms *MetricInitializer) openFile() error {
-
-	if !ms.fileExists() {
-		err := os.MkdirAll(filepath.Dir(ms.fileName), 0755)
-		if err != nil {
-			return err
-		}
-	}
-
 	file, err := os.OpenFile(ms.fileName, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
 	ms.file = file
 	return nil
-}
-
-func (ms *MetricInitializer) fileExists() bool {
-	if _, err := os.Stat(ms.fileName); err == nil {
-		return true
-	}
-	return false
 }
 
 func (ms *MetricInitializer) closeFile() error {
