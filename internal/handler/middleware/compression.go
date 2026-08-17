@@ -28,44 +28,27 @@ var gzipPool = sync.Pool{
 // Compression - если клиент поддерживает прием gzip данных, то сжимаем их перед ответом клиенту
 func Compression(logger logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		isClientAcceptGzip := strings.Contains(r.Header.Get("Accept-Encoding"), "gzip")
 
 		// Проверяем, поддерживает ли клиент gzip
-		if !shouldCompress(r) {
+		if !isClientAcceptGzip {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Получаем Writer из pool
-		gz := gzipPool.Get().(*gzip.Writer)
+		gw := newGzipResponseWriter(isClientAcceptGzip, w, logger)
 		defer func() {
-			err := gz.Close()
+			err := gw.Close()
 			if err != nil {
-				logger.Error("error closing gzip writer", "error", err)
+				logger.Error("GzipResponseWriter", "err", err)
 			}
-			gzipPool.Put(gz) // Возвращаем в pool
 		}()
-
-		/*
-			gz.Reset():
-			- Перенаправляет вывод на новый io.Writer() (в данном случае http.ResponseWriter())
-			- Сбрасывает внутреннее состояние (не создавая новый объект)
-			- Готовит gzip.Writer() к использованию с новым потоком данных
-		*/
-		gz.Reset(w)
-		// Сообщаем клиенту, что данные запакованы
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Vary", "Accept-Encoding")
-
-		gw := &gzipResponseWriter{
-			ResponseWriter: w,
-			gz:             gz,
-		}
 
 		next.ServeHTTP(gw, r)
 	})
 }
 
-// Decompression - распаковываем данные, если клиент прислал их запакованные в gizp
+// Decompression - распаковываем данные, если клиент прислал их запакованные в gzip
 func Decompression(logger logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !shouldDecompress(r) {
@@ -114,40 +97,107 @@ func Decompression(logger logger.Logger, next http.Handler) http.Handler {
 
 // contentTypesForCompression - список типов контента, для которых [не]надо будет сжимать данные
 var contentTypesForCompression = map[string]bool{
-	"text/html":                true,
-	"text/html; charset=utf-8": true,
-	"application/json":         true,
-	"":                         true, //если клиент не прислал тип контента
+	"text/html":        true,
+	"application/json": true,
 }
 
-// shouldCompress - проверяем, поддерживает ли клиент gzip
-func shouldCompress(r *http.Request) bool {
-
-	contentType := r.Header.Get("Content-Type")
-	needCompress, exists := contentTypesForCompression[contentType]
-
-	if !exists {
-		return false
-	}
-
-	return strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && needCompress
-}
-
-// shouldCompress - проверяем, поддерживает ли клиент gzip
+// shouldDecompress - проверяем, нужно ли будет распаковать данные
 func shouldDecompress(r *http.Request) bool {
 	return r.Body != nil && r.Header.Get("Content-Encoding") == "gzip"
 }
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
-	gz *gzip.Writer
+	gz                 *gzip.Writer
+	logger             logger.Logger
+	isClientAcceptGzip bool
+	isHeaderWritten    bool
+}
+
+func newGzipResponseWriter(isClientAcceptGzip bool, w http.ResponseWriter, logger logger.Logger) *gzipResponseWriter {
+	return &gzipResponseWriter{
+		ResponseWriter:     w,
+		gz:                 nil,
+		logger:             logger,
+		isClientAcceptGzip: isClientAcceptGzip,
+		isHeaderWritten:    false,
+	}
 }
 
 func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
-	return gw.gz.Write(b)
+	if gw.shouldCompress() {
+		gw.initGzipWriter()
+		gw.setHeaderContentEncoding()
+
+		//сжимаем
+		return gw.gz.Write(b)
+	}
+
+	return gw.ResponseWriter.Write(b)
 }
 
 // WriteHeader переопределяем, чтобы установить Content-Length после сжатия
 func (gw *gzipResponseWriter) WriteHeader(statusCode int) {
+	gw.setHeaderContentEncoding()
 	gw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (gw *gzipResponseWriter) Close() error {
+	if gw.gz != nil {
+		// Сначала сбрасываем данные
+		if err := gw.gz.Flush(); err != nil {
+			return err
+		}
+
+		// Затем закрываем
+		if err := gw.gz.Close(); err != nil {
+			return err
+		}
+
+		gzipPool.Put(gw.gz)
+		gw.gz = nil
+		return nil
+	}
+	return nil
+}
+
+// shouldCompress - проверяем, будем ли сжимать данные
+func (gw *gzipResponseWriter) shouldCompress() bool {
+	if !gw.isClientAcceptGzip {
+		return false
+	}
+
+	contentType := strings.Split(gw.ResponseWriter.Header().Get("Content-Type"), ";")[0]
+	needCompress, exists := contentTypesForCompression[contentType]
+
+	if !exists {
+		return false
+	}
+
+	return needCompress
+}
+
+func (gw *gzipResponseWriter) setHeaderContentEncoding() {
+	if gw.shouldCompress() && !gw.isHeaderWritten {
+		gw.isHeaderWritten = true
+		// Сообщаем клиенту, что данные запакованы
+		gw.ResponseWriter.Header().Set("Content-Encoding", "gzip")
+		gw.ResponseWriter.Header().Set("Vary", "Accept-Encoding")
+	}
+}
+
+func (gw *gzipResponseWriter) initGzipWriter() {
+	// инициализируем его только когда точно знаем, что надо будет сжимать ответ
+	if gw.gz == nil {
+		// Получаем/Создаем Writer из pool
+		gw.gz = gzipPool.Get().(*gzip.Writer)
+
+		/*
+			gz.Reset():
+			- Перенаправляет вывод на новый io.Writer() (в данном случае http.ResponseWriter())
+			- Сбрасывает внутреннее состояние (не создавая новый объект)
+			- Готовит gzip.Writer() к использованию с новым потоком данных
+		*/
+		gw.gz.Reset(gw.ResponseWriter)
+	}
 }

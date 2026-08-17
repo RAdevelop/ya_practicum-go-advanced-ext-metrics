@@ -13,18 +13,9 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 )
 
-type serverSettings struct {
-	ServerAddress         string
-	MetricStoreInterval   time.Duration
-	MetricFileStoragePath string
-	MetricRestoreFromFile bool
-}
-
 func main() {
 
 	logMe := logger.New()
-	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetric(metricStorage)
 
 	configServerEnv, err := configServer.NewEnv()
 	if err != nil {
@@ -55,6 +46,8 @@ func main() {
 		serverConfig.RestoreSet(srvRestore)
 	}
 
+	var metricStorage = memory.NewStorage()
+	var metricService = service.NewMetric(metricStorage)
 	h := handler.New(metricService, logMe)
 	r := router.New(h)
 

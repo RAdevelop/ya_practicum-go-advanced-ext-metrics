@@ -1,6 +1,7 @@
 package router
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -667,7 +668,18 @@ func TestMetric_GetWithJson(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "wrong status code")
 			assert.Equalf(t, tt.want.contentType, result.Header().Get("Content-Type"), "wrong Content-Type")
-			body, err := io.ReadAll(result.RawResponse.Body)
+
+			var body []byte
+			if result.RawResponse.Header.Get("Content-Encoding") == "gzip" {
+				reader, err := gzip.NewReader(result.RawResponse.Body)
+				assert.NoError(t, err)
+				defer assert.NoError(t, reader.Close())
+
+				body, err = io.ReadAll(reader)
+			} else {
+				body, err = io.ReadAll(result.RawResponse.Body)
+			}
+
 			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
 			assert.Equal(t, tt.want.body, strings.TrimSpace(string(body)))
