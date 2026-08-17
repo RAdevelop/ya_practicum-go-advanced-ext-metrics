@@ -58,15 +58,24 @@ func validateMetricName(validator *validator.Validator, mName string) validateRe
 	return result
 }
 
-func validateMetricValue(validator *validator.Validator, metric *models.Metrics) validateResult {
+func validateMetricValue(validate *validator.Validator, metric *models.Metrics) validateResult {
 
 	result := validateResult{}
 
 	var err error
 	if metric.MType == models.Counter {
-		_, err = validator.ValidateValueInt64(converter.NumericToString(*metric.Delta))
+		if metric.Delta == nil {
+			err = validator.ErrValueInt64
+		} else {
+			_, err = validate.ValidateValueInt64(converter.NumericToString(*metric.Delta))
+		}
+
 	} else {
-		_, err = validator.ValidateValueFloat64(converter.NumericToString(*metric.Value))
+		if metric.Value == nil {
+			err = validator.ErrValueInt64
+		} else {
+			_, err = validate.ValidateValueFloat64(converter.NumericToString(*metric.Value))
+		}
 	}
 
 	if err != nil {
