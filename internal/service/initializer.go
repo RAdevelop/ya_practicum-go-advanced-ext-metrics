@@ -3,11 +3,14 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 )
+
+var ErrEmptyFilePath = errors.New("file path is empty")
 
 /*
 MetricInitializer - инициализатор метрик
@@ -23,6 +26,10 @@ type MetricInitializer struct {
 
 func NewMetricInitializer(fileName string, metricService *MetricService) (*MetricInitializer, error) {
 
+	if fileName == "" {
+		return nil, fmt.Errorf("%w: fileName = %s", ErrEmptyFilePath, fileName)
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -36,37 +43,59 @@ func NewMetricInitializer(fileName string, metricService *MetricService) (*Metri
 	}, nil
 }
 
+/*
+Save - сохраняем метрики
+
+Пояснения к: "Другой вариант -- написать обертку над хранилищем в памяти, которая будет обеспечивать работу (извлечение из/сохранение в) с файлом"
+
+MetricInitializer - идея как раз была в этом - обертка. Я думал, написать интерфейс, чтобы MetricInitializer его реализовывал.
+Как раз для того, чтобы можно было менять при необходимости работу с файлами, на другое хранилище (БД, внешний сервис и тп).
+Причем такой, который реализовывал бы io.Reader, io.Writer
+
+Не стал делать, чтобы не увлеичивать кодовую базу. И как читал по Go - создавать интерфейсы лучше тогда, когда действиетльно нужно по задаче :)
+И не надо "гадать" - пригодится или нет. Надо было мне сразу такой комментарий оставить.
+MetricInitializer - тут скорее неудачно имя выбрал. Из опыта знаю, что в разработке самое сложное: это выбор имен и задачт кэширования :)
+*/
 func (ms *MetricInitializer) Save() (err error) {
-
-	defer func() {
-		errCloseFile := ms.closeFile()
-		err = errors.Join(err, errCloseFile)
-	}()
-
 	ms.readFromStorage()
+
 	if len(ms.metrics) == 0 {
 		return nil
 	}
 
-	err = ms.openFile()
+	filePath := ms.fileName
+	tmpFile, err := ms.createTempFile(filePath)
 	if err != nil {
 		return err
 	}
 
-	err = json.NewEncoder(ms.file).Encode(ms.metrics)
-	if err != nil {
+	// Записываем данные во временный файл
+	encoder := json.NewEncoder(tmpFile)
+
+	if err = encoder.Encode(ms.metrics); err != nil {
 		return err
 	}
 
-	if err = ms.file.Sync(); err != nil {
+	if err = tmpFile.Sync(); err != nil {
 		return err
 	}
+
+	if err = tmpFile.Close(); err != nil {
+		return err
+	}
+
+	// Атомарная замена
+	if err = os.Rename(tmpFile.Name(), filePath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (ms *MetricInitializer) Load() (err error) {
 	defer func() {
-		err = ms.closeFile()
+		errClose := ms.closeFile()
+		err = errors.Join(err, errClose)
 	}()
 
 	err = ms.openFile()
@@ -156,4 +185,23 @@ func (ms *MetricInitializer) closeFile() error {
 		return err
 	}
 	return nil
+}
+
+// createTempFile - создает временный файл в той же директории
+func (ms *MetricInitializer) createTempFile(filePath string) (*os.File, error) {
+	// Получаем директорию файла
+	dir := filepath.Dir(filePath)
+
+	// Создаем директорию, если её нет
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Создаем временный файл с префиксом
+	tmpFile, err := os.CreateTemp(dir, "metrics_*.tmp")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	return tmpFile, nil
 }
