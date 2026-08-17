@@ -15,7 +15,7 @@ import (
 
 type serverSettings struct {
 	ServerAddress         string
-	MetricStoreInterval   uint
+	MetricStoreInterval   time.Duration
 	MetricFileStoragePath string
 	MetricRestoreFromFile bool
 }
@@ -72,7 +72,7 @@ func srvSettings(serverConfig configServer.ConfigProvider, srvAddress *string, s
 
 	var settings = serverSettings{
 		ServerAddress:         *srvAddress,
-		MetricStoreInterval:   *srvStoreInterval,
+		MetricStoreInterval:   time.Duration(*srvStoreInterval) * time.Second,
 		MetricFileStoragePath: *srvFileStoragePath,
 		MetricRestoreFromFile: *srvRestore,
 	}
@@ -98,7 +98,11 @@ func srvSettings(serverConfig configServer.ConfigProvider, srvAddress *string, s
 
 func saver(metricInitializer *service.MetricInitializer, logger logger.Logger, settings serverSettings) {
 
-	metricStoreIntervalTicker := time.NewTicker(time.Duration(settings.MetricStoreInterval) * time.Second)
+	if settings.MetricStoreInterval <= 0 {
+		return
+	}
+
+	metricStoreIntervalTicker := time.NewTicker(settings.MetricStoreInterval)
 	defer func() {
 		metricStoreIntervalTicker.Stop()
 	}()

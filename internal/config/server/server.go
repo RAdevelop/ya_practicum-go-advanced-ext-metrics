@@ -1,9 +1,11 @@
 package server
 
+import "time"
+
 // ConfigProvider - абстракция над работой настроек для сервера (они могут быть получены из: ENV переменных, INI файла, БД, и т.п.)
 type ConfigProvider interface {
 	Address() string
-	StoreInterval() *uint
+	StoreInterval() *time.Duration
 	FileStoragePath() string
 	Restore() *bool
 }
@@ -24,7 +26,7 @@ func (c *Config) Address() string {
 	return c.cfgProvider.Address()
 }
 
-func (c *Config) StoreInterval() *uint {
+func (c *Config) StoreInterval() *time.Duration {
 	return c.cfgProvider.StoreInterval()
 }
 

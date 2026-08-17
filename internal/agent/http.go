@@ -75,7 +75,6 @@ func compress(data []byte) ([]byte, error) {
 	gz := gzipPool.Get().(*gzip.Writer)
 	gz.Reset(buf) // Направляем вывод в буфер
 	defer func() {
-		_ = gz.Close()
 		gzipPool.Put(gz) // Возвращаем в пул
 	}()
 

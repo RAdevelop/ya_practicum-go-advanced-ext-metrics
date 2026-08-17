@@ -2,18 +2,19 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 type TestConfigProvider struct {
 	address               func() string
-	metricStoreInterval   func() *uint
+	metricStoreInterval   func() *time.Duration
 	metricFileStoragePath func() string
 	metricRestoreMock     func() *bool
 }
 
-func NewTestConfigProvider(addressMock func() string, metricStoreInterval func() *uint, metricFileStoragePath func() string, metricRestoreMock func() *bool) *TestConfigProvider {
+func NewTestConfigProvider(addressMock func() string, metricStoreInterval func() *time.Duration, metricFileStoragePath func() string, metricRestoreMock func() *bool) *TestConfigProvider {
 	return &TestConfigProvider{
 		address:               addressMock,
 		metricStoreInterval:   metricStoreInterval,
@@ -25,7 +26,7 @@ func NewTestConfigProvider(addressMock func() string, metricStoreInterval func()
 func (tcp *TestConfigProvider) Address() string {
 	return tcp.address()
 }
-func (tcp *TestConfigProvider) StoreInterval() *uint {
+func (tcp *TestConfigProvider) StoreInterval() *time.Duration {
 	return tcp.metricStoreInterval()
 }
 
@@ -41,7 +42,7 @@ func TestConfig(t *testing.T) {
 
 	type want struct {
 		address               string
-		metricStoreInterval   *uint
+		metricStoreInterval   *time.Duration
 		metricRestoreMock     *bool
 		metricFileStoragePath string
 	}
@@ -49,7 +50,7 @@ func TestConfig(t *testing.T) {
 	tests := []struct {
 		name                  string
 		addressMock           func() string
-		metricStoreInterval   func() *uint
+		metricStoreInterval   func() *time.Duration
 		metricRestoreMock     func() *bool
 		metricFileStoragePath func() string
 		want                  want
@@ -59,7 +60,7 @@ func TestConfig(t *testing.T) {
 			addressMock: func() string {
 				return ""
 			},
-			metricStoreInterval: func() *uint {
+			metricStoreInterval: func() *time.Duration {
 				return nil
 			},
 			metricRestoreMock: func() *bool {
@@ -80,8 +81,8 @@ func TestConfig(t *testing.T) {
 			addressMock: func() string {
 				return "127.0.0.1:9090"
 			},
-			metricStoreInterval: func() *uint {
-				return new(uint(0))
+			metricStoreInterval: func() *time.Duration {
+				return new(time.Duration(0))
 			},
 			metricFileStoragePath: func() string {
 				return "path"
@@ -91,7 +92,7 @@ func TestConfig(t *testing.T) {
 			},
 			want: want{
 				address:               "127.0.0.1:9090",
-				metricStoreInterval:   new(uint(0)),
+				metricStoreInterval:   new(time.Duration(0)),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(true),
 			},
@@ -101,8 +102,8 @@ func TestConfig(t *testing.T) {
 			addressMock: func() string {
 				return "localhost:9090"
 			},
-			metricStoreInterval: func() *uint {
-				return new(uint(10))
+			metricStoreInterval: func() *time.Duration {
+				return new(time.Duration(10))
 			},
 			metricFileStoragePath: func() string {
 				return "path"
@@ -112,7 +113,7 @@ func TestConfig(t *testing.T) {
 			},
 			want: want{
 				address:               "localhost:9090",
-				metricStoreInterval:   new(uint(10)),
+				metricStoreInterval:   new(time.Duration(10)),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
 			},

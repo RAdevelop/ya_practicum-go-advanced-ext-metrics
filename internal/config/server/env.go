@@ -1,10 +1,16 @@
 package server
 
 import (
+	"time"
+
 	"github.com/caarlos0/env/v11"
 )
 
 type Env struct {
+	cfg envCfg
+}
+
+type envCfg struct {
 	Addr                  string `env:"ADDRESS"`
 	MetricStoreInterval   *uint  `env:"STORE_INTERVAL"`
 	MetricFileStoragePath string `env:"FILE_STORAGE_PATH"`
@@ -17,7 +23,7 @@ func NewEnv() (*Env, error) {
 
 // NewEnvWithOptions - Конструктор с опциями
 func NewEnvWithOptions(opts *env.Options) (*Env, error) {
-	var cfg Env
+	var cfg envCfg
 	var err error
 
 	if opts != nil {
@@ -30,18 +36,24 @@ func NewEnvWithOptions(opts *env.Options) (*Env, error) {
 		return nil, err
 	}
 
-	return &cfg, nil
+	return &Env{
+		cfg: cfg,
+	}, nil
 }
 
 func (env *Env) Address() string {
-	return env.Addr
+	return env.cfg.Addr
 }
-func (env *Env) StoreInterval() *uint {
-	return env.MetricStoreInterval
+func (env *Env) StoreInterval() *time.Duration {
+
+	if env.cfg.MetricStoreInterval == nil {
+		return nil
+	}
+	return new(time.Duration(*env.cfg.MetricStoreInterval) * time.Second)
 }
 func (env *Env) FileStoragePath() string {
-	return env.MetricFileStoragePath
+	return env.cfg.MetricFileStoragePath
 }
 func (env *Env) Restore() *bool {
-	return env.MetricRestore
+	return env.cfg.MetricRestore
 }
