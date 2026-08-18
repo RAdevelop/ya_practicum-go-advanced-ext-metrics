@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -36,6 +37,7 @@ type given struct {
 }
 
 var loggerTest = logger.NewTest()
+var configProvider = &server.TestConfigProvider{}
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
@@ -217,9 +219,13 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 		},
 	}
 
+	var err error
+
 	memStorage := memory.NewStorage()
 	metricService := service.NewMetric(memStorage)
-	h := handler.New(metricService, loggerTest)
+	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	assert.NoError(t, err)
+	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -229,7 +235,6 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 	client.SetBaseURL(mockServer.URL)
 
 	var result *resty.Response
-	var err error
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -385,9 +390,12 @@ Use one of the supported metric types: [counter gauge]`,
 		},
 	}
 
+	var err error
 	memStorage := memory.NewStorage()
 	metricService := service.NewMetric(memStorage)
-	h := handler.New(metricService, loggerTest)
+	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	assert.NoError(t, err)
+	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -397,7 +405,6 @@ Use one of the supported metric types: [counter gauge]`,
 	client.SetBaseURL(mockServer.URL)
 
 	var result *resty.Response
-	var err error
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -542,8 +549,9 @@ Use one of the supported metric types: [counter gauge]
 			},
 		},
 	}
-
-	h := handler.New(metricService, loggerTest)
+	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	assert.NoError(t, err)
+	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -635,7 +643,9 @@ func TestMetric_GetWithJson(t *testing.T) {
 		},
 	}
 
-	h := handler.New(metricService, loggerTest)
+	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	assert.NoError(t, err)
+	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()

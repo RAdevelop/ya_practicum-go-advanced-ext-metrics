@@ -7,15 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type TestConfigProvider struct {
+type TestConfProvider struct {
 	address               func() string
 	metricStoreInterval   func() *time.Duration
 	metricFileStoragePath func() string
 	metricRestoreMock     func() *bool
 }
 
-func NewTestConfigProvider(addressMock func() string, metricStoreInterval func() *time.Duration, metricFileStoragePath func() string, metricRestoreMock func() *bool) *TestConfigProvider {
-	return &TestConfigProvider{
+func NewTestConfigProvider(addressMock func() string, metricStoreInterval func() *time.Duration, metricFileStoragePath func() string, metricRestoreMock func() *bool) *TestConfProvider {
+	return &TestConfProvider{
 		address:               addressMock,
 		metricStoreInterval:   metricStoreInterval,
 		metricFileStoragePath: metricFileStoragePath,
@@ -23,18 +23,18 @@ func NewTestConfigProvider(addressMock func() string, metricStoreInterval func()
 	}
 }
 
-func (tcp *TestConfigProvider) Address() string {
+func (tcp *TestConfProvider) Address() string {
 	return tcp.address()
 }
-func (tcp *TestConfigProvider) StoreInterval() *time.Duration {
+func (tcp *TestConfProvider) StoreInterval() *time.Duration {
 	return tcp.metricStoreInterval()
 }
 
-func (tcp *TestConfigProvider) FileStoragePath() string {
+func (tcp *TestConfProvider) FileStoragePath() string {
 	return tcp.metricFileStoragePath()
 }
 
-func (tcp *TestConfigProvider) Restore() *bool {
+func (tcp *TestConfProvider) Restore() *bool {
 	return tcp.metricRestoreMock()
 }
 

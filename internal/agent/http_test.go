@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -21,10 +22,12 @@ var loggerTest = logger.NewTest()
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
 
+	var configProvider = &server.TestConfigProvider{}
 	var metricStorage = memory.NewStorage()
 	var metricService = service.NewMetric(metricStorage)
-
-	h := handler.New(metricService, loggerTest)
+	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	assert.NoError(t, err)
+	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
 	r := router.New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()

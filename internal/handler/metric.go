@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -15,14 +16,18 @@ import (
 )
 
 type Metric struct {
-	metricService *service.MetricService
-	logger        logger.Logger
+	metricService     *service.MetricService
+	logger            logger.Logger
+	config            configServer.ConfigProvider
+	metricInitializer *service.MetricInitializer
 }
 
-func NewMetric(metricService *service.MetricService, logger logger.Logger) *Metric {
+func NewMetric(metricService *service.MetricService, logger logger.Logger, config configServer.ConfigProvider, metricInitializer *service.MetricInitializer) *Metric {
 	return &Metric{
-		metricService: metricService,
-		logger:        logger,
+		metricService:     metricService,
+		logger:            logger,
+		config:            config,
+		metricInitializer: metricInitializer,
 	}
 }
 
@@ -69,6 +74,13 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		m.metricService.CounterAdd(metric.ID, *metric.Delta)
 	} else {
 		m.metricService.GaugeUpdate(metric.ID, *metric.Value)
+	}
+
+	if m.config.StoreInterval() != nil && *m.config.StoreInterval() == 0 {
+		err = m.metricInitializer.Save()
+		if err != nil {
+			m.logger.Error("metricInitializer", "err", err)
+		}
 	}
 
 	contentType := r.Header.Get("Content-Type")

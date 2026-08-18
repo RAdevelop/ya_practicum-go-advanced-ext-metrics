@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/middleware"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -14,9 +15,9 @@ type Handlers struct {
 	MetricList   http.Handler
 }
 
-func New(metricService *service.MetricService, logger logger.Logger) *Handlers {
+func New(metricService *service.MetricService, logger logger.Logger, config configServer.ConfigProvider, metricInitializer *service.MetricInitializer) *Handlers {
 
-	metric := NewMetric(metricService, logger)
+	metric := NewMetric(metricService, logger, config, metricInitializer)
 
 	var metricUpdate = middleware.PipeLine(logger, http.HandlerFunc(metric.Update), middleware.Decompression, middleware.Compression, middleware.WithLogging)
 	var metricGet = middleware.PipeLine(logger, http.HandlerFunc(metric.Get), middleware.Decompression, middleware.Compression, middleware.WithLogging)

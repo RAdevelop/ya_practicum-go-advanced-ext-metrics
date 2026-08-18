@@ -46,16 +46,24 @@ func main() {
 		serverConfig.RestoreSet(srvRestore)
 	}
 
+	/*
+		Понимаю, что тут что-то не так уже идет с архитектурой зависимостей.
+		Надо будет ее пересмотреть, как завершу курс по Кафка (еще месяц примерно на курсе...).
+		Например, metricInitializer - будет "фасадом":
+			- для metricService.
+			- создать интерфейс для такого менеджера (загрузка данных, сохранение данных в/из некоего источника)
+		metricInitializer - имеет смысл переименовать в metricManger, и в обработчиках роутеров уже работать с ним, а не с зоопарком классов
+	*/
+
 	var metricStorage = memory.NewStorage()
 	var metricService = service.NewMetric(metricStorage)
-	h := handler.New(metricService, logMe)
-	r := router.New(h)
-
 	metricInitializer, err := service.NewMetricInitializer(serverConfig.FileStoragePath(), metricService)
 	if err != nil {
 		logMe.Error("error", "err", err)
 		return
 	}
+	h := handler.New(metricService, logMe, serverConfig, metricInitializer)
+	r := router.New(h)
 
 	if serverConfig.Restore() != nil && *serverConfig.Restore() {
 		err = metricInitializer.Load()

@@ -103,6 +103,14 @@ func (ms *MetricInitializer) Load() (err error) {
 		return err
 	}
 
+	stat, err := ms.file.Stat()
+	if err != nil {
+		return err
+	}
+	if stat.Size() == 0 {
+		return nil
+	}
+
 	decoder := json.NewDecoder(ms.file)
 	// Читаем открывающую скобку массива
 	if _, err = decoder.Token(); err != nil {
