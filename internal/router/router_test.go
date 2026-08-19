@@ -224,7 +224,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 	var err error
 
 	memStorage := memory.NewStorage()
-	metricService := metric.NewMetric(memStorage)
+	metricService := metric.NewService(memStorage)
 	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
 	assert.NoError(t, err)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
@@ -395,7 +395,7 @@ Use one of the supported metric types: [counter gauge]`,
 
 	var err error
 	memStorage := memory.NewStorage()
-	metricService := metric.NewMetric(memStorage)
+	metricService := metric.NewService(memStorage)
 	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
 	assert.NoError(t, err)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
@@ -432,7 +432,7 @@ Use one of the supported metric types: [counter gauge]`,
 func TestMetric_GetWithTextPlain(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewMetric(metricStorage)
+	var metricService = metric.NewService(metricStorage)
 
 	tests := []struct {
 		name  string
@@ -588,7 +588,7 @@ Use one of the supported metric types: [counter gauge]
 func TestMetric_GetWithJson(t *testing.T) {
 
 	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewMetric(metricStorage)
+	var metricService = metric.NewService(metricStorage)
 
 	type given struct {
 		metric *models.Metrics
@@ -704,7 +704,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 	}
 }
 
-func metricBuildParamsForCounterGetValue(metricService *metric.MetricService, metricType string, metricName string, metricValues []int64) params {
+func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
 		metricService.CounterAdd(metricName, value)
@@ -717,7 +717,7 @@ func metricBuildParamsForCounterGetValue(metricService *metric.MetricService, me
 	}
 }
 
-func metricBuildParamsForGaugeGetValue(metricService *metric.MetricService, metricType string, metricName string, metricValues []float64) params {
+func metricBuildParamsForGaugeGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
 		metricService.GaugeUpdate(metricName, value)
 	}

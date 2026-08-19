@@ -16,11 +16,11 @@ type MetricManagementAble interface {
 
 // Manager - предоставляет интерфейс (фасад) для работы с метриками
 type Manager struct {
-	metricService  *metric.MetricService
+	metricService  *metric.Service
 	metricSnapshot snapshot.Able
 }
 
-func NewManager(metricService *metric.MetricService, metricSnapshot snapshot.Able) *Manager {
+func NewManager(metricService *metric.Service, metricSnapshot snapshot.Able) *Manager {
 	return &Manager{
 		metricService:  metricService,
 		metricSnapshot: metricSnapshot,

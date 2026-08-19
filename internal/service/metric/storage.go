@@ -1,12 +1,12 @@
 package metric
 
 /*
-MetricStorage - интерфейс по работе с хранилищем метрик
+Storage - интерфейс по работе с хранилищем метрик
 скорее всего этот интерфейс надо разделить на два:
 - для counter
 - для gauge
 */
-type MetricStorage interface {
+type Storage interface {
 	GaugeUpdate(name string, value float64)
 	GaugeByName(name string) (float64, error)
 	Gauge() map[string]float64

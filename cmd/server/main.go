@@ -58,7 +58,7 @@ func main() {
 	*/
 
 	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewMetric(metricStorage)
+	var metricService = metric.NewService(metricStorage)
 	metricSnapshot, err := snapshot.NewFiler(metricService, serverConfig.FileStoragePath())
 	if err != nil {
 		logMe.Error("snapshot.NewFiler", "err", err)

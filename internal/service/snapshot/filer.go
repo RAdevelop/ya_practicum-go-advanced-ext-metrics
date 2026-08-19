@@ -19,13 +19,13 @@ Filer - инициализатор метрик
   - загружает (инициализирует) ранее сохраненные метрики
 */
 type Filer struct {
-	metricService *metric.MetricService
+	metricService *metric.Service
 	fileName      string
 	file          *os.File
 	metrics       []models.Metrics
 }
 
-func NewFiler(metricService *metric.MetricService, fileName string) (*Filer, error) {
+func NewFiler(metricService *metric.Service, fileName string) (*Filer, error) {
 
 	if fileName == "" {
 		return nil, fmt.Errorf("%w: fileName = %s", ErrEmptyFilePath, fileName)

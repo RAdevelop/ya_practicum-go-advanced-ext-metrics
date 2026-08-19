@@ -26,7 +26,7 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	var configProvider = &server.TestConfigProvider{}
 	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewMetric(metricStorage)
+	var metricService = metric.NewService(metricStorage)
 	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
 	assert.NoError(t, err)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
