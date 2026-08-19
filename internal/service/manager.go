@@ -58,7 +58,7 @@ func (manager *Manager) MetricValue(metricType string, metricID string) (*models
 			return nil, err
 		}
 		modelMetric = &models.Metrics{
-			MType: models.Counter,
+			MType: models.Gauge,
 			ID:    metricID,
 			Value: &value,
 		}

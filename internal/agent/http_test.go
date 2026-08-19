@@ -13,6 +13,8 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,10 +26,12 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	var configProvider = &server.TestConfigProvider{}
 	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetric(metricStorage)
-	metricInitializer, err := service.NewMetricInitializer(configProvider.FileStoragePath(), metricService)
+	var metricService = metric.NewMetric(metricStorage)
+	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
 	assert.NoError(t, err)
-	h := handler.New(metricService, loggerTest, configProvider, metricInitializer)
+	var metricManager = service.NewManager(metricService, metricSnapshot)
+
+	h := handler.New(metricManager, loggerTest, configProvider)
 	r := router.New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()

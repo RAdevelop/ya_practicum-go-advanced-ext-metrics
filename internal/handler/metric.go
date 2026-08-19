@@ -109,21 +109,11 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var metricValue any
-
-	metricValue, err = m.metricManager.MetricValue(metric.MType, metric.ID)
-
+	metric, err = m.metricManager.MetricValue(metric.MType, metric.ID)
 	if err != nil {
 		m.logger.Warn("error", "err", err)
 		http.Error(w, "Metric value not found by name", http.StatusNotFound)
 		return
-	}
-
-	switch mValue := metricValue.(type) {
-	case float64:
-		metric.Value = &mValue
-	case int64:
-		metric.Delta = &mValue
 	}
 
 	contentType := r.Header.Get("Content-Type")
@@ -132,6 +122,15 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	if contentType == "application/json" {
 		err = json.NewEncoder(w).Encode(metric)
 	} else {
+
+		var metricValue any
+		switch metric.MType {
+		case models.Gauge:
+			metricValue = *metric.Value
+		case models.Counter:
+			metricValue = *metric.Delta
+		}
+
 		_, err = w.Write([]byte(converter.NumericToString(metricValue)))
 	}
 
