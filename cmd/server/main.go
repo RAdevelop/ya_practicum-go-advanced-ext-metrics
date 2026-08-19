@@ -72,7 +72,7 @@ func main() {
 	if serverConfig.Restore() != nil && *serverConfig.Restore() {
 		err = metricManager.MetricSnapshotLoad()
 		if err != nil {
-			logMe.Error("metricSaver Load", "err", err)
+			logMe.Error("metricManager MetricSnapshotLoad", "err", err)
 		}
 	}
 

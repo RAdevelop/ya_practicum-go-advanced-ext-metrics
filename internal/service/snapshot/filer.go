@@ -44,6 +44,12 @@ func NewFiler(metricService *metric.Service, fileName string) (*Filer, error) {
 	}, nil
 }
 
+/*
+Load - получаем данные метрик из хранилища снимков, и загружаем их в основное хранилище
+
+TODO чтобы такие "толстые" методы можно было покрыть тестами (с хорошим уровнем покрытия), надо из разбить на мелкие методы.
+  - Тогда можно будет протестировать логику метода через моки/стабы
+*/
 func (filer *Filer) Load() (err error) {
 	defer func() {
 		errClose := filer.closeFile()
@@ -52,6 +58,9 @@ func (filer *Filer) Load() (err error) {
 
 	err = filer.openFile()
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
 		return err
 	}
 

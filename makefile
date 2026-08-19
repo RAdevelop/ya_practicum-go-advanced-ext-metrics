@@ -1,5 +1,12 @@
 # Переменные
+
+#номер инкремента
 iter ?=
+
+# Цвета для вывода
+GREEN = \033[0;32m
+YELLOW = \033[0;33m
+NC = \033[0m # No Color
 
 .PHONY: help
 help: ## Показать справку
@@ -8,11 +15,15 @@ help: ## Показать справку
 
 .PHONY: test
 test: ## Запустить локальные тесты
+	@echo "$(GREEN)=== Running tests ===$(NC)"
+	@go generate ./...
 	@go test ./...
+	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-v
 test-v: ## Запустить тесты с подробным выводом
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@go generate ./...
 	@go test ./... -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
@@ -31,7 +42,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 		-source-path=. \
 		-test.failfast \
 		-file-storage-path=$${TEMP_FILE} \
-	&& echo $$ADDRESS
+	&& echo $$ADDRESS && rm -f $$TEMP_FILE
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 

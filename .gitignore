@@ -28,3 +28,5 @@ vendor/
 sprints
 
 dump
+
+mocks_mockery_test.go

@@ -6,6 +6,7 @@ Storage - интерфейс по работе с хранилищем метр�
 - для counter
 - для gauge
 */
+//go:generate mockery
 type Storage interface {
 	GaugeUpdate(name string, value float64)
 	GaugeByName(name string) (float64, error)
