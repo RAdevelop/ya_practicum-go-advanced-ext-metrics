@@ -11,6 +11,8 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
 
 func main() {
@@ -56,23 +58,25 @@ func main() {
 	*/
 
 	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetric(metricStorage)
-	metricInitializer, err := service.NewMetricInitializer(serverConfig.FileStoragePath(), metricService)
+	var metricService = metric.NewMetric(metricStorage)
+	metricSnapshot, err := snapshot.NewFiler(metricService, serverConfig.FileStoragePath())
 	if err != nil {
-		logMe.Error("error", "err", err)
+		logMe.Error("snapshot.NewFiler", "err", err)
 		return
 	}
-	h := handler.New(metricService, logMe, serverConfig, metricInitializer)
+	var metricManager = service.NewManager(metricService, metricSnapshot)
+
+	h := handler.New(metricManager, logMe, serverConfig)
 	r := router.New(h)
 
 	if serverConfig.Restore() != nil && *serverConfig.Restore() {
-		err = metricInitializer.Load()
+		err = metricManager.MetricSnapshotLoad()
 		if err != nil {
 			logMe.Error("metricSaver Load", "err", err)
 		}
 	}
 
-	go saver(metricInitializer, logMe, serverConfig)
+	go saver(metricManager, logMe, serverConfig)
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
@@ -80,7 +84,7 @@ func main() {
 	}
 }
 
-func saver(metricInitializer *service.MetricInitializer, logger logger.Logger, config configServer.ConfigProvider) {
+func saver(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
 
 	if config.StoreInterval() == nil || *config.StoreInterval() <= 0 {
 		return
@@ -95,7 +99,7 @@ func saver(metricInitializer *service.MetricInitializer, logger logger.Logger, c
 		select {
 		case <-metricStoreIntervalTicker.C:
 
-			err := metricInitializer.Save()
+			err := metricManager.MetricSnapshotSave()
 			if err != nil {
 				logger.Error("MetricInitializer", "err", err)
 			}

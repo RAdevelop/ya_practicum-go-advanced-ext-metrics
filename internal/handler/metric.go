@@ -16,18 +16,16 @@ import (
 )
 
 type Metric struct {
-	metricService     *service.MetricService
-	logger            logger.Logger
-	config            configServer.ConfigProvider
-	metricInitializer *service.MetricInitializer
+	metricManager service.MetricManagementAble
+	logger        logger.Logger
+	config        configServer.ConfigProvider
 }
 
-func NewMetric(metricService *service.MetricService, logger logger.Logger, config configServer.ConfigProvider, metricInitializer *service.MetricInitializer) *Metric {
+func NewMetric(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) *Metric {
 	return &Metric{
-		metricService:     metricService,
-		logger:            logger,
-		config:            config,
-		metricInitializer: metricInitializer,
+		metricManager: metricManager,
+		logger:        logger,
+		config:        config,
 	}
 }
 
@@ -70,16 +68,12 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if metric.MType == models.Counter {
-		m.metricService.CounterAdd(metric.ID, *metric.Delta)
-	} else {
-		m.metricService.GaugeUpdate(metric.ID, *metric.Value)
-	}
+	m.metricManager.MetricUpdate(metric)
 
 	if m.config.StoreInterval() != nil && *m.config.StoreInterval() == 0 {
-		err = m.metricInitializer.Save()
+		err = m.metricManager.MetricSnapshotSave()
 		if err != nil {
-			m.logger.Error("metricInitializer", "err", err)
+			m.logger.Error("metricManager", "err", err)
 		}
 	}
 
@@ -117,11 +111,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 	var metricValue any
 
-	if metric.MType == models.Counter {
-		metricValue, err = m.metricService.CounterByNameAccumulative(metric.ID)
-	} else {
-		metricValue, err = m.metricService.GaugeByName(metric.ID)
-	}
+	metricValue, err = m.metricManager.MetricValue(metric.MType, metric.ID)
 
 	if err != nil {
 		m.logger.Warn("error", "err", err)
@@ -159,34 +149,13 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	sb.Grow(1024)
 
 	sb.WriteString("<ul>")
-	sb.WriteString("<li><strong>Gauge metrics:</strong>")
 
-	gaugeMetrics := m.metricService.Gauge()
-	if len(gaugeMetrics) > 0 {
-		sb.WriteString("<ul>")
-		for name, value := range gaugeMetrics {
-			// Порядок метрик при выводе на страницу будет чаще всего разный всегда из-за перебора по "map"
-			// Но прям требования на этот счет не было. Поэтому оставляю пока так.
-			sb.WriteString("<li>")
-			sb.WriteString(fmt.Sprintf("%s: %v", name, value))
-			sb.WriteString("</li>")
-		}
-		sb.WriteString("</ul>")
-	}
-	sb.WriteString("</li>")
+	gaugeMetrics := m.metricManager.MetricList(models.Gauge)
+	m.metricListRender(&sb, "Gauge metrics", models.Gauge, gaugeMetrics)
 
-	sb.WriteString("<li><strong>Counter metrics:</strong>")
-	counterMetrics := m.metricService.CounterAccumulative()
-	if len(counterMetrics) > 0 {
-		sb.WriteString("<ul>")
-		for name, value := range counterMetrics {
-			sb.WriteString("<li>")
-			sb.WriteString(fmt.Sprintf("%s: %v", name, value))
-			sb.WriteString("</li>")
-		}
-		sb.WriteString("</ul>")
-	}
-	sb.WriteString("</li>")
+	gaugeMetrics = m.metricManager.MetricList(models.Counter)
+	m.metricListRender(&sb, "Counter metrics", models.Counter, gaugeMetrics)
+
 	sb.WriteString("</ul>")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -196,6 +165,26 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 		m.logger.Error("error", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
+}
+
+func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType string, metricList map[string]models.Metrics) {
+	sb.WriteString("<li><strong>" + title + ":</strong>")
+
+	if len(metricList) > 0 {
+		sb.WriteString("<ul>")
+		for name, metric := range metricList {
+			sb.WriteString("<li>")
+			if metricType == models.Gauge {
+				sb.WriteString(fmt.Sprintf("%s: %v", name, *metric.Value))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s: %v", name, *metric.Delta))
+			}
+
+			sb.WriteString("</li>")
+		}
+		sb.WriteString("</ul>")
+	}
+	sb.WriteString("</li>")
 }
 
 func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {

@@ -15,9 +15,9 @@ type Handlers struct {
 	MetricList   http.Handler
 }
 
-func New(metricService *service.MetricService, logger logger.Logger, config configServer.ConfigProvider, metricInitializer *service.MetricInitializer) *Handlers {
+func New(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) *Handlers {
 
-	metric := NewMetric(metricService, logger, config, metricInitializer)
+	metric := NewMetric(metricManager, logger, config)
 
 	var metricUpdate = middleware.PipeLine(logger, http.HandlerFunc(metric.Update), middleware.Decompression, middleware.Compression, middleware.WithLogging)
 	var metricGet = middleware.PipeLine(logger, http.HandlerFunc(metric.Get), middleware.Decompression, middleware.Compression, middleware.WithLogging)

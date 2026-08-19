@@ -1,4 +1,4 @@
-package service
+package metric
 
 // MetricService - сервис для работы с метриками
 type MetricService struct {

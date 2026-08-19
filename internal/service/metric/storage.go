@@ -1,4 +1,4 @@
-package service
+package metric
 
 /*
 MetricStorage - интерфейс по работе с хранилищем метрик
