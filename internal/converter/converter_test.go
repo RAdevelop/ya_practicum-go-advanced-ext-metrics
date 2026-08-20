@@ -84,3 +84,90 @@ func TestNumericToString(t *testing.T) {
 		})
 	}
 }
+
+func TestToFloat64(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   any
+		want    float64
+		wantErr bool
+	}{
+		{
+			name:    "int(1)",
+			value:   1,
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "int32(1)",
+			value:   int32(1),
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "int64(1)",
+			value:   int64(1),
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "float32(123.123)",
+			value:   float32(123.123),
+			want:    123.123,
+			wantErr: false,
+		},
+		{
+			name:    "float64(123.123)",
+			value:   123.123,
+			want:    123.123,
+			wantErr: false,
+		},
+		{
+			name:    "float64(-123.123)",
+			value:   -123.123,
+			want:    -123.123,
+			wantErr: false,
+		},
+		{
+			name:    "string(-123.123)",
+			value:   "-123.123",
+			want:    -123.123,
+			wantErr: false,
+		},
+		{
+			name:    "nil",
+			value:   nil,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "bool(true)",
+			value:   true,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "bool(false)",
+			value:   false,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "struct {}{}",
+			value:   struct{}{},
+			want:    0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ToFloat64(tt.value)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.InDelta(t, tt.want, got, 1e-5, "ToFloat64(%v) = %v, want %v", tt.value, got, tt.want)
+		})
+	}
+}

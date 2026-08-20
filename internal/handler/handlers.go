@@ -3,6 +3,9 @@ package handler
 import (
 	"net/http"
 
+	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/middleware"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 )
 
@@ -12,13 +15,16 @@ type Handlers struct {
 	MetricList   http.Handler
 }
 
-func New(metricService *service.MetricService) *Handlers {
+func New(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) *Handlers {
 
-	metric := NewMetric(metricService)
+	metric := NewMetric(metricManager, logger, config)
 
+	var metricUpdate = middleware.PipeLine(logger, http.HandlerFunc(metric.Update), middleware.Decompression, middleware.Compression, middleware.WithLogging)
+	var metricGet = middleware.PipeLine(logger, http.HandlerFunc(metric.Get), middleware.Decompression, middleware.Compression, middleware.WithLogging)
+	var metricList = middleware.PipeLine(logger, http.HandlerFunc(metric.List), middleware.Decompression, middleware.Compression, middleware.WithLogging)
 	return &Handlers{
-		MetricUpdate: MiddlewarePipeLine(http.HandlerFunc(metric.Update), MiddlewareValidator, MiddlewareIsPostRequest),
-		MetricGet:    MiddlewarePipeLine(http.HandlerFunc(metric.Get), MiddlewareValidator),
-		MetricList:   http.HandlerFunc(metric.List),
+		MetricUpdate: metricUpdate,
+		MetricGet:    metricGet,
+		MetricList:   metricList,
 	}
 }

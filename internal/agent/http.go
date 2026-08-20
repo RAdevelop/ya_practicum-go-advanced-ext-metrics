@@ -1,8 +1,13 @@
 package agent
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"net/http"
+	"sync"
 
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -11,25 +16,30 @@ type HttpAgent struct {
 	client *resty.Client
 }
 
-// MetricIn - данные по метрике, которые надо отправить на сервер
-type MetricIn struct {
-	Type  string
-	Name  string
-	Value string
-}
-
 func New(client *resty.Client) *HttpAgent {
 	return &HttpAgent{
 		client: client,
 	}
 }
 
-func (a HttpAgent) Update(metric MetricIn) (*http.Response, error) {
-	url := "/update/" + metric.Type + "/" + metric.Name + "/" + metric.Value
+func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
+	url := "/update"
+	body, err := json.Marshal(metric)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = compress(body)
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
+		SetHeader("Content-Type", "application/json").
 		SetDoNotParseResponse(true).
+		SetHeader("Content-Encoding", "gzip").
+		SetHeader("Accept-Encoding", "gzip").
+		SetBody(body).
 		Post(url)
 
 	if err != nil {
@@ -39,17 +49,45 @@ func (a HttpAgent) Update(metric MetricIn) (*http.Response, error) {
 	return resp.RawResponse, nil
 }
 
-func (a HttpAgent) Get(metric MetricIn) (*http.Response, error) {
-	url := "/value/" + metric.Type + "/" + metric.Name
+// gzipPool - Пул для gzip.Writer() (сжимает данные)
+var gzipPool = sync.Pool{
+	New: func() interface{} {
+		gz, _ := gzip.NewWriterLevel(nil, gzip.DefaultCompression)
+		return gz
+	},
+}
 
-	resp, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
-		SetDoNotParseResponse(true).
-		Get(url)
+// bufferPool - Пул для bytes.Buffer() (хранит сжатые данные)
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return &bytes.Buffer{}
+	},
+}
 
-	if err != nil {
+// Compress - сжимает данные с использованием пулов
+func compress(data []byte) ([]byte, error) {
+	// Берем буфер из пула
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf) // Возвращаем в пул после использования
+
+	// Берем gzip.Writer() из пула
+	gz := gzipPool.Get().(*gzip.Writer)
+	gz.Reset(buf) // Направляем вывод в буфер
+	defer func() {
+		gzipPool.Put(gz) // Возвращаем в пул
+	}()
+
+	// Сжимаем данные
+	if _, err := gz.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gz.Close(); err != nil {
 		return nil, err
 	}
 
-	return resp.RawResponse, nil
+	// 4. Копируем результат (обязательно, т.к. буфер будет переиспользован)
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }

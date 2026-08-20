@@ -4,22 +4,31 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"runtime"
 	"time"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
+	configAgent "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/go-resty/resty/v2"
 )
 
 const metricNamePollCount = "PollCount"
 
+type agentSettings struct {
+	ServerAddress  string
+	IntervalReport uint
+	IntervalPoll   uint
+}
+
 func main() {
 	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
 	var runtimeMetrics map[string]any
+
+	logMe := logger.New()
 
 	srvAddress := &agent.ServerAddress{
 		Host: "localhost",
@@ -28,18 +37,28 @@ func main() {
 	_ = flag.Value(srvAddress)
 
 	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	rInterval := flag.Int("r", 10, `The frequency of sending metrics to the server in seconds`)
-	pInterval := flag.Int("p", 2, `The frequency of metrics polling in seconds`)
+	rInterval := flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
+	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
 	flag.Parse()
 
+	configAgentEnv, err := configAgent.NewEnv()
+	if err != nil {
+		logMe.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
+		return
+	}
+
+	agentConfig := configAgent.New(configAgentEnv)
+
+	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
+
 	httpClient := resty.New()
-	httpClient.SetBaseURL(srvAddress.String())
+	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
 
 	httpAgent := agent.New(httpClient)
 	var pollCount = int64(0)
 
-	pollInterval := time.NewTicker(time.Duration(*pInterval) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(*rInterval) * time.Second)
+	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
 
 	defer func() {
 		pollInterval.Stop()
@@ -52,17 +71,39 @@ func main() {
 			runtimeMetrics = collectRuntimeMetrics()
 			pollCount++
 		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(httpAgent, pollCount, runtimeMetrics)
+			runtimeMetricSend(logMe, httpAgent, pollCount, runtimeMetrics)
 			pollCount = 0
 		}
 	}
 }
 
-func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) (err error) {
+func settings(agentConfig configAgent.ConfigProvider, srvAddress string, intervalReport *uint, intervalPoll *uint) agentSettings {
+
+	cfg := agentSettings{
+		ServerAddress:  srvAddress,
+		IntervalReport: *intervalReport,
+		IntervalPoll:   *intervalPoll,
+	}
+
+	if agentConfig.Address() != "" {
+		cfg.ServerAddress = agentConfig.Address()
+	}
+
+	if agentConfig.ReportInterval() > 0 {
+		cfg.IntervalReport = agentConfig.ReportInterval()
+	}
+	if agentConfig.PollInterval() > 0 {
+		cfg.IntervalPoll = agentConfig.PollInterval()
+	}
+
+	return cfg
+}
+
+func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error) {
 
 	resp, err := httpAgent.Update(metric)
 	if err != nil {
-		err = fmt.Errorf("Error updating metric: %v\n err: %w\n", metric, err)
+		err = fmt.Errorf("error updating metric: %v\n err: %w", metric, err)
 		return err
 	}
 	defer func() {
@@ -79,12 +120,12 @@ func metricUpdate(httpAgent *agent.HttpAgent, metric agent.MetricIn) (err error)
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
 	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		return fmt.Errorf("error body reading for updating metric: %v, err: %w\n", metric, err)
+		return fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
 	}
 	return nil
 }
 
-func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
+func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -95,39 +136,43 @@ func runtimeMetricSend(httpAgent *agent.HttpAgent, pollCount int64, runtimeMetri
 
 	var err error
 	for name, value := range runtimeMetrics {
-		m := agent.MetricIn{
-			Type:  models.Gauge,
-			Name:  name,
-			Value: converter.NumericToString(value),
+		v, errConvert := converter.ToFloat64(value)
+		if errConvert != nil {
+			continue
+		}
+		m := models.Metrics{
+			MType: models.Gauge,
+			ID:    name,
+			Value: &v,
 		}
 
 		err = metricUpdate(httpAgent, m)
 		if err != nil {
-			log.Printf("Error updating metric: %v, err: %v\n", m, err)
+			logMe.Warn("error", "err", err)
 		}
 	}
 
-	m := agent.MetricIn{
-		Type: models.Gauge,
-		Name: "RandomValue",
-		Value: (func(min, max float64) string {
+	m := models.Metrics{
+		MType: models.Gauge,
+		ID:    "RandomValue",
+		Value: (func(min, max float64) *float64 {
 			rnd := min + rand.Float64()*(max-min)
-			return converter.NumericToString(rnd)
+			return &rnd
 		})(0, 1000),
 	}
 
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+		logMe.Warn("error", "err", err)
 	}
-	m = agent.MetricIn{
-		Type:  models.Counter,
-		Name:  metricNamePollCount,
-		Value: converter.NumericToString(pollCount),
+	m = models.Metrics{
+		MType: models.Counter,
+		ID:    metricNamePollCount,
+		Delta: &pollCount,
 	}
 	err = metricUpdate(httpAgent, m)
 	if err != nil {
-		log.Printf("Error updating metric: %v, err: %v\n", m, err)
+		logMe.Warn("error", "err", err)
 	}
 }
 

@@ -25,5 +25,8 @@ vendor/
 .vscode
 
 .DS_Store
-sprint1
+sprints
 
+dump
+
+#mocks_mockery*.go

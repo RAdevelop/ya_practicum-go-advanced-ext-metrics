@@ -6,21 +6,54 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+func setupMockLogger(t *testing.T) *logger.MockLogger {
+	logMe := logger.NewMockLogger(t)
+
+	//не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
+	logMe.EXPECT().Info(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Error(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Warn(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Debug(mock.Anything, mock.Anything, mock.Anything).Maybe()
+
+	return logMe
+}
+
+func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
+	cfg := server.NewMockConfigProvider(t)
+
+	cfg.EXPECT().FileStoragePath().Maybe().Return("mock.file")
+	cfg.EXPECT().Address().Maybe().Return("localhost:8080")
+	cfg.EXPECT().StoreInterval().Maybe().Return(nil)
+	cfg.EXPECT().Restore().Maybe().Return(nil)
+
+	return cfg
+}
 
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
 
-	var metricStorage = memory.NewStorage()
-	var metricService = service.NewMetricService(metricStorage)
+	mockConfigProvider := setupMockConfigProvider(t)
 
-	h := handler.New(metricService)
+	var metricStorage = memory.NewStorage()
+	var metricService = metric.NewService(metricStorage)
+	metricSnapshot := snapshot.NewMockAble(t)
+	var metricManager = service.NewManager(metricService, metricSnapshot)
+
+	h := handler.New(metricManager, setupMockLogger(t), mockConfigProvider)
 	r := router.New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -36,15 +69,15 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		given MetricIn
+		given models.Metrics
 		want  want
 	}{
 		{
 			name: "gauge StatusOK",
-			given: MetricIn{
-				Type:  "gauge",
-				Name:  "test",
-				Value: "42.42",
+			given: models.Metrics{
+				MType: "gauge",
+				ID:    "test",
+				Value: new(42.42),
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -52,10 +85,10 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter StatusOK",
-			given: MetricIn{
-				Type:  "counter",
-				Name:  "test",
-				Value: "42",
+			given: models.Metrics{
+				MType: "counter",
+				ID:    "test",
+				Delta: new(int64(42)),
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -63,10 +96,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "gauge WrongType StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "test",
-				Value: "42.42",
+			given: models.Metrics{
+				MType: "gaugeWrongType",
+				ID:    "test",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -74,43 +106,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongType StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "test",
-				Value: "42",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "gauge WrongValue StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "test",
-				Value: "42.42WrongValue",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "counter WrongValue StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "test",
-				Value: "42WrongValue",
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "gauge WrongName StatusBadRequest",
-			given: MetricIn{
-				Type:  "gaugeWrongType",
-				Name:  "-WrongName",
-				Value: "42.42WrongValue",
+			given: models.Metrics{
+				MType: "counterWrongType",
+				ID:    "test",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -118,10 +116,9 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongName StatusBadRequest",
-			given: MetricIn{
-				Type:  "counterWrongType",
-				Name:  "12WrongName",
-				Value: "42",
+			given: models.Metrics{
+				MType: "counterWrongType",
+				ID:    "12WrongName",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,

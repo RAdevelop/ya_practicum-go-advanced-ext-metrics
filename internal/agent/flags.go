@@ -12,7 +12,7 @@ type ServerAddress struct {
 }
 
 func (sa *ServerAddress) String() string {
-	return fmt.Sprintf("http://%s:%d", sa.Host, sa.Port)
+	return fmt.Sprintf("%s:%d", sa.Host, sa.Port)
 }
 
 func (sa *ServerAddress) Set(flagValue string) error {
