@@ -52,14 +52,14 @@ func setupMockLogger(t *testing.T) *logger.MockLogger {
 }
 
 func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
-	mock := server.NewMockConfigProvider(t)
+	cfg := server.NewMockConfigProvider(t)
 
-	mock.EXPECT().FileStoragePath().Maybe().Return("mock.file")
-	mock.EXPECT().Address().Maybe().Return("localhost:8080")
-	mock.EXPECT().StoreInterval().Maybe().Return(nil)
-	mock.EXPECT().Restore().Maybe().Return(nil)
+	cfg.EXPECT().FileStoragePath().Maybe().Return("mock.file")
+	cfg.EXPECT().Address().Maybe().Return("localhost:8080")
+	cfg.EXPECT().StoreInterval().Maybe().Return(nil)
+	cfg.EXPECT().Restore().Maybe().Return(nil)
 
-	return mock
+	return cfg
 }
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
