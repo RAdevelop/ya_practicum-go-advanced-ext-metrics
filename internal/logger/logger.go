@@ -8,6 +8,8 @@ import (
 )
 
 // Logger - интерфейс для логирования
+//
+//go:generate mockery
 type Logger interface {
 	Debug(msg string, args ...any)
 	Info(msg string, args ...any)
@@ -39,18 +41,6 @@ func (l *LogMe) Warn(msg string, args ...any) {
 func (l *LogMe) Error(msg string, args ...any) {
 	l.log.Error(msg, l.withFileLine(args...)...)
 }
-
-// LogMeTest - заглушка для логов во время выполнения тестов
-type LogMeTest struct{}
-
-func NewTest() Logger {
-	return &LogMeTest{}
-}
-
-func (l *LogMeTest) Debug(string, ...any) {}
-func (l *LogMeTest) Info(string, ...any)  {}
-func (l *LogMeTest) Warn(string, ...any)  {}
-func (l *LogMeTest) Error(string, ...any) {}
 
 // withFileLine - добавим ко всем логам путь к файлу и номеру строки, где вызвали метод логирования
 func (l *LogMe) withFileLine(args ...any) []any {

@@ -1,6 +1,6 @@
 all: false
 dir: '{{.InterfaceDir}}'
-filename: mocks_mockery_test.go
+filename: mocks_mockery.go
 force-file-write: true
 formatter: goimports
 formatter-options:
@@ -24,5 +24,22 @@ template-schema: '{{.Template}}.schema.json'
 packages:
   github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric:
     config:
-      all: true
+      all: false
+    interfaces:
+      Storage:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server:
+    config:
+      all: false
+    interfaces:
+      ConfigProvider:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot:
+    config:
+      all: false
+    interfaces:
+      Able:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger:
+    config:
+      all: false
+    interfaces:
+      Logger:
 

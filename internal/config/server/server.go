@@ -3,6 +3,8 @@ package server
 import "time"
 
 // ConfigProvider - абстракция над работой настроек для сервера (они могут быть получены из: ENV переменных, INI файла, БД, и т.п.)
+//
+//go:generate mockery
 type ConfigProvider interface {
 	Address() string
 	StoreInterval() *time.Duration
@@ -72,26 +74,4 @@ func (c *Config) RestoreSet(metricRestore *bool) {
 	if metricRestore != nil {
 		c.metricRestore = metricRestore
 	}
-}
-
-/*
-Примечание для себя. Надо будет в ближайшее время практиковаться генерировать моки на основе инетерфейсов.
-Чтобы не писать вот такие заглушки.
-*/
-type TestConfigProvider struct{}
-
-func (TestConfigProvider) Address() string {
-	return ""
-}
-
-func (TestConfigProvider) StoreInterval() *time.Duration {
-	return new(time.Duration(1))
-}
-
-func (TestConfigProvider) FileStoragePath() string {
-	return "path"
-}
-
-func (TestConfigProvider) Restore() *bool {
-	return new(false)
 }

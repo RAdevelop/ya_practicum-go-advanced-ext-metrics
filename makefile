@@ -20,8 +20,22 @@ test: ## Запустить локальные тесты
 	@go test ./...
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
+.PHONY: test-c
+test-c: ## Запустить тесты без кэширования
+	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@go generate ./...
+	@go test ./... -count=1
+	@echo "$(GREEN)✅ Tests completed$(NC)"
+
 .PHONY: test-v
 test-v: ## Запустить тесты с подробным выводом
+	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@go generate ./...
+	@go test ./... -v
+	@echo "$(GREEN)✅ Tests completed$(NC)"
+
+.PHONY: test-vс
+test-vc: ## Запустить тесты с подробным выводом без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
 	@go generate ./...
 	@go test ./... -v -count=1

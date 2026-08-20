@@ -19,6 +19,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type params struct {
@@ -38,8 +39,28 @@ type given struct {
 	reqParams   params
 }
 
-var loggerTest = logger.NewTest()
-var configProvider = &server.TestConfigProvider{}
+func setupMockLogger(t *testing.T) *logger.MockLogger {
+	logMe := logger.NewMockLogger(t)
+
+	//не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
+	logMe.EXPECT().Info(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Error(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Warn(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	logMe.EXPECT().Debug(mock.Anything, mock.Anything, mock.Anything).Maybe()
+
+	return logMe
+}
+
+func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
+	mock := server.NewMockConfigProvider(t)
+
+	mock.EXPECT().FileStoragePath().Maybe().Return("mock.file")
+	mock.EXPECT().Address().Maybe().Return("localhost:8080")
+	mock.EXPECT().StoreInterval().Maybe().Return(nil)
+	mock.EXPECT().Restore().Maybe().Return(nil)
+
+	return mock
+}
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
@@ -223,12 +244,13 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	var err error
 
+	loggerTest := setupMockLogger(t)
+	mockConfigProvider := setupMockConfigProvider(t)
 	memStorage := memory.NewStorage()
 	metricService := metric.NewService(memStorage)
-	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
-	assert.NoError(t, err)
+	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, configProvider)
+	h := handler.New(metricManager, loggerTest, mockConfigProvider)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -394,12 +416,13 @@ Use one of the supported metric types: [counter gauge]`,
 	}
 
 	var err error
+	loggerTest := setupMockLogger(t)
+	mockConfigProvider := setupMockConfigProvider(t)
 	memStorage := memory.NewStorage()
 	metricService := metric.NewService(memStorage)
-	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
-	assert.NoError(t, err)
+	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, configProvider)
+	h := handler.New(metricManager, loggerTest, mockConfigProvider)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -553,10 +576,11 @@ Use one of the supported metric types: [counter gauge]
 			},
 		},
 	}
-	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
-	assert.NoError(t, err)
+	loggerTest := setupMockLogger(t)
+	mockConfigProvider := setupMockConfigProvider(t)
+	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, configProvider)
+	h := handler.New(metricManager, loggerTest, mockConfigProvider)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
@@ -648,10 +672,11 @@ func TestMetric_GetWithJson(t *testing.T) {
 		},
 	}
 
-	metricSnapshot, err := snapshot.NewFiler(metricService, configProvider.FileStoragePath())
-	assert.NoError(t, err)
+	loggerTest := setupMockLogger(t)
+	mockConfigProvider := setupMockConfigProvider(t)
+	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, configProvider)
+	h := handler.New(metricManager, loggerTest, mockConfigProvider)
 	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
