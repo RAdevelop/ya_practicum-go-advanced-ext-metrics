@@ -46,8 +46,8 @@ func main() {
 		logMe.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
 		return
 	}
-	var agentConfig configAgent.ConfigProvider
-	agentConfig = configAgent.New(configAgentEnv)
+
+	agentConfig := configAgent.New(configAgentEnv)
 
 	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
 
@@ -143,7 +143,7 @@ func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCoun
 		m := models.Metrics{
 			MType: models.Gauge,
 			ID:    name,
-			Value: new(v),
+			Value: &v,
 		}
 
 		err = metricUpdate(httpAgent, m)
@@ -157,7 +157,7 @@ func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCoun
 		ID:    "RandomValue",
 		Value: (func(min, max float64) *float64 {
 			rnd := min + rand.Float64()*(max-min)
-			return new(rnd)
+			return &rnd
 		})(0, 1000),
 	}
 

@@ -95,14 +95,10 @@ func saver(metricManager service.MetricManagementAble, logger logger.Logger, con
 		metricStoreIntervalTicker.Stop()
 	}()
 
-	for {
-		select {
-		case <-metricStoreIntervalTicker.C:
-
-			err := metricManager.MetricSnapshotSave()
-			if err != nil {
-				logger.Error("MetricInitializer", "err", err)
-			}
+	for range metricStoreIntervalTicker.C {
+		err := metricManager.MetricSnapshotSave()
+		if err != nil {
+			logger.Error("MetricInitializer", "err", err)
 		}
 	}
 }
