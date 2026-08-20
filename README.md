@@ -33,117 +33,13 @@ git fetch template && git checkout template/v2 .github
 
 ### на локальной машине (mac os)
 
-### iter1
+### iterN - запуск тестов практикума и/или локальные тесты:
+
+> [metricstest_v2-darwin-amd64](https://github.com/Yandex-Practicum/go-autotests/releases/download/v0.13.4/metricstest_v2-darwin-amd64) - для запуска текстов практикума файл должен быть в корне проекта  
+
+Как запускать тесты - смотри файл `makefile`:
 ```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration1$ -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
-```
-
-### iter2
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run="^TestIteration2[AB]*$" -source-path=. -agent-binary-path=cmd/agent/agent
-```
-
-### iter3
-```bash
-go build -o ./cmd/server/server ./cmd/server/main.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/main.go \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run="^TestIteration3[AB]*$" -source-path=. -agent-binary-path=cmd/agent/agent -binary-path=cmd/server/server
-```
-
-### iter4
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=$(jot -r 1 1024 9000) \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration4$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=.
-```
-
-### iter5
-
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=$(jot -r 1 1024 9000) \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration5$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=. \
-&& echo $ADDRESS
-```
-### iter6
-
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=$(jot -r 1 1024 9000) \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration6$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=. \
-&& echo $ADDRESS
-```
-
-### iter7
-
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=$(jot -r 1 1024 9000) \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration7$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=. \
--test.failfast \
-&& echo $ADDRESS
-```
-
-### iter8
-
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=$(jot -r 1 1024 9000) \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration8$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=. \
--test.failfast \
-&& echo $ADDRESS
-```
-
-### iter9
-
-```bash
-go build -o ./cmd/server/server ./cmd/server/*.go \
-&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
-&& SERVER_PORT=8080 \
-&& ADDRESS="localhost:${SERVER_PORT}" \
-&& TEMP_FILE="iter9.json" \
-&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration9$ \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server \
--server-port=$SERVER_PORT \
--source-path=. \
--test.failfast \
--file-storage-path=$TEMP_FILE \
-&& echo $ADDRESS
+make help
 ```
 
 ## Структура проекта
