@@ -1,8 +1,9 @@
 # Переменные
 ## Это конечно не хранить в Git.
-export POSTGRES_USER := go-advanced-ext
-export POSTGRES_PASSWORD := go-advanced-ext
-export POSTGRES_DB := go-advanced-ext
+
+export POSTGRES_USER := postgres
+export POSTGRES_PASSWORD := postgres
+export POSTGRES_DB := praktikum
 
 # Определение команды docker-compose
 DOCKER_COMPOSE := docker-compose
@@ -129,7 +130,7 @@ build:  ## Собрать кластер
 rebuild:  ## пересобрать кластер
 	@make down
 	@make clean
-	@make up --no-deps --build
+	@$(DOCKER_COMPOSE) up -d --no-deps --build
 	@make status
 	@make unset-env
 
