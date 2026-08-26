@@ -48,7 +48,14 @@ func TestEnv(t *testing.T) {
 				Environment: map[string]string{},
 			},
 			want: want{
-				hasErr: true,
+				hasErr: false,
+				envCfg: envCfg{
+					DSN:             "",
+					MaxConns:        25,
+					MinConns:        5,
+					MaxConnLifetime: time.Hour,
+					MaxConnIdleTime: 5 * time.Minute,
+				},
 			},
 		},
 		{
@@ -63,7 +70,13 @@ func TestEnv(t *testing.T) {
 				},
 			},
 			want: want{
-				hasErr: true,
+				hasErr: false,
+				envCfg: envCfg{
+					MaxConns:        25,
+					MinConns:        5,
+					MaxConnLifetime: 1 * time.Hour,
+					MaxConnIdleTime: 1 * time.Minute,
+				},
 			},
 		},
 		{
@@ -132,17 +145,17 @@ func TestEnv(t *testing.T) {
 			envConf, err := NewEnvWithOptions(tt.env)
 
 			if tt.want.hasErr {
-				assert.Error(t, err)
-				assert.Nil(t, envConf)
+				assert.Errorf(t, err, "env: %v", tt.env)
+				assert.Nil(t, envConf, "env: %v", tt.env)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want.envCfg.DSN, envConf.DSN())
-			assert.Equal(t, tt.want.envCfg.MaxConns, envConf.MaxConns())
-			assert.Equal(t, tt.want.envCfg.MinConns, envConf.MinConns())
-			assert.Equal(t, tt.want.envCfg.MaxConnLifetime, envConf.MaxConnLifetime())
-			assert.Equal(t, tt.want.envCfg.MaxConnIdleTime, envConf.MaxConnIdleTime())
+			assert.Equalf(t, tt.want.DSN, envConf.DSN(), "want DSN: %v, got: %v", tt.want.DSN, envConf.DSN())
+			assert.Equalf(t, tt.want.MaxConns, envConf.MaxConns(), "want MaxConns: %v, got %v", tt.want.MaxConns, envConf.MaxConns())
+			assert.Equalf(t, tt.want.MinConns, envConf.MinConns(), "want MinConns: %v, got %v", tt.want.MinConns, envConf.MinConns())
+			assert.Equalf(t, tt.want.MaxConnLifetime, envConf.MaxConnLifetime(), "want MaxConnLifetime: %v, got %v", tt.want.MaxConnLifetime, envConf.MaxConnLifetime())
+			assert.Equalf(t, tt.want.MaxConnIdleTime, envConf.MaxConnIdleTime(), "want MaxConnIdleTime: %v, got: %v", tt.want.MaxConnIdleTime, envConf.MaxConnIdleTime())
 		})
 	}
 }

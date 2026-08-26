@@ -11,7 +11,7 @@ type Env struct {
 }
 
 type envCfg struct {
-	DSN string `env:"DATABASE_DSN,required"`
+	DSN string `env:"DATABASE_DSN"`
 	// Сколько всего подключений можно открыть к БД
 	MaxConns int32 `env:"MAX_CONNS" envDefault:"25"`
 	// Сколько соединений держать всегда открытыми
