@@ -10,6 +10,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
@@ -54,7 +55,7 @@ func TestHttpAgent_Update(t *testing.T) {
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 
 	h := handler.New(metricManager, setupMockLogger(t), mockConfigProvider)
-	r := router.New(h)
+	r := router.New(h, database.NewMockDatabase(t))
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 

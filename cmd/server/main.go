@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"net/http"
 	"time"
 
@@ -58,15 +57,6 @@ func main() {
 	}
 	defer db.Close()
 
-	err = db.Ping(ctx)
-
-	//TODO del
-	log.Printf("db.Ping: %+v\n", err)
-	log.Printf("dbDSN: %+v\n", *dbDSN)
-	log.Printf("configDBEnv: %+v\n", configDBEnv)
-	log.Printf("dbConfig: %+v\n", dbConfig)
-	return
-
 	if serverConfig.Address() == "" {
 		serverConfig.AddressSet(*srvAddress)
 	}
@@ -92,7 +82,9 @@ func main() {
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 
 	h := handler.New(metricManager, logApp, serverConfig)
-	r := router.New(h)
+
+	// Видимо хранилище метрик будет заменяться с "memory" на "БД", поэтому, пока работы с БД передадим сюда
+	r := router.New(h, db)
 
 	if serverConfig.Restore() != nil && *serverConfig.Restore() {
 		err = metricManager.MetricSnapshotLoad()

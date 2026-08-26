@@ -42,6 +42,11 @@ packages:
       all: false
     interfaces:
       Able:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database:
+    config:
+      all: false
+    interfaces:
+      Database:
   github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger:
     config:
       all: false

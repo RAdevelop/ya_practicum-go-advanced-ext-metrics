@@ -23,29 +23,29 @@ help: ## Показать справку
 .PHONY: test
 test: ## Запустить локальные тесты
 	@echo "$(GREEN)=== Running tests ===$(NC)"
-	@go generate ./...
-	@go test ./...
+	@go generate ./internal/...
+	@go test ./internal/...
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-c
 test-c: ## Запустить тесты без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./...
-	@go test ./... -count=1
+	@go generate ./internal/...
+	@go test ./internal/... -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-v
 test-v: ## Запустить тесты с подробным выводом
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./...
-	@go test ./... -v
+	@go generate ./internal/...
+	@go test ./internal/... -v
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-vс
 test-vc: ## Запустить тесты с подробным выводом без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./...
-	@go test ./... -v -count=1
+	@go generate ./internal/...
+	@go test ./internal/... -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter
