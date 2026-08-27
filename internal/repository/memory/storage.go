@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
@@ -90,4 +91,8 @@ func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
 
 func (ms *MemStorage) counterAccumulate(name string, value int64) {
 	ms.counterAccumulative[name] += value
+}
+
+func (ms *MemStorage) Ping(context.Context) error {
+	return nil
 }

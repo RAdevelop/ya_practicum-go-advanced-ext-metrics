@@ -54,7 +54,7 @@ func TestEnv(t *testing.T) {
 					MaxConns:        25,
 					MinConns:        5,
 					MaxConnLifetime: time.Hour,
-					MaxConnIdleTime: 5 * time.Minute,
+					MaxConnIdleTime: 4 * time.Minute,
 				},
 			},
 		},

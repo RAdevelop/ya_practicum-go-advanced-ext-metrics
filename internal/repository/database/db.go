@@ -11,12 +11,11 @@ import (
 //go:generate mockery
 type Database interface {
 	Close()
-	Ping() error
+	Ping(context.Context) error
 }
 
 type DB struct {
 	Pool *pgxpool.Pool
-	ctx  context.Context
 }
 
 func New(ctx context.Context, cfg configDB.ConfigProvider) (*DB, error) {
@@ -46,7 +45,6 @@ func New(ctx context.Context, cfg configDB.ConfigProvider) (*DB, error) {
 
 	return &DB{
 		Pool: pool,
-		ctx:  ctx,
 	}, nil
 }
 
@@ -57,6 +55,6 @@ func (db *DB) Close() {
 }
 
 // Ping - проверка доступности БД
-func (db *DB) Ping() error {
-	return db.Pool.Ping(db.ctx)
+func (db *DB) Ping(ctx context.Context) error {
+	return db.Pool.Ping(ctx)
 }

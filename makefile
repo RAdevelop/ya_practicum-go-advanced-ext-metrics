@@ -1,12 +1,13 @@
 # Переменные
-## Это конечно не хранить в Git.
-
+## Это конечно не стоит хранить в Git.
 export POSTGRES_USER := postgres
 export POSTGRES_PASSWORD := postgres
 export POSTGRES_DB := praktikum
 
-# Определение команды docker-compose
+# Определение команд
 DOCKER_COMPOSE := docker-compose
+GO_GENERATE := go generate ./internal/...
+GO_TEST := go test ./internal/...
 
 #номер инкремента
 iter ?=
@@ -24,29 +25,29 @@ help: ## Показать справку
 .PHONY: test
 test: ## Запустить локальные тесты
 	@echo "$(GREEN)=== Running tests ===$(NC)"
-	@go generate ./internal/...
-	@go test ./internal/...
+	@${GO_GENERATE}
+	@${GO_TEST}
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-c
 test-c: ## Запустить тесты без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./internal/...
-	@go test ./internal/... -count=1
+	@${GO_GENERATE}
+	@${GO_TEST} -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-v
 test-v: ## Запустить тесты с подробным выводом
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./internal/...
-	@go test ./internal/... -v
+	@${GO_GENERATE}
+	@${GO_TEST} -v
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-vс
 test-vc: ## Запустить тесты с подробным выводом без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
-	@go generate ./internal/...
-	@go test ./internal/... -v -count=1
+	@${GO_GENERATE}
+	@${GO_TEST} -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter

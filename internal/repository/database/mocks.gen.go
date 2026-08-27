@@ -5,6 +5,8 @@
 package database
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -69,16 +71,16 @@ func (_c *MockDatabase_Close_Call) RunAndReturn(run func()) *MockDatabase_Close_
 }
 
 // Ping provides a mock function for the type MockDatabase
-func (_mock *MockDatabase) Ping() error {
-	ret := _mock.Called()
+func (_mock *MockDatabase) Ping(context1 context.Context) error {
+	ret := _mock.Called(context1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Ping")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(context1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -91,13 +93,20 @@ type MockDatabase_Ping_Call struct {
 }
 
 // Ping is a helper method to define mock.On call
-func (_e *MockDatabase_Expecter) Ping() *MockDatabase_Ping_Call {
-	return &MockDatabase_Ping_Call{Call: _e.mock.On("Ping")}
+//   - context1 context.Context
+func (_e *MockDatabase_Expecter) Ping(context1 any) *MockDatabase_Ping_Call {
+	return &MockDatabase_Ping_Call{Call: _e.mock.On("Ping", context1)}
 }
 
-func (_c *MockDatabase_Ping_Call) Run(run func()) *MockDatabase_Ping_Call {
+func (_c *MockDatabase_Ping_Call) Run(run func(context1 context.Context)) *MockDatabase_Ping_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -107,7 +116,7 @@ func (_c *MockDatabase_Ping_Call) Return(err error) *MockDatabase_Ping_Call {
 	return _c
 }
 
-func (_c *MockDatabase_Ping_Call) RunAndReturn(run func() error) *MockDatabase_Ping_Call {
+func (_c *MockDatabase_Ping_Call) RunAndReturn(run func(context1 context.Context) error) *MockDatabase_Ping_Call {
 	_c.Call.Return(run)
 	return _c
 }

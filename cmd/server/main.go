@@ -18,6 +18,15 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
 
+type serverFlags struct {
+	address          *string
+	storeInterval    *uint
+	fileStoragePath  *string
+	restore          *bool
+	dbDSN            *string
+	useMemoryStorage bool
+}
+
 func main() {
 
 	logApp := logger.New()
@@ -34,45 +43,47 @@ func main() {
 		return
 	}
 
+	srvFlags := &serverFlags{}
+
 	serverConfig := configServer.New(configServerEnv)
 	dbConfig := configDB.New(configDBEnv)
 
-	srvAddress := flag.String("a", "localhost:8080", `Server address pattern: "host:port"`)
-	srvStoreInterval := flag.Uint("i", 300, `интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск (по умолчанию 300 секунд, значение 0 делает запись синхронной)`)
-	srvFileStoragePath := flag.String("f", "dump/metrics/iter9.json", `путь до файла, куда сохраняются текущие значения`)
-	srvRestore := flag.Bool("r", true, `булево значение (true/false), определяющее, следует ли загружать ранее сохранённые значения из указанного файла при старте сервера.`)
-	dbDSN := flag.String("d", "", `Строка с адресом подключения к БД`)
+	srvFlags.address = flag.String("a", "localhost:8080", `Server address pattern: "host:port"`)
+	srvFlags.storeInterval = flag.Uint("i", 300, `интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск (по умолчанию 300 секунд, значение 0 делает запись синхронной)`)
+	srvFlags.fileStoragePath = flag.String("f", "dump/metrics/iter9.json", `путь до файла, куда сохраняются текущие значения`)
+	srvFlags.restore = flag.Bool("r", true, `булево значение (true/false), определяющее, следует ли загружать ранее сохранённые значения из указанного файла при старте сервера.`)
+	srvFlags.dbDSN = flag.String("d", "", `Строка с адресом подключения к БД`)
 	flag.Parse()
 
-	if dbDSN != nil && *dbDSN != "" {
-		dbConfig.DSNSet(*dbDSN)
+	serverConfigUpdateByFlags(serverConfig, srvFlags)
+
+	if srvFlags.dbDSN != nil && *srvFlags.dbDSN != "" {
+		dbConfig.DSNSet(*srvFlags.dbDSN)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	var metricStorage metric.Storage
+	var db *database.DB
 
-	db, err := database.New(ctx, dbConfig)
-	if err != nil {
-		logApp.Error("db", "err", err)
-	}
-	defer db.Close()
+	if dbConfig.DSN() == "" {
+		metricStorage = memory.NewStorage()
+		srvFlags.useMemoryStorage = true
+	} else {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-	if serverConfig.Address() == "" {
-		serverConfig.AddressSet(*srvAddress)
+		db, err = database.New(ctx, dbConfig)
+		if err != nil {
+			srvFlags.useMemoryStorage = true
+			logApp.Error("db", "err", err)
+		} else {
+			defer db.Close()
+			srvFlags.useMemoryStorage = false
+		}
+
+		//TODO заменить на database.NewStorage
+		metricStorage = memory.NewStorage()
 	}
 
-	if serverConfig.StoreInterval() == nil {
-		serverConfig.StoreIntervalSet(srvStoreInterval)
-	}
-	if serverConfig.FileStoragePath() == "" {
-		serverConfig.FileStoragePathSet(*srvFileStoragePath)
-	}
-
-	if serverConfig.Restore() == nil {
-		serverConfig.RestoreSet(srvRestore)
-	}
-
-	var metricStorage = memory.NewStorage()
 	var metricService = metric.NewService(metricStorage)
 	metricSnapshot, err := snapshot.NewFiler(metricService, serverConfig.FileStoragePath())
 	if err != nil {
@@ -82,23 +93,28 @@ func main() {
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 
 	h := handler.New(metricManager, logApp, serverConfig)
+	r := router.New(h)
 
-	// Видимо хранилище метрик будет заменяться с "memory" на "БД", поэтому, пока работы с БД передадим сюда
-	r := router.New(h, db)
-
-	if serverConfig.Restore() != nil && *serverConfig.Restore() {
-		err = metricManager.MetricSnapshotLoad()
-		if err != nil {
-			logApp.Error("metricManager MetricSnapshotLoad", "err", err)
-		}
+	if srvFlags.useMemoryStorage {
+		metricSnapshotTask(metricManager, logApp, serverConfig)
 	}
-
-	go saver(metricManager, logApp, serverConfig)
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
 		logApp.Error("error", "err", err)
 	}
+}
+
+func metricSnapshotTask(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
+
+	if config.Restore() != nil && *config.Restore() {
+		err := metricManager.MetricSnapshotLoad()
+		if err != nil {
+			logger.Error("metricManager MetricSnapshotLoad", "err", err)
+		}
+	}
+
+	go saver(metricManager, logger, config)
 }
 
 func saver(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
@@ -117,5 +133,22 @@ func saver(metricManager service.MetricManagementAble, logger logger.Logger, con
 		if err != nil {
 			logger.Error("MetricInitializer", "err", err)
 		}
+	}
+}
+
+func serverConfigUpdateByFlags(serverConfig *configServer.Config, srvFlags *serverFlags) {
+	if serverConfig.Address() == "" {
+		serverConfig.AddressSet(*srvFlags.address)
+	}
+
+	if serverConfig.StoreInterval() == nil {
+		serverConfig.StoreIntervalSet(srvFlags.storeInterval)
+	}
+	if serverConfig.FileStoragePath() == "" {
+		serverConfig.FileStoragePathSet(*srvFlags.fileStoragePath)
+	}
+
+	if serverConfig.Restore() == nil {
+		serverConfig.RestoreSet(srvFlags.restore)
 	}
 }

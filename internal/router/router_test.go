@@ -3,6 +3,7 @@ package router
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +14,6 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
@@ -252,7 +252,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, database.NewMockDatabase(t))
+	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -424,7 +424,7 @@ Use one of the supported metric types: [counter gauge]`,
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, database.NewMockDatabase(t))
+	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -582,7 +582,7 @@ Use one of the supported metric types: [counter gauge]
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, database.NewMockDatabase(t))
+	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -602,9 +602,9 @@ Use one of the supported metric types: [counter gauge]
 			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
 
 			metricValue, err := io.ReadAll(result.RawResponse.Body)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.metricValue, string(metricValue), "given: %+v", tt.given)
 
-			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
 		})
 	}
@@ -678,7 +678,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricService, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, database.NewMockDatabase(t))
+	r := New(h)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 	client := resty.New()
@@ -726,6 +726,85 @@ func TestMetric_GetWithJson(t *testing.T) {
 			assert.NoError(t, result.RawResponse.Body.Close())
 			assert.Equal(t, tt.want.body, strings.TrimSpace(string(body)))
 
+		})
+	}
+}
+
+func TestMetric_StoragePing(t *testing.T) {
+
+	type given struct {
+		contentType   string
+		metricStorage metric.Storage
+	}
+	type want struct {
+		statusCode int
+	}
+
+	var tests = []struct {
+		name  string
+		given given
+		want  want
+	}{
+		{
+			name: "ping return StatusOK",
+			given: given{
+				contentType: "text/plain",
+				metricStorage: (func() metric.Storage {
+					var metricStorage = metric.NewMockStorage(t)
+					metricStorage.EXPECT().Ping(mock.Anything).Return(nil)
+
+					return metricStorage
+				})(),
+			},
+			want: want{
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name: "ping return StatusInternalServerError",
+			given: given{
+				contentType: "text/plain",
+				metricStorage: (func() metric.Storage {
+					var metricStorage = metric.NewMockStorage(t)
+					metricStorage.EXPECT().Ping(mock.Anything).Return(errors.New("ping error"))
+
+					return metricStorage
+				})(),
+			},
+			want: want{
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var metricService = metric.NewService(tt.given.metricStorage)
+			loggerTest := setupMockLogger(t)
+			mockConfigProvider := setupMockConfigProvider(t)
+			metricSnapshot := snapshot.NewMockAble(t)
+			var metricManager = service.NewManager(metricService, metricSnapshot)
+
+			h := handler.New(metricManager, loggerTest, mockConfigProvider)
+			r := New(h)
+			mockServer := httptest.NewServer(r)
+			defer mockServer.Close()
+			client := resty.New()
+			client.SetBaseURL(mockServer.URL)
+
+			req := client.R().
+				SetHeader("Content-Type", tt.given.contentType).
+				SetDoNotParseResponse(true)
+
+			result, err := req.Get("/ping")
+
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
+
+			_, err = io.Copy(io.Discard, result.RawResponse.Body)
+
+			assert.NoError(t, err)
+			assert.NoError(t, result.RawResponse.Body.Close())
 		})
 	}
 }

@@ -5,6 +5,8 @@
 package metric
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -336,5 +338,56 @@ func (_c *MockStorage_GaugeUpdate_Call) Return() *MockStorage_GaugeUpdate_Call {
 
 func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(name string, value float64)) *MockStorage_GaugeUpdate_Call {
 	_c.Run(run)
+	return _c
+}
+
+// Ping provides a mock function for the type MockStorage
+func (_mock *MockStorage) Ping(context1 context.Context) error {
+	ret := _mock.Called(context1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Ping")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(context1)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStorage_Ping_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Ping'
+type MockStorage_Ping_Call struct {
+	*mock.Call
+}
+
+// Ping is a helper method to define mock.On call
+//   - context1 context.Context
+func (_e *MockStorage_Expecter) Ping(context1 any) *MockStorage_Ping_Call {
+	return &MockStorage_Ping_Call{Call: _e.mock.On("Ping", context1)}
+}
+
+func (_c *MockStorage_Ping_Call) Run(run func(context1 context.Context)) *MockStorage_Ping_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStorage_Ping_Call) Return(err error) *MockStorage_Ping_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStorage_Ping_Call) RunAndReturn(run func(context1 context.Context) error) *MockStorage_Ping_Call {
+	_c.Call.Return(run)
 	return _c
 }

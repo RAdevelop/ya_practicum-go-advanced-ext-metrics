@@ -166,6 +166,20 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (m *Metric) StoragePing(w http.ResponseWriter, r *http.Request) {
+	defer m.requestBodyClose(r)
+
+	err := m.metricManager.StoragePing(r.Context())
+
+	if err != nil {
+		m.logger.Error("StoragePing", "err", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType string, metricList map[string]models.Metrics) {
 	sb.WriteString("<li><strong>" + title + ":</strong>")
 

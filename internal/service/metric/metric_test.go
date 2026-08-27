@@ -311,3 +311,13 @@ func TestService_CounterAccumulative(t *testing.T) {
 		})
 	}
 }
+
+func TestService_Ping(t *testing.T) {
+	t.Run("ping is nil", func(t *testing.T) {
+		mockStorage := NewMockStorage(t)
+		mockStorage.EXPECT().Ping(nil).Return(nil).Once()
+		metricService := NewService(mockStorage)
+		err := metricService.Ping(nil)
+		assert.Nil(t, err)
+	})
+}

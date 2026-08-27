@@ -1,5 +1,7 @@
 package metric
 
+import "context"
+
 // Service - сервис для работы с метриками
 type Service struct {
 	storage Storage
@@ -33,4 +35,8 @@ func (ms *Service) Gauge() map[string]float64 {
 
 func (ms *Service) CounterAccumulative() map[string]int64 {
 	return ms.storage.CounterAccumulative()
+}
+
+func (ms *Service) Ping(ctx context.Context) error {
+	return ms.storage.Ping(ctx)
 }

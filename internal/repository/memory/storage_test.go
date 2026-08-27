@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -347,4 +348,11 @@ func TestMemStorage_GaugeByName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMemStorage_Ping(t *testing.T) {
+	t.Run("ping is nil", func(t *testing.T) {
+		memStorage := NewStorage()
+		assert.NoError(t, memStorage.Ping(context.TODO()))
+	})
 }

@@ -19,7 +19,7 @@ type envCfg struct {
 	// Через сколько времени закрывать соединение, даже если оно используется
 	MaxConnLifetime time.Duration `env:"MAX_CONN_LIFETIME" envDefault:"1h"`
 	// Через сколько времени закрывать соединение, если оно не используется
-	MaxConnIdleTime time.Duration `env:"MAX_CONN_IDLE_TIME" envDefault:"5m"`
+	MaxConnIdleTime time.Duration `env:"MAX_CONN_IDLE_TIME" envDefault:"4m"`
 }
 
 func NewEnv() (*Env, error) {

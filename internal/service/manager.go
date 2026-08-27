@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
@@ -12,6 +14,7 @@ type MetricManagementAble interface {
 	MetricList(string) map[string]models.Metrics
 	MetricSnapshotLoad() error
 	MetricSnapshotSave() error
+	StoragePing(context.Context) error
 }
 
 // Manager - предоставляет интерфейс (фасад) для работы с метриками
@@ -100,4 +103,8 @@ func (manager *Manager) MetricSnapshotLoad() error {
 }
 func (manager *Manager) MetricSnapshotSave() error {
 	return manager.metricSnapshot.Save()
+}
+
+func (manager *Manager) StoragePing(ctx context.Context) error {
+	return manager.metricService.Ping(ctx)
 }
