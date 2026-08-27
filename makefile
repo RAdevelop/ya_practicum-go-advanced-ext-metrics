@@ -2,7 +2,19 @@
 ## Это конечно не стоит хранить в Git.
 export POSTGRES_USER := postgres
 export POSTGRES_PASSWORD := postgres
+export POSTGRES_HOST := postgres
+export POSTGRES_PORT := 5432
 export POSTGRES_DB := praktikum
+
+export POSTGRES_USER_TEST := postgres_test
+export POSTGRES_PASSWORD_TEST := postgres_test
+export POSTGRES_HOST_TEST := postgres
+export POSTGRES_PORT_TEST := 15432
+export POSTGRES_DB_TEST := praktikum_test
+
+DB_DSN="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+DB_DSN_TEST="postgres://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@${POSTGRES_HOST_TEST}:${POSTGRES_PORT_TEST}/${POSTGRES_DB_TEST}?sslmode=disable"
+
 
 # Определение команд
 DOCKER_COMPOSE := docker-compose
@@ -21,6 +33,8 @@ NC = \033[0m # No Color
 help: ## Показать справку
 	@echo "$(GREEN)Доступные команды:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)  make %-20s$(NC) %s\n", $$1, $$2}'
+
+######## Tests
 
 .PHONY: test
 test: ## Запустить локальные тесты
@@ -79,7 +93,7 @@ test-iter10x: ## Запустить тесты практикума с 10 по 1
 	&& ./metricstest_v2-darwin-amd64 -test.v -test.run=^TestIteration${iter}$$ \
 		-agent-binary-path=cmd/agent/agent \
 		-binary-path=cmd/server/server \
-		-database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' \
+		-database-dsn=${DB_DSN} \
 		-server-port=$${SERVER_PORT} \
 		-source-path=. \
 		-test.failfast \
@@ -94,6 +108,9 @@ unset-env: ## Удалить ENV переменные
 		unset $$var; \
 	done
 	@echo "$(GREEN)✅ Environment cleaned$(NC)"
+
+
+######## Docker
 
 .PHONY: down
 down: ## Остановить кластер
@@ -134,5 +151,31 @@ rebuild:  ## пересобрать кластер
 	@$(DOCKER_COMPOSE) up -d --no-deps --build
 	@make status
 	@make unset-env
+
+
+######## migrate db schema
+MIGRATIONS_DIR := ./migrations
+
+.PHONY: migrate-c
+migrate-c: ## Создать миграцию (make migrate-c name=[название миграции])
+	@migrate create -dir=${MIGRATIONS_DIR} -ext=sql ${name}
+
+.PHONY: migrate-up
+migrate-up: ## Применить все миграции
+	@migrate -path=$(MIGRATIONS_DIR) -database=$(DB_DSN) up
+
+.PHONY: migrate-down
+migrate-down: ## Откатить одну миграцию
+	@migrate -path=$(MIGRATIONS_DIR) -database=$(DB_DSN) down 1
+
+
+.PHONY: migrate-upt
+migrate-upt: ## Применить все миграции на тестовой БД
+	@migrate -path=$(MIGRATIONS_DIR) -database=$(DB_DSN_TEST) up
+
+.PHONY: migrate-downt
+migrate-downt: ## Откатить одну миграцию на тестовой БД
+	@migrate -path=$(MIGRATIONS_DIR) -database=$(DB_DSN_TEST) down 1
+
 
 .DEFAULT_GOAL := help

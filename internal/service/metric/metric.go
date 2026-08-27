@@ -13,12 +13,12 @@ func NewService(storage Storage) *Service {
 	}
 }
 
-func (ms *Service) GaugeUpdate(name string, value float64) {
-	ms.storage.GaugeUpdate(name, value)
+func (ms *Service) GaugeUpdate(name string, value float64) error {
+	return ms.storage.GaugeUpdate(name, value)
 }
 
-func (ms *Service) CounterAdd(name string, value int64) {
-	ms.storage.CounterAdd(name, value)
+func (ms *Service) CounterAdd(name string, value int64) error {
+	return ms.storage.CounterAdd(name, value)
 }
 
 func (ms *Service) CounterByNameAccumulative(name string) (int64, error) {

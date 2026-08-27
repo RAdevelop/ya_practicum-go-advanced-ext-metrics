@@ -27,8 +27,9 @@ func NewStorage() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) GaugeUpdate(name string, value float64) {
+func (ms *MemStorage) GaugeUpdate(name string, value float64) error {
 	ms.gauge[name] = value
+	return nil
 }
 
 func (ms *MemStorage) GaugeByName(name string) (float64, error) {
@@ -47,13 +48,14 @@ func (ms *MemStorage) GaugeSize() int {
 	return len(ms.gauge)
 }
 
-func (ms *MemStorage) CounterAdd(name string, value int64) {
+func (ms *MemStorage) CounterAdd(name string, value int64) error {
 	if _, ok := ms.counter[name]; !ok {
 		ms.counter[name] = make([]int64, 0)
 	}
 
 	ms.counter[name] = append(ms.counter[name], value)
 	ms.counterAccumulate(name, value)
+	return nil
 }
 
 func (ms *MemStorage) CounterByName(name string) ([]int64, error) {

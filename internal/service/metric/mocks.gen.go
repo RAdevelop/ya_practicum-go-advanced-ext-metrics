@@ -144,9 +144,20 @@ func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(name
 }
 
 // CounterAdd provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAdd(name string, value int64) {
-	_mock.Called(name, value)
-	return
+func (_mock *MockStorage) CounterAdd(name string, value int64) error {
+	ret := _mock.Called(name, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CounterAdd")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, int64) error); ok {
+		r0 = returnFunc(name, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // MockStorage_CounterAdd_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CounterAdd'
@@ -179,13 +190,13 @@ func (_c *MockStorage_CounterAdd_Call) Run(run func(name string, value int64)) *
 	return _c
 }
 
-func (_c *MockStorage_CounterAdd_Call) Return() *MockStorage_CounterAdd_Call {
-	_c.Call.Return()
+func (_c *MockStorage_CounterAdd_Call) Return(err error) *MockStorage_CounterAdd_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(name string, value int64)) *MockStorage_CounterAdd_Call {
-	_c.Run(run)
+func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(name string, value int64) error) *MockStorage_CounterAdd_Call {
+	_c.Call.Return(run)
 	return _c
 }
 
@@ -296,9 +307,20 @@ func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(name string) (floa
 }
 
 // GaugeUpdate provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeUpdate(name string, value float64) {
-	_mock.Called(name, value)
-	return
+func (_mock *MockStorage) GaugeUpdate(name string, value float64) error {
+	ret := _mock.Called(name, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GaugeUpdate")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, float64) error); ok {
+		r0 = returnFunc(name, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // MockStorage_GaugeUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GaugeUpdate'
@@ -331,13 +353,13 @@ func (_c *MockStorage_GaugeUpdate_Call) Run(run func(name string, value float64)
 	return _c
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) Return() *MockStorage_GaugeUpdate_Call {
-	_c.Call.Return()
+func (_c *MockStorage_GaugeUpdate_Call) Return(err error) *MockStorage_GaugeUpdate_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(name string, value float64)) *MockStorage_GaugeUpdate_Call {
-	_c.Run(run)
+func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(name string, value float64) error) *MockStorage_GaugeUpdate_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

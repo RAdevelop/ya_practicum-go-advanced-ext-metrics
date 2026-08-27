@@ -55,6 +55,9 @@ func main() {
 	srvFlags.dbDSN = flag.String("d", "", `Строка с адресом подключения к БД`)
 	flag.Parse()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	serverConfigUpdateByFlags(serverConfig, srvFlags)
 
 	if srvFlags.dbDSN != nil && *srvFlags.dbDSN != "" {
@@ -62,16 +65,12 @@ func main() {
 	}
 
 	var metricStorage metric.Storage
-	var db *database.DB
 
 	if dbConfig.DSN() == "" {
 		metricStorage = memory.NewStorage()
 		srvFlags.useMemoryStorage = true
 	} else {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		db, err = database.New(ctx, dbConfig)
+		db, err := database.New(ctx, dbConfig)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
 			logApp.Error("db", "err", err)
@@ -80,8 +79,7 @@ func main() {
 			srvFlags.useMemoryStorage = false
 		}
 
-		//TODO заменить на database.NewStorage
-		metricStorage = memory.NewStorage()
+		metricStorage = database.NewStorage(db)
 	}
 
 	var metricService = metric.NewService(metricStorage)
@@ -101,7 +99,7 @@ func main() {
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
-		logApp.Error("error", "err", err)
+		logApp.Error("ListenAndServe", "err", err)
 	}
 }
 

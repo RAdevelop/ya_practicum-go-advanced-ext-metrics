@@ -9,7 +9,7 @@ import (
 )
 
 type MetricManagementAble interface {
-	MetricUpdate(*models.Metrics)
+	MetricUpdate(*models.Metrics) error
 	MetricValue(string, string) (*models.Metrics, error)
 	MetricList(string) map[string]models.Metrics
 	MetricSnapshotLoad() error
@@ -30,16 +30,14 @@ func NewManager(metricService *metric.Service, metricSnapshot snapshot.Able) *Ma
 	}
 }
 
-func (manager *Manager) MetricUpdate(metric *models.Metrics) {
-	if metric.MType == models.Counter {
-		if metric.Delta != nil {
-			manager.metricService.CounterAdd(metric.ID, *metric.Delta)
-		}
-	} else {
-		if metric.Value != nil {
-			manager.metricService.GaugeUpdate(metric.ID, *metric.Value)
-		}
+func (manager *Manager) MetricUpdate(metric *models.Metrics) error {
+	if metric.MType == models.Counter && metric.Delta != nil {
+		return manager.metricService.CounterAdd(metric.ID, *metric.Delta)
+	} else if metric.MType == models.Gauge && metric.Value != nil {
+		return manager.metricService.GaugeUpdate(metric.ID, *metric.Value)
 	}
+	//TODO вернуть ошибку "unknown metric'?
+	return nil
 }
 
 func (manager *Manager) MetricValue(metricType string, metricID string) (*models.Metrics, error) {

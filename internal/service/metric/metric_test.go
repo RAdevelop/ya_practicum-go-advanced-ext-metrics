@@ -41,12 +41,14 @@ func TestService_GaugeUpdate(t *testing.T) {
 			mockStorage := NewMockStorage(t)
 			mockStorage.EXPECT().
 				GaugeUpdate("test_gauge", tt.value).
+				Return(nil).
 				Once()
 
 			metricService := NewService(mockStorage)
 
 			// Act
-			metricService.GaugeUpdate("test_gauge", tt.value)
+			err := metricService.GaugeUpdate("test_gauge", tt.value)
+			assert.NoError(t, err)
 
 			// Assert
 			mockStorage.AssertExpectations(t)
@@ -75,10 +77,11 @@ func TestService_CounterAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().CounterAdd("test_counter", tt.value).Once()
+			mockStorage.EXPECT().CounterAdd("test_counter", tt.value).Return(nil).Once()
 			metricService := NewService(mockStorage)
-			metricService.CounterAdd("test_counter", tt.value)
+			err := metricService.CounterAdd("test_counter", tt.value)
 			mockStorage.AssertExpectations(t)
+			assert.NoError(t, err)
 		})
 	}
 }

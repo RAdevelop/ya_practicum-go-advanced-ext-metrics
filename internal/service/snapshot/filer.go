@@ -87,9 +87,13 @@ func (filer *Filer) Load() (err error) {
 
 		switch modelMetric.MType {
 		case models.Gauge:
-			filer.metricService.GaugeUpdate(modelMetric.ID, *modelMetric.Value)
+			err = filer.metricService.GaugeUpdate(modelMetric.ID, *modelMetric.Value)
 		case models.Counter:
-			filer.metricService.CounterAdd(modelMetric.ID, *modelMetric.Delta)
+			err = filer.metricService.CounterAdd(modelMetric.ID, *modelMetric.Delta)
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 

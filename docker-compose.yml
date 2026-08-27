@@ -8,15 +8,31 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - go-advanced-ext
+  postgres_test:
+      image: postgres:17.11-bookworm
+      container_name: postgres_test
+      hostname: postgres_test
+      environment:
+        POSTGRES_USER: ${POSTGRES_USER_TEST}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST}
+        POSTGRES_DB: ${POSTGRES_DB_TEST}
+      ports:
+        - "${POSTGRES_PORT_TEST}:5432"
+      volumes:
+        - postgres_data_test:/var/lib/postgresql/data
+      restart: unless-stopped
+      networks:
+        - go-advanced-ext
 
 volumes:
   postgres_data:
+  postgres_data_test:
 
 networks:
   go-advanced-ext:

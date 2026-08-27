@@ -49,7 +49,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	metric, err := metricGetFromRequest(r)
 
 	if err != nil {
-		m.logger.Warn("error", "err", err)
+		m.logger.Warn("Update", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -68,7 +68,11 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.metricManager.MetricUpdate(metric)
+	if err = m.metricManager.MetricUpdate(metric); err != nil {
+		m.logger.Warn("Update", "err", err)
+		http.Error(w, "Can't update metric", http.StatusBadRequest)
+		return
+	}
 
 	if m.config.StoreInterval() != nil && *m.config.StoreInterval() == 0 {
 		err = m.metricManager.MetricSnapshotSave()
