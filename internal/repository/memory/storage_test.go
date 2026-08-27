@@ -133,7 +133,8 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 			memStorage := NewStorage()
 
 			for _, counter := range tt.got.counters {
-				memStorage.CounterAdd(tt.got.counterMetricName, counter)
+				err := memStorage.CounterAdd(tt.got.counterMetricName, counter)
+				assert.NoError(t, err)
 			}
 
 			counterAccumulative, err := memStorage.CounterAccumulativeByName(tt.got.counterMetricName)
@@ -228,7 +229,8 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 
 			memStorage := &tt.got.memStorage
 
-			memStorage.CounterAdd(tt.got.counterMetricName, tt.got.counterMetricValue)
+			err := memStorage.CounterAdd(tt.got.counterMetricName, tt.got.counterMetricValue)
+			assert.NoError(t, err)
 			assert.Equal(t, memStorage.CounterSize(), tt.want.lenCounterAfterAdd)
 			assert.Equal(t, memStorage.CounterSizeByName(tt.got.counterMetricName), tt.want.lenCounterMetricNameAfterAdd)
 		})
@@ -287,7 +289,8 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 				gauge: tt.gaugeMapInit,
 			}
 
-			memStorage.GaugeUpdate(tt.gaugeMetricName, tt.gaugeMetricValue)
+			err := memStorage.GaugeUpdate(tt.gaugeMetricName, tt.gaugeMetricValue)
+			assert.NoError(t, err)
 
 			assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
 			assert.Equal(t, memStorage.GaugeSize(), tt.gaugeSizeAfterUpdate)

@@ -693,13 +693,15 @@ func TestMetric_GetWithJson(t *testing.T) {
 
 			if tt.given.metric != nil {
 
+				var err error
 				// сами сначала добавляем значения в хранилище данных
 				switch tt.given.metric.MType {
 				case models.Gauge:
-					metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
+					err = metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
 				case models.Counter:
-					metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
+					err = metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
 				}
+				assert.NoError(t, err)
 
 				sendBody, _ := json.Marshal(tt.given.metric)
 				req.SetBody(sendBody)
@@ -812,7 +814,7 @@ func TestMetric_StoragePing(t *testing.T) {
 func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
-		metricService.CounterAdd(metricName, value)
+		_ = metricService.CounterAdd(metricName, value)
 	}
 
 	return params{
@@ -824,7 +826,7 @@ func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricTy
 
 func metricBuildParamsForGaugeGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
-		metricService.GaugeUpdate(metricName, value)
+		_ = metricService.GaugeUpdate(metricName, value)
 	}
 
 	return params{
