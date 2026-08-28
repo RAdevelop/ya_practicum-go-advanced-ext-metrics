@@ -2,11 +2,22 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
+
+/*
+ErrUnknownMetricType - неизвестный тип метрики
+
+ВОПРОС К РЕВЬЮЕРУ: в разных пакетах иногда приходится объявлять одинаковые по смыслу ошибку.
+Вопрос - насколько в Go практикуется создавать своего рода общий пакет с объявлением ошибок, и уже его использовать в коде,
+чтобы не плодить идентичные по смыслу ошибку?
+*/
+var ErrUnknownMetricType = errors.New("unknown metric type")
 
 type MetricManagementAble interface {
 	MetricUpdate(context.Context, *models.Metrics) error
@@ -36,8 +47,8 @@ func (manager *Manager) MetricUpdate(ctx context.Context, metric *models.Metrics
 	} else if metric.MType == models.Gauge && metric.Value != nil {
 		return manager.metricService.GaugeUpdate(ctx, metric.ID, *metric.Value)
 	}
-	//TODO вернуть ошибку "unknown metric'?
-	return nil
+
+	return fmt.Errorf("%w: %s", ErrUnknownMetricType, metric.MType)
 }
 
 func (manager *Manager) MetricValue(ctx context.Context, metricType string, metricID string) (*models.Metrics, error) {

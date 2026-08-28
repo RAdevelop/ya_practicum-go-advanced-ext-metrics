@@ -31,7 +31,7 @@ func setUpStorage(t *testing.T, ctx context.Context) *Storage {
 	assert.NoError(t, err)
 
 	t.Cleanup(func() {
-		defer db.Close()
+		db.Close()
 	})
 
 	return NewStorage(db)
