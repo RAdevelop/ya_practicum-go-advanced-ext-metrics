@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,11 +92,11 @@ func TestService_CounterByNameAccumulative(t *testing.T) {
 
 	type given struct {
 		name  string
-		value int64
+		value *models.Metrics
 		err   error
 	}
 	type want struct {
-		value int64
+		value *models.Metrics
 		err   error
 	}
 	tests := []struct {
@@ -106,49 +107,72 @@ func TestService_CounterByNameAccumulative(t *testing.T) {
 		{
 			name: "CounterByNameAccumulative with positive value and no error",
 			given: given{
-				name:  "counter",
-				value: 42,
-				err:   nil,
+				name: "counter",
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(42)),
+				},
+				err: nil,
 			},
 			want: want{
-				value: 42,
-				err:   nil,
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(42)),
+				},
+				err: nil,
 			},
 		},
 		{
 			name: "CounterByNameAccumulative with negative value and no error",
 			given: given{
-				name:  "counter",
-				value: -42,
-				err:   nil,
+				name: "counter",
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(-42)),
+				},
+				err: nil,
 			},
 			want: want{
-				value: -42,
-				err:   nil,
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(-42)),
+				},
+				err: nil,
 			},
 		},
 		{
 			name: "CounterByNameAccumulative with zero value and no error",
 			given: given{
-				name:  "counter",
-				value: 0,
-				err:   nil,
+				name: "counter",
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(0)),
+				},
+				err: nil,
 			},
 			want: want{
-				value: 0,
-				err:   nil,
+				value: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(0)),
+				},
+				err: nil,
 			},
 		},
-
 		{
 			name: "CounterByNameAccumulative with zero value and error",
 			given: given{
 				name:  "counter",
-				value: 0,
+				value: nil,
 				err:   errors.New("error"),
 			},
 			want: want{
-				value: 0,
+				value: nil,
 				err:   errors.New("error"),
 			},
 		},
@@ -171,11 +195,11 @@ func TestService_CounterByNameAccumulative(t *testing.T) {
 func TestService_GaugeByName(t *testing.T) {
 	type given struct {
 		name  string
-		value float64
+		value *models.Metrics
 		err   error
 	}
 	type want struct {
-		value float64
+		value *models.Metrics
 		err   error
 	}
 	tests := []struct {
@@ -186,36 +210,52 @@ func TestService_GaugeByName(t *testing.T) {
 		{
 			name: "GaugeByName with positive value and no error",
 			given: given{
-				name:  "gauge",
-				value: 42.42,
-				err:   nil,
+				name: "gauge",
+				value: &models.Metrics{
+					ID:    "gauge",
+					MType: models.Gauge,
+					Value: new(float64(42.42)),
+				},
+				err: nil,
 			},
 			want: want{
-				value: 42.42,
-				err:   nil,
+				value: &models.Metrics{
+					ID:    "gauge",
+					MType: models.Gauge,
+					Value: new(42.42),
+				},
+				err: nil,
 			},
 		},
 		{
 			name: "GaugeByName with negative value and no error",
 			given: given{
-				name:  "gauge",
-				value: -42.42,
-				err:   nil,
+				name: "gauge",
+				value: &models.Metrics{
+					ID:    "gauge",
+					MType: models.Gauge,
+					Value: new(-42.42),
+				},
+				err: nil,
 			},
 			want: want{
-				value: -42.42,
-				err:   nil,
+				value: &models.Metrics{
+					ID:    "gauge",
+					MType: models.Gauge,
+					Value: new(-42.42),
+				},
+				err: nil,
 			},
 		},
 		{
 			name: "GaugeByName with zero value and no error",
 			given: given{
 				name:  "gauge",
-				value: 0,
+				value: nil,
 				err:   nil,
 			},
 			want: want{
-				value: 0,
+				value: nil,
 				err:   nil,
 			},
 		},
@@ -223,11 +263,11 @@ func TestService_GaugeByName(t *testing.T) {
 			name: "GaugeByName with zero value and error",
 			given: given{
 				name:  "gauge",
-				value: 0,
+				value: nil,
 				err:   errors.New("error"),
 			},
 			want: want{
-				value: 0,
+				value: nil,
 				err:   errors.New("error"),
 			},
 		},
@@ -248,7 +288,7 @@ func TestService_GaugeByName(t *testing.T) {
 
 func TestService_Gauge(t *testing.T) {
 	type want struct {
-		value map[string]float64
+		value []models.Metrics
 	}
 	tests := []struct {
 		name string
@@ -257,14 +297,18 @@ func TestService_Gauge(t *testing.T) {
 		{
 			name: "empty map",
 			want: want{
-				value: map[string]float64{},
+				value: []models.Metrics{},
 			},
 		},
 		{
 			name: "not empty map",
 			want: want{
-				value: map[string]float64{
-					"counter": 42.42,
+				value: []models.Metrics{
+					{
+						MType: models.Gauge,
+						ID:    "counter",
+						Value: new(42.42),
+					},
 				},
 			},
 		},
@@ -272,10 +316,11 @@ func TestService_Gauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().Gauge(context.TODO()).Return(tt.want.value).Once()
+			mockStorage.EXPECT().Gauge(context.TODO()).Return(tt.want.value, nil).Once()
 			metricService := NewService(mockStorage)
-			value := metricService.Gauge(context.TODO())
+			value, err := metricService.Gauge(context.TODO())
 			mockStorage.AssertExpectations(t)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, value)
 		})
 	}
@@ -283,7 +328,7 @@ func TestService_Gauge(t *testing.T) {
 
 func TestService_CounterAccumulative(t *testing.T) {
 	type want struct {
-		value map[string]int64
+		value []models.Metrics
 	}
 	tests := []struct {
 		name string
@@ -292,14 +337,17 @@ func TestService_CounterAccumulative(t *testing.T) {
 		{
 			name: "empty map",
 			want: want{
-				value: map[string]int64{},
+				value: []models.Metrics{},
 			},
 		},
 		{
 			name: "not empty map",
 			want: want{
-				value: map[string]int64{
-					"counter": 42,
+				value: []models.Metrics{
+					{
+						ID:    "counter",
+						Delta: new(int64(42)),
+					},
 				},
 			},
 		},
@@ -307,10 +355,11 @@ func TestService_CounterAccumulative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().CounterAccumulative(context.TODO()).Return(tt.want.value).Once()
+			mockStorage.EXPECT().CounterAccumulative(context.TODO()).Return(tt.want.value, nil).Once()
 			metricService := NewService(mockStorage)
-			value := metricService.CounterAccumulative(context.TODO())
+			value, err := metricService.CounterAccumulative(context.TODO())
 			mockStorage.AssertExpectations(t)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, value)
 		})
 	}

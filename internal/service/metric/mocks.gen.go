@@ -7,6 +7,7 @@ package metric
 import (
 	"context"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,22 +39,31 @@ func (_m *MockStorage) EXPECT() *MockStorage_Expecter {
 }
 
 // CounterAccumulative provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulative(ctx context.Context) map[string]int64 {
+func (_mock *MockStorage) CounterAccumulative(ctx context.Context) ([]models.Metrics, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CounterAccumulative")
 	}
 
-	var r0 map[string]int64
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]int64); ok {
+	var r0 []models.Metrics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]models.Metrics, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []models.Metrics); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]int64)
+			r0 = ret.Get(0).([]models.Metrics)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockStorage_CounterAccumulative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CounterAccumulative'
@@ -80,33 +90,35 @@ func (_c *MockStorage_CounterAccumulative_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulative_Call) Return(stringToInt64 map[string]int64) *MockStorage_CounterAccumulative_Call {
-	_c.Call.Return(stringToInt64)
+func (_c *MockStorage_CounterAccumulative_Call) Return(metricss []models.Metrics, err error) *MockStorage_CounterAccumulative_Call {
+	_c.Call.Return(metricss, err)
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulative_Call) RunAndReturn(run func(ctx context.Context) map[string]int64) *MockStorage_CounterAccumulative_Call {
+func (_c *MockStorage_CounterAccumulative_Call) RunAndReturn(run func(ctx context.Context) ([]models.Metrics, error)) *MockStorage_CounterAccumulative_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CounterAccumulativeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulativeByName(ctx context.Context, name string) (int64, error) {
+func (_mock *MockStorage) CounterAccumulativeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CounterAccumulativeByName")
 	}
 
-	var r0 int64
+	var r0 *models.Metrics
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int64, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*models.Metrics, error)); ok {
 		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int64); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *models.Metrics); ok {
 		r0 = returnFunc(ctx, name)
 	} else {
-		r0 = ret.Get(0).(int64)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Metrics)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, name)
@@ -146,12 +158,12 @@ func (_c *MockStorage_CounterAccumulativeByName_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulativeByName_Call) Return(n int64, err error) *MockStorage_CounterAccumulativeByName_Call {
-	_c.Call.Return(n, err)
+func (_c *MockStorage_CounterAccumulativeByName_Call) Return(metrics *models.Metrics, err error) *MockStorage_CounterAccumulativeByName_Call {
+	_c.Call.Return(metrics, err)
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (int64, error)) *MockStorage_CounterAccumulativeByName_Call {
+func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (*models.Metrics, error)) *MockStorage_CounterAccumulativeByName_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -220,22 +232,31 @@ func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Gauge provides a mock function for the type MockStorage
-func (_mock *MockStorage) Gauge(ctx context.Context) map[string]float64 {
+func (_mock *MockStorage) Gauge(ctx context.Context) ([]models.Metrics, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Gauge")
 	}
 
-	var r0 map[string]float64
-	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]float64); ok {
+	var r0 []models.Metrics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]models.Metrics, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []models.Metrics); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]float64)
+			r0 = ret.Get(0).([]models.Metrics)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockStorage_Gauge_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Gauge'
@@ -262,33 +283,35 @@ func (_c *MockStorage_Gauge_Call) Run(run func(ctx context.Context)) *MockStorag
 	return _c
 }
 
-func (_c *MockStorage_Gauge_Call) Return(stringToFloat64 map[string]float64) *MockStorage_Gauge_Call {
-	_c.Call.Return(stringToFloat64)
+func (_c *MockStorage_Gauge_Call) Return(metricss []models.Metrics, err error) *MockStorage_Gauge_Call {
+	_c.Call.Return(metricss, err)
 	return _c
 }
 
-func (_c *MockStorage_Gauge_Call) RunAndReturn(run func(ctx context.Context) map[string]float64) *MockStorage_Gauge_Call {
+func (_c *MockStorage_Gauge_Call) RunAndReturn(run func(ctx context.Context) ([]models.Metrics, error)) *MockStorage_Gauge_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GaugeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeByName(ctx context.Context, name string) (float64, error) {
+func (_mock *MockStorage) GaugeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GaugeByName")
 	}
 
-	var r0 float64
+	var r0 *models.Metrics
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (float64, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*models.Metrics, error)); ok {
 		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) float64); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *models.Metrics); ok {
 		r0 = returnFunc(ctx, name)
 	} else {
-		r0 = ret.Get(0).(float64)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Metrics)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, name)
@@ -328,12 +351,12 @@ func (_c *MockStorage_GaugeByName_Call) Run(run func(ctx context.Context, name s
 	return _c
 }
 
-func (_c *MockStorage_GaugeByName_Call) Return(f float64, err error) *MockStorage_GaugeByName_Call {
-	_c.Call.Return(f, err)
+func (_c *MockStorage_GaugeByName_Call) Return(metrics *models.Metrics, err error) *MockStorage_GaugeByName_Call {
+	_c.Call.Return(metrics, err)
 	return _c
 }
 
-func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (float64, error)) *MockStorage_GaugeByName_Call {
+func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (*models.Metrics, error)) *MockStorage_GaugeByName_Call {
 	_c.Call.Return(run)
 	return _c
 }

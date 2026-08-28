@@ -23,105 +23,40 @@ func (s *Storage) GaugeUpdate(ctx context.Context, name string, value float64) e
 	return s.upsertMetric(ctx, models.Gauge, name, value)
 }
 
-func (s *Storage) GaugeByName(ctx context.Context, name string) (float64, error) {
+func (s *Storage) GaugeByName(ctx context.Context, name string) (*models.Metrics, error) {
 
 	if err := ctx.Err(); err != nil {
-		return 0, err
+		return nil, err
 	}
-	var value *float64
-	row := s.selectMetricRow(ctx, models.Gauge, name, "value")
-
-	err := row.Scan(&value)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("metric value not found for name: %s, %w", name, err)
-		}
-		return 0, fmt.Errorf("scan error: %w", err)
-	}
-
-	return *value, err
+	return s.selectMetricRow(ctx, models.Gauge, name)
 }
 
-func (s *Storage) Gauge(ctx context.Context) map[string]float64 {
-
-	result := make(map[string]float64)
-
+func (s *Storage) Gauge(ctx context.Context) ([]models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return result
+		return nil, err
 	}
 
-	rows, err := s.selectMetricsRows(ctx, models.Gauge, "value")
-	if err != nil {
-		return result
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var name string
-		var value float64
-		if err := rows.Scan(&name, &value); err != nil {
-			return result
-		}
-		result[name] = value
-	}
-
-	//TODO надо менять интерфейс, чтобы он возвращал карту models.Metrics и error
-	if err = rows.Err(); err != nil {
-		return result
-	}
-	return result
+	return s.selectMetricsRows(ctx, models.Gauge)
 }
 
 func (s *Storage) CounterAdd(ctx context.Context, name string, value int64) error {
 	return s.upsertMetric(ctx, models.Counter, name, value)
 
 }
-func (s *Storage) CounterAccumulative(ctx context.Context) map[string]int64 {
-	result := make(map[string]int64)
+func (s *Storage) CounterAccumulative(ctx context.Context) ([]models.Metrics, error) {
 
 	if err := ctx.Err(); err != nil {
-		return result
+		return nil, err
 	}
 
-	rows, err := s.selectMetricsRows(ctx, models.Counter, "delta")
-	if err != nil {
-		return result
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var name string
-		var value int64
-		if err := rows.Scan(&name, &value); err != nil {
-			return result
-		}
-		result[name] = value
-	}
-
-	//TODO надо менять интерфейс, чтобы он возвращал карту models.Metrics и error
-	if err = rows.Err(); err != nil {
-		return result
-	}
-	return result
+	return s.selectMetricsRows(ctx, models.Counter)
 }
 
-func (s *Storage) CounterAccumulativeByName(ctx context.Context, name string) (int64, error) {
+func (s *Storage) CounterAccumulativeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return 0, err
+		return nil, err
 	}
-	var delta *int64
-	row := s.selectMetricRow(ctx, models.Counter, name, "delta")
-
-	err := row.Scan(&delta)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, fmt.Errorf("metric value not found for name: %s, %w", name, err)
-		}
-		return 0, fmt.Errorf("scan error: %w", err)
-	}
-
-	return *delta, err
+	return s.selectMetricRow(ctx, models.Counter, name)
 }
 
 func (s *Storage) Ping(ctx context.Context) error {
@@ -161,17 +96,49 @@ func (s *Storage) upsertMetric(ctx context.Context, mType string, mID string, mV
 }
 
 // selectMetricRow - ищем значения для метрики
-func (s *Storage) selectMetricRow(ctx context.Context, mType string, mID string, field string) pgx.Row {
+func (s *Storage) selectMetricRow(ctx context.Context, mType string, mID string) (*models.Metrics, error) {
 
-	sql := `SELECT ` + field + ` FROM metric WHERE metric_id = $1 AND m_type = $2`
+	sql := `SELECT metric_id, m_type, delta, "value"  FROM metric WHERE metric_id = $1 AND m_type = $2`
 
-	return s.DB.Executor(ctx).QueryRow(ctx, sql, mID, mType)
+	row := s.DB.Executor(ctx).QueryRow(ctx, sql, mID, mType)
+
+	var modelsMetric models.Metrics
+	err := row.Scan(&modelsMetric.ID, &modelsMetric.MType, &modelsMetric.Delta, &modelsMetric.Value)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("metric value not found for name: %s, %w", mID, err)
+		}
+		return nil, fmt.Errorf("scan error: %w", err)
+	}
+
+	return &modelsMetric, nil
 }
 
 // selectMetricsRows - ищем значения для метрик
-func (s *Storage) selectMetricsRows(ctx context.Context, mType string, field string) (pgx.Rows, error) {
+func (s *Storage) selectMetricsRows(ctx context.Context, mType string) ([]models.Metrics, error) {
 
-	sql := `SELECT metric_id, ` + field + ` FROM metric WHERE m_type = $1`
+	sql := `SELECT metric_id, m_type, delta, "value" FROM metric WHERE m_type = $1`
 
-	return s.DB.Executor(ctx).Query(ctx, sql, mType)
+	rows, err := s.DB.Executor(ctx).Query(ctx, sql, mType)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := make([]models.Metrics, 0, 30) // стоит написать COUNT() метод
+	for rows.Next() {
+		var modelMetric models.Metrics
+		err = rows.Scan(&modelMetric.ID, &modelMetric.MType, &modelMetric.Delta, &modelMetric.Value)
+		if err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, modelMetric)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	if len(metrics) == 0 {
+		metrics = nil
+	}
+	return metrics, nil
 }

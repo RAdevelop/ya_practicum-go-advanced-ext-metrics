@@ -22,7 +22,7 @@ var ErrUnknownMetricType = errors.New("unknown metric type")
 type MetricManagementAble interface {
 	MetricUpdate(context.Context, *models.Metrics) error
 	MetricValue(context.Context, string, string) (*models.Metrics, error)
-	MetricList(context.Context, string) map[string]models.Metrics
+	MetricList(context.Context, string) ([]models.Metrics, error)
 	MetricSnapshotLoad(context.Context) error
 	MetricSnapshotSave(context.Context) error
 	StoragePing(context.Context) error
@@ -53,58 +53,46 @@ func (manager *Manager) MetricUpdate(ctx context.Context, metric *models.Metrics
 
 func (manager *Manager) MetricValue(ctx context.Context, metricType string, metricID string) (*models.Metrics, error) {
 	var modelMetric *models.Metrics
-
+	var err error
 	if metricType == models.Counter {
-		value, err := manager.metricService.CounterByNameAccumulative(ctx, metricID)
+		modelMetric, err = manager.metricService.CounterByNameAccumulative(ctx, metricID)
 		if err != nil {
 			return nil, err
-		}
-		modelMetric = &models.Metrics{
-			MType: models.Counter,
-			ID:    metricID,
-			Delta: &value,
 		}
 	} else if metricType == models.Gauge {
-		value, err := manager.metricService.GaugeByName(ctx, metricID)
+		modelMetric, err = manager.metricService.GaugeByName(ctx, metricID)
 		if err != nil {
 			return nil, err
-		}
-		modelMetric = &models.Metrics{
-			MType: models.Gauge,
-			ID:    metricID,
-			Value: &value,
 		}
 	}
 
 	return modelMetric, nil
 }
 
-func (manager *Manager) MetricList(ctx context.Context, metricType string) map[string]models.Metrics {
-
-	metricsCounter := manager.metricService.CounterAccumulative(ctx)
-	metricsGauge := manager.metricService.Gauge(ctx)
-
-	metrics := make(map[string]models.Metrics, len(metricsCounter)+len(metricsGauge))
+func (manager *Manager) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+	var metrics []models.Metrics
 
 	if metricType == models.Counter {
-		for name, value := range metricsCounter {
-			metrics[name] = models.Metrics{
-				MType: models.Counter,
-				ID:    name,
-				Delta: &value,
-			}
+		metricsCounter, err := manager.metricService.CounterAccumulative(ctx)
+		if err != nil {
+			return nil, err
+		}
+		metrics = make([]models.Metrics, 0, len(metricsCounter))
+		for _, value := range metricsCounter {
+			metrics = append(metrics, value)
 		}
 	} else if metricType == models.Gauge {
-		for name, value := range metricsGauge {
-			metrics[name] = models.Metrics{
-				MType: models.Gauge,
-				ID:    name,
-				Value: &value,
-			}
+		metricsGauge, err := manager.metricService.Gauge(ctx)
+		if err != nil {
+			return nil, err
+		}
+		metrics = make([]models.Metrics, 0, len(metricsGauge))
+		for _, value := range metricsGauge {
+			metrics = append(metrics, value)
 		}
 	}
 
-	return metrics
+	return metrics, nil
 }
 
 func (manager *Manager) MetricSnapshotLoad(ctx context.Context) error {

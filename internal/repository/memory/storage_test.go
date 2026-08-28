@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,50 +29,6 @@ func TestMemStorage_validateName(t *testing.T) {
 
 }
 
-func TestMemStorage_CounterByName(t *testing.T) {
-
-	tests := []struct {
-		name              string
-		counterMapInit    map[string][]int64
-		counterMetricName string
-		err               error
-	}{
-		{
-			name:              "error is ErrNotFoundName",
-			counterMapInit:    map[string][]int64{},
-			counterMetricName: "counter",
-			err:               ErrNotFoundName,
-		},
-		{
-			name: "metric found by name",
-			counterMapInit: map[string][]int64{
-				"counter": {1, 2, 3},
-			},
-			counterMetricName: "counter",
-			err:               nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			memStorage := &MemStorage{
-				counter: tt.counterMapInit,
-			}
-
-			counterMetric, err := memStorage.CounterByName(context.TODO(), tt.counterMetricName)
-
-			if tt.err != nil {
-				assert.ErrorIs(t, err, tt.err, "CounterByName() should return an error for name: %s", tt.counterMetricName)
-				assert.Nil(t, counterMetric)
-			} else {
-				assert.NoError(t, err, "CounterByName() should not return an error for name: %s", tt.counterMetricName)
-				assert.Equal(t, tt.counterMapInit[tt.counterMetricName], counterMetric)
-			}
-		})
-	}
-
-}
-
 func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 
 	type got struct {
@@ -80,7 +37,7 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 	}
 
 	type want struct {
-		counterAccumulative int64
+		counterAccumulative *models.Metrics
 		err                 error
 	}
 
@@ -96,7 +53,7 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 				counterMetricName: "counter",
 			},
 			want: want{
-				counterAccumulative: 0,
+				counterAccumulative: nil,
 				err:                 ErrNotFoundName,
 			},
 		},
@@ -109,8 +66,12 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 				counterMetricName: "counter",
 			},
 			want: want{
-				counterAccumulative: 0,
-				err:                 nil,
+				counterAccumulative: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(0)),
+				},
+				err: nil,
 			},
 		},
 		{
@@ -122,8 +83,12 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 				counterMetricName: "counter",
 			},
 			want: want{
-				counterAccumulative: 6,
-				err:                 nil,
+				counterAccumulative: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(6)),
+				},
+				err: nil,
 			},
 		},
 	}
@@ -227,8 +192,6 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 
 			err := memStorage.CounterAdd(context.TODO(), tt.got.counterMetricName, tt.got.counterMetricValue)
 			assert.NoError(t, err)
-
-			assert.Equal(t, memStorage.CounterSizeByName(context.TODO(), tt.got.counterMetricName), tt.want.lenCounterMetricNameAfterAdd)
 		})
 	}
 }
@@ -237,15 +200,19 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 	tests := []struct {
 		name                string
 		gaugeMapInit        map[string]float64
-		gaugeMapAfterUpdate map[string]float64
+		gaugeMapAfterUpdate []models.Metrics
 		gaugeMetricName     string
 		gaugeMetricValue    float64
 	}{
 		{
 			name:         "update to empty gauge map with valid metric name",
 			gaugeMapInit: map[string]float64{},
-			gaugeMapAfterUpdate: map[string]float64{
-				"validMetricName": 1,
+			gaugeMapAfterUpdate: []models.Metrics{
+				{
+					ID:    "validMetricName",
+					MType: models.Gauge,
+					Value: new(float64(1)),
+				},
 			},
 			gaugeMetricName:  "validMetricName",
 			gaugeMetricValue: 1,
@@ -255,8 +222,12 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMapInit: map[string]float64{
 				"validMetricName": 1,
 			},
-			gaugeMapAfterUpdate: map[string]float64{
-				"validMetricName": 2,
+			gaugeMapAfterUpdate: []models.Metrics{
+				{
+					ID:    "validMetricName",
+					MType: models.Gauge,
+					Value: new(float64(2)),
+				},
 			},
 			gaugeMetricName:  "validMetricName",
 			gaugeMetricValue: 2,
@@ -266,9 +237,17 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMapInit: map[string]float64{
 				"validMetricName": 0,
 			},
-			gaugeMapAfterUpdate: map[string]float64{
-				"validMetricName":    0,
-				"validMetricNameNew": 2,
+			gaugeMapAfterUpdate: []models.Metrics{
+				{
+					ID:    "validMetricName",
+					MType: models.Gauge,
+					Value: new(float64(0)),
+				},
+				{
+					ID:    "validMetricNameNew",
+					MType: models.Gauge,
+					Value: new(float64(2)),
+				},
 			},
 			gaugeMetricName:  "validMetricNameNew",
 			gaugeMetricValue: 2,
@@ -283,9 +262,11 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 
 			err := memStorage.GaugeUpdate(context.TODO(), tt.gaugeMetricName, tt.gaugeMetricValue)
 			assert.NoError(t, err)
-
 			assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
-			assert.Equal(t, memStorage.Gauge(context.TODO()), tt.gaugeMapAfterUpdate)
+
+			gauge, err := memStorage.Gauge(context.TODO())
+			assert.NoError(t, err)
+			assert.ElementsMatch(t, tt.gaugeMapAfterUpdate, gauge)
 		})
 	}
 }
@@ -295,14 +276,14 @@ func TestMemStorage_GaugeByName(t *testing.T) {
 		name             string
 		gaugeMapInit     map[string]float64
 		gaugeMetricName  string
-		gaugeMetricValue float64
+		gaugeMetricValue *models.Metrics
 		err              error
 	}{
 		{
 			name:             "get gauge by name valid metric name but not found",
 			gaugeMapInit:     map[string]float64{},
 			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: 0,
+			gaugeMetricValue: nil,
 			err:              ErrNotFoundName,
 		},
 		{
@@ -310,18 +291,26 @@ func TestMemStorage_GaugeByName(t *testing.T) {
 			gaugeMapInit: map[string]float64{
 				"validMetricName": 1,
 			},
-			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: 1,
-			err:              nil,
+			gaugeMetricName: "validMetricName",
+			gaugeMetricValue: &models.Metrics{
+				ID:    "validMetricName",
+				MType: models.Gauge,
+				Value: new(float64(1)),
+			},
+			err: nil,
 		},
 		{
 			name: "success get gauge by name valid metric with value 1.2",
 			gaugeMapInit: map[string]float64{
 				"validMetricName": 1.2,
 			},
-			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: 1.2,
-			err:              nil,
+			gaugeMetricName: "validMetricName",
+			gaugeMetricValue: &models.Metrics{
+				ID:    "validMetricName",
+				MType: models.Gauge,
+				Value: new(1.2),
+			},
+			err: nil,
 		},
 	}
 
@@ -336,8 +325,6 @@ func TestMemStorage_GaugeByName(t *testing.T) {
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err, "GaugeByName() should return an error for name: %s", tt.gaugeMetricName)
 			} else {
-				assert.NoError(t, err, "GaugeByName() should not return an error for name: %s", tt.gaugeMetricName)
-				assert.Equal(t, memStorage.Gauge(context.TODO()), tt.gaugeMapInit)
 				assert.Equal(t, tt.gaugeMetricValue, metricValue)
 			}
 		})

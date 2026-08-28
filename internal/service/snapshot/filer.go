@@ -106,7 +106,10 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 	return nil
 }
 func (filer *Filer) Save(ctx context.Context) error {
-	filer.readFromStorage(ctx)
+	err := filer.readFromStorage(ctx)
+	if err != nil {
+		return err
+	}
 
 	if len(filer.metrics) == 0 {
 		return nil
@@ -142,39 +145,35 @@ func (filer *Filer) Save(ctx context.Context) error {
 }
 
 // readFromStorage - получаем данные метрик из источника
-func (filer *Filer) readFromStorage(ctx context.Context) {
-	gaugeMetrics := filer.metricService.Gauge(ctx)
-	counterMetrics := filer.metricService.CounterAccumulative(ctx)
+func (filer *Filer) readFromStorage(ctx context.Context) error {
+	gaugeMetrics, err := filer.metricService.Gauge(ctx)
+	if err != nil {
+		return err
+	}
+
+	counterMetrics, err := filer.metricService.CounterAccumulative(ctx)
+	if err != nil {
+		return err
+	}
 
 	if len(gaugeMetrics) == 0 && len(counterMetrics) == 0 {
-		return
+		return nil
 	}
 
 	filer.metrics = make([]models.Metrics, 0, len(gaugeMetrics)+len(counterMetrics))
 
 	if len(gaugeMetrics) > 0 {
-		for id, value := range gaugeMetrics {
-			modelMetric := models.Metrics{
-				ID:    id,
-				MType: models.Gauge,
-				Value: &value,
-			}
-
+		for _, modelMetric := range gaugeMetrics {
 			filer.metrics = append(filer.metrics, modelMetric)
 		}
 	}
 
 	if len(counterMetrics) > 0 {
-		for id, value := range counterMetrics {
-			modelMetric := models.Metrics{
-				ID:    id,
-				MType: models.Counter,
-				Delta: &value,
-			}
-
+		for _, modelMetric := range counterMetrics {
 			filer.metrics = append(filer.metrics, modelMetric)
 		}
 	}
+	return nil
 }
 
 func (filer *Filer) openFile() error {

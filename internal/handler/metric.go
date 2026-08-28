@@ -153,17 +153,25 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 
 	sb.WriteString("<ul>")
 
-	gaugeMetrics := m.metricManager.MetricList(r.Context(), models.Gauge)
-	m.metricListRender(&sb, "Gauge metrics", models.Gauge, gaugeMetrics)
+	gaugeMetrics, err := m.metricManager.MetricList(r.Context(), models.Gauge)
+	if err != nil {
+		m.logger.Error("metricManager", "err", err)
+	} else {
+		m.metricListRender(&sb, "Gauge metrics", models.Gauge, gaugeMetrics)
+	}
 
-	gaugeMetrics = m.metricManager.MetricList(r.Context(), models.Counter)
-	m.metricListRender(&sb, "Counter metrics", models.Counter, gaugeMetrics)
+	gaugeMetrics, err = m.metricManager.MetricList(r.Context(), models.Counter)
+	if err != nil {
+		m.logger.Error("metricManager", "err", err)
+	} else {
+		m.metricListRender(&sb, "Counter metrics", models.Counter, gaugeMetrics)
+	}
 
 	sb.WriteString("</ul>")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte(sb.String()))
+	_, err = w.Write([]byte(sb.String()))
 	if err != nil {
 		m.logger.Error("error", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
@@ -184,17 +192,17 @@ func (m *Metric) StoragePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType string, metricList map[string]models.Metrics) {
+func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType string, metricList []models.Metrics) {
 	sb.WriteString("<li><strong>" + title + ":</strong>")
 
 	if len(metricList) > 0 {
 		sb.WriteString("<ul>")
-		for name, metric := range metricList {
+		for _, metric := range metricList {
 			sb.WriteString("<li>")
 			if metricType == models.Gauge {
-				sb.WriteString(fmt.Sprintf("%s: %v", name, *metric.Value))
+				sb.WriteString(fmt.Sprintf("%s: %v", metric.ID, *metric.Value))
 			} else {
-				sb.WriteString(fmt.Sprintf("%s: %v", name, *metric.Delta))
+				sb.WriteString(fmt.Sprintf("%s: %v", metric.ID, *metric.Delta))
 			}
 
 			sb.WriteString("</li>")

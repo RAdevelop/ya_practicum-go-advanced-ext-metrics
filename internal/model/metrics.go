@@ -11,9 +11,9 @@ const (
 // что бы отличать значение "0", от не заданного значения
 // и соответственно не кодировать в структуру.
 type Metrics struct {
-	ID    string   `json:"id"`
-	MType string   `json:"type"`
-	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
+	ID    string   `json:"id" db:"metric_id"`
+	MType string   `json:"type" db:"m_type"`
+	Delta *int64   `json:"delta,omitempty" db:"delta"`
+	Value *float64 `json:"value,omitempty" db:"value"`
 	Hash  string   `json:"hash,omitempty"`
 }

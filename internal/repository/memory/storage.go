@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 )
 
 var ErrNotFoundName = errors.New("metric not found by name")
@@ -33,18 +35,32 @@ func (ms *MemStorage) GaugeUpdate(ctx context.Context, name string, value float6
 	return nil
 }
 
-func (ms *MemStorage) GaugeByName(ctx context.Context, name string) (float64, error) {
+func (ms *MemStorage) GaugeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	_ = ctx
 	if value, ok := ms.gauge[name]; ok {
-		return value, nil
+		return &models.Metrics{
+			ID:    name,
+			MType: models.Gauge,
+			Value: &value,
+		}, nil
 	}
 
-	return 0, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
+	return nil, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
-func (ms *MemStorage) Gauge(ctx context.Context) map[string]float64 {
+func (ms *MemStorage) Gauge(ctx context.Context) ([]models.Metrics, error) {
 	_ = ctx
-	return ms.gauge
+
+	metrics := make([]models.Metrics, 0, len(ms.gauge))
+	for name, value := range ms.gauge {
+		metrics = append(metrics, models.Metrics{
+			ID:    name,
+			MType: models.Gauge,
+			Value: &value,
+		})
+	}
+
+	return metrics, nil
 }
 
 func (ms *MemStorage) CounterAdd(ctx context.Context, name string, value int64) error {
@@ -58,35 +74,30 @@ func (ms *MemStorage) CounterAdd(ctx context.Context, name string, value int64) 
 	return nil
 }
 
-func (ms *MemStorage) CounterByName(ctx context.Context, name string) ([]int64, error) {
+func (ms *MemStorage) CounterAccumulative(ctx context.Context) ([]models.Metrics, error) {
 	_ = ctx
-	if value, ok := ms.counter[name]; ok {
-		return value, nil
+	metrics := make([]models.Metrics, 0, len(ms.counterAccumulative))
+	for name, value := range ms.counterAccumulative {
+		metrics = append(metrics, models.Metrics{
+			ID:    name,
+			MType: models.Counter,
+			Delta: &value,
+		})
 	}
 
-	return nil, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
+	return metrics, nil
 }
 
-func (ms *MemStorage) CounterAccumulative(ctx context.Context) map[string]int64 {
-	_ = ctx
-	return ms.counterAccumulative
-}
-
-func (ms *MemStorage) CounterSizeByName(ctx context.Context, name string) int {
-	_ = ctx
-	if _, ok := ms.counter[name]; !ok {
-		return 0
-	}
-
-	return len(ms.counter[name])
-}
-
-func (ms *MemStorage) CounterAccumulativeByName(ctx context.Context, name string) (int64, error) {
+func (ms *MemStorage) CounterAccumulativeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	_ = ctx
 	if value, ok := ms.counterAccumulative[name]; ok {
-		return value, nil
+		return &models.Metrics{
+			ID:    name,
+			MType: models.Counter,
+			Delta: &value,
+		}, nil
 	}
-	return 0, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
+	return nil, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
 func (ms *MemStorage) counterAccumulate(name string, value int64) {

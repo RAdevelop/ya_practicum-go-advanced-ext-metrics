@@ -1,6 +1,10 @@
 package metric
 
-import "context"
+import (
+	"context"
+
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+)
 
 /*
 Storage - интерфейс по работе с хранилищем метрик
@@ -11,11 +15,11 @@ Storage - интерфейс по работе с хранилищем метр�
 //go:generate mockery
 type Storage interface {
 	GaugeUpdate(ctx context.Context, name string, value float64) error
-	GaugeByName(ctx context.Context, name string) (float64, error)
-	Gauge(ctx context.Context) map[string]float64
+	GaugeByName(ctx context.Context, name string) (*models.Metrics, error)
+	Gauge(ctx context.Context) ([]models.Metrics, error)
 
 	CounterAdd(ctx context.Context, name string, value int64) error
-	CounterAccumulative(ctx context.Context) map[string]int64
-	CounterAccumulativeByName(ctx context.Context, name string) (int64, error)
+	CounterAccumulative(ctx context.Context) ([]models.Metrics, error)
+	CounterAccumulativeByName(ctx context.Context, name string) (*models.Metrics, error)
 	Ping(context.Context) error
 }

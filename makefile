@@ -31,7 +31,7 @@ NC = \033[0m # No Color
 .PHONY: help
 help: ## Показать справку
 	@echo "$(GREEN)Доступные команды:$(NC)"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)  make %-20s$(NC) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)  make %-20s$(NC) %s\n", $$1, $$2}'
 
 ######## Tests
 
@@ -82,7 +82,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter10x
-test-iter10x: ## Запустить тесты практикума с 10 по 14 задание они идут с БД (make test-iter iter=номер_задания)
+test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
 	@go build -o ./cmd/server/server ./cmd/server/*.go \
 	&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/caarlos0/env/v11"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +44,7 @@ func TestStorage_GaugeUpdateAndGaugeByName(t *testing.T) {
 	}
 	type want struct {
 		hasError bool
-		mValue   float64
+		mValue   *models.Metrics
 	}
 
 	tests := []struct {
@@ -59,7 +60,11 @@ func TestStorage_GaugeUpdateAndGaugeByName(t *testing.T) {
 			},
 			want: want{
 				hasError: false,
-				mValue:   100.11,
+				mValue: &models.Metrics{
+					ID:    "gauge",
+					MType: models.Gauge,
+					Value: new(100.11),
+				},
 			},
 		},
 	}
@@ -93,7 +98,7 @@ func TestStorage_Gauge(t *testing.T) {
 	}
 	type want struct {
 		hasError bool
-		gauge    map[string]float64
+		gauge    []models.Metrics
 	}
 
 	tests := []struct {
@@ -105,15 +110,23 @@ func TestStorage_Gauge(t *testing.T) {
 			name: "success map not empty",
 			given: given{
 				gauge: map[string]float64{
-					"gauge1": 100.11,
-					"gauge2": 101.11,
+					"gauge1": 101.11,
+					"gauge2": 102.11,
 				},
 			},
 			want: want{
 				hasError: false,
-				gauge: map[string]float64{
-					"gauge1": 100.11,
-					"gauge2": 101.11,
+				gauge: []models.Metrics{
+					{
+						ID:    "gauge1",
+						MType: models.Gauge,
+						Value: new(101.11),
+					},
+					{
+						ID:    "gauge2",
+						MType: models.Gauge,
+						Value: new(102.11),
+					},
 				},
 			},
 		},
@@ -124,7 +137,7 @@ func TestStorage_Gauge(t *testing.T) {
 			},
 			want: want{
 				hasError: false,
-				gauge:    map[string]float64{},
+				gauge:    nil,
 			},
 		},
 	}
@@ -143,7 +156,10 @@ func TestStorage_Gauge(t *testing.T) {
 					}
 				}
 
-				gaugeValue := storage.Gauge(ctx)
+				gaugeValue, err := storage.Gauge(ctx)
+
+				t.Logf("--------------------------------------------------------------gaugeValue: %v", gaugeValue)
+				assert.NoError(t, err)
 				assert.Equalf(t, tt.want.gauge, gaugeValue, "gauge want: %v, given: %v", tt.want, tt.given)
 
 				return errForTransactionRollback
@@ -162,7 +178,7 @@ func TestStorage_CounterAddAndCounterAccumulativeByName(t *testing.T) {
 	}
 	type want struct {
 		hasError bool
-		mValue   int64
+		mValue   *models.Metrics
 	}
 
 	tests := []struct {
@@ -178,7 +194,11 @@ func TestStorage_CounterAddAndCounterAccumulativeByName(t *testing.T) {
 			},
 			want: want{
 				hasError: false,
-				mValue:   100,
+				mValue: &models.Metrics{
+					ID:    "counter",
+					MType: models.Counter,
+					Delta: new(int64(100)),
+				},
 			},
 		},
 	}
@@ -188,6 +208,7 @@ func TestStorage_CounterAddAndCounterAccumulativeByName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := storage.DB.RunInTransaction(ctx, func(ctx context.Context) error {
+
 				err := storage.CounterAdd(ctx, tt.given.mId, tt.given.mValue)
 				if tt.want.hasError {
 					assert.Errorf(t, err, "counter want: %v, given: %v", tt.want, tt.given)
@@ -215,7 +236,7 @@ func TestStorage_CounterAccumulative(t *testing.T) {
 	}
 	type want struct {
 		hasError bool
-		counter  map[string]int64
+		counter  []models.Metrics
 	}
 
 	tests := []struct {
@@ -233,9 +254,17 @@ func TestStorage_CounterAccumulative(t *testing.T) {
 			},
 			want: want{
 				hasError: false,
-				counter: map[string]int64{
-					"counter1": 100,
-					"counter2": 101,
+				counter: []models.Metrics{
+					{
+						ID:    "counter1",
+						MType: models.Counter,
+						Delta: new(int64(100)),
+					},
+					{
+						ID:    "counter2",
+						MType: models.Counter,
+						Delta: new(int64(101)),
+					},
 				},
 			},
 		},
@@ -246,7 +275,7 @@ func TestStorage_CounterAccumulative(t *testing.T) {
 			},
 			want: want{
 				hasError: false,
-				counter:  map[string]int64{},
+				counter:  []models.Metrics{},
 			},
 		},
 	}
@@ -255,7 +284,9 @@ func TestStorage_CounterAccumulative(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			err := storage.DB.RunInTransaction(ctx, func(ctx context.Context) error {
+
 				for mId, mValue := range tt.given.counter {
 					err := storage.CounterAdd(ctx, mId, mValue)
 					if tt.want.hasError {
@@ -265,8 +296,12 @@ func TestStorage_CounterAccumulative(t *testing.T) {
 					}
 				}
 
-				counterValue := storage.CounterAccumulative(ctx)
-				assert.Equalf(t, tt.want.counter, counterValue, "counter want: %v, given: %v", tt.want, tt.given)
+				counterValue, err := storage.CounterAccumulative(ctx)
+
+				t.Logf("---------counterValue: %v", counterValue)
+
+				assert.NoError(t, err)
+				assert.ElementsMatch(t, tt.want.counter, counterValue, "counter want: %v, given: %v", tt.want, tt.given)
 
 				return errForTransactionRollback
 			})

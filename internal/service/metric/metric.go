@@ -1,6 +1,10 @@
 package metric
 
-import "context"
+import (
+	"context"
+
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+)
 
 // Service - сервис для работы с метриками
 type Service struct {
@@ -21,19 +25,19 @@ func (ms *Service) CounterAdd(ctx context.Context, name string, value int64) err
 	return ms.storage.CounterAdd(ctx, name, value)
 }
 
-func (ms *Service) CounterByNameAccumulative(ctx context.Context, name string) (int64, error) {
+func (ms *Service) CounterByNameAccumulative(ctx context.Context, name string) (*models.Metrics, error) {
 	return ms.storage.CounterAccumulativeByName(ctx, name)
 }
 
-func (ms *Service) GaugeByName(ctx context.Context, name string) (float64, error) {
+func (ms *Service) GaugeByName(ctx context.Context, name string) (*models.Metrics, error) {
 	return ms.storage.GaugeByName(ctx, name)
 }
 
-func (ms *Service) Gauge(ctx context.Context) map[string]float64 {
+func (ms *Service) Gauge(ctx context.Context) ([]models.Metrics, error) {
 	return ms.storage.Gauge(ctx)
 }
 
-func (ms *Service) CounterAccumulative(ctx context.Context) map[string]int64 {
+func (ms *Service) CounterAccumulative(ctx context.Context) ([]models.Metrics, error) {
 	return ms.storage.CounterAccumulative(ctx)
 }
 
