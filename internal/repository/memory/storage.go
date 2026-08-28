@@ -27,12 +27,14 @@ func NewStorage() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) GaugeUpdate(name string, value float64) error {
+func (ms *MemStorage) GaugeUpdate(ctx context.Context, name string, value float64) error {
+	_ = ctx
 	ms.gauge[name] = value
 	return nil
 }
 
-func (ms *MemStorage) GaugeByName(name string) (float64, error) {
+func (ms *MemStorage) GaugeByName(ctx context.Context, name string) (float64, error) {
+	_ = ctx
 	if value, ok := ms.gauge[name]; ok {
 		return value, nil
 	}
@@ -40,15 +42,13 @@ func (ms *MemStorage) GaugeByName(name string) (float64, error) {
 	return 0, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
-func (ms *MemStorage) Gauge() map[string]float64 {
+func (ms *MemStorage) Gauge(ctx context.Context) map[string]float64 {
+	_ = ctx
 	return ms.gauge
 }
 
-func (ms *MemStorage) GaugeSize() int {
-	return len(ms.gauge)
-}
-
-func (ms *MemStorage) CounterAdd(name string, value int64) error {
+func (ms *MemStorage) CounterAdd(ctx context.Context, name string, value int64) error {
+	_ = ctx
 	if _, ok := ms.counter[name]; !ok {
 		ms.counter[name] = make([]int64, 0)
 	}
@@ -58,7 +58,8 @@ func (ms *MemStorage) CounterAdd(name string, value int64) error {
 	return nil
 }
 
-func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
+func (ms *MemStorage) CounterByName(ctx context.Context, name string) ([]int64, error) {
+	_ = ctx
 	if value, ok := ms.counter[name]; ok {
 		return value, nil
 	}
@@ -66,16 +67,13 @@ func (ms *MemStorage) CounterByName(name string) ([]int64, error) {
 	return nil, fmt.Errorf("%w: name = %q", ErrNotFoundName, name)
 }
 
-func (ms *MemStorage) CounterAccumulative() map[string]int64 {
+func (ms *MemStorage) CounterAccumulative(ctx context.Context) map[string]int64 {
+	_ = ctx
 	return ms.counterAccumulative
 }
 
-func (ms *MemStorage) CounterSize() int {
-	return len(ms.counter)
-}
-
-func (ms *MemStorage) CounterSizeByName(name string) int {
-
+func (ms *MemStorage) CounterSizeByName(ctx context.Context, name string) int {
+	_ = ctx
 	if _, ok := ms.counter[name]; !ok {
 		return 0
 	}
@@ -83,8 +81,8 @@ func (ms *MemStorage) CounterSizeByName(name string) int {
 	return len(ms.counter[name])
 }
 
-func (ms *MemStorage) CounterAccumulativeByName(name string) (int64, error) {
-
+func (ms *MemStorage) CounterAccumulativeByName(ctx context.Context, name string) (int64, error) {
+	_ = ctx
 	if value, ok := ms.counterAccumulative[name]; ok {
 		return value, nil
 	}

@@ -2,6 +2,7 @@ package router
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -697,9 +698,9 @@ func TestMetric_GetWithJson(t *testing.T) {
 				// сами сначала добавляем значения в хранилище данных
 				switch tt.given.metric.MType {
 				case models.Gauge:
-					err = metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
+					err = metricService.GaugeUpdate(req.Context(), tt.given.metric.ID, *tt.given.metric.Value)
 				case models.Counter:
-					err = metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
+					err = metricService.CounterAdd(req.Context(), tt.given.metric.ID, *tt.given.metric.Delta)
 				}
 				assert.NoError(t, err)
 
@@ -814,7 +815,7 @@ func TestMetric_StoragePing(t *testing.T) {
 func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
-		_ = metricService.CounterAdd(metricName, value)
+		_ = metricService.CounterAdd(context.TODO(), metricName, value)
 	}
 
 	return params{
@@ -826,7 +827,7 @@ func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricTy
 
 func metricBuildParamsForGaugeGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
-		_ = metricService.GaugeUpdate(metricName, value)
+		_ = metricService.GaugeUpdate(context.TODO(), metricName, value)
 	}
 
 	return params{

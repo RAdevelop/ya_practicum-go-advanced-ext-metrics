@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -40,14 +41,14 @@ func TestService_GaugeUpdate(t *testing.T) {
 			// Arrange
 			mockStorage := NewMockStorage(t)
 			mockStorage.EXPECT().
-				GaugeUpdate("test_gauge", tt.value).
+				GaugeUpdate(context.TODO(), "test_gauge", tt.value).
 				Return(nil).
 				Once()
 
 			metricService := NewService(mockStorage)
 
 			// Act
-			err := metricService.GaugeUpdate("test_gauge", tt.value)
+			err := metricService.GaugeUpdate(context.TODO(), "test_gauge", tt.value)
 			assert.NoError(t, err)
 
 			// Assert
@@ -77,9 +78,9 @@ func TestService_CounterAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().CounterAdd("test_counter", tt.value).Return(nil).Once()
+			mockStorage.EXPECT().CounterAdd(context.TODO(), "test_counter", tt.value).Return(nil).Once()
 			metricService := NewService(mockStorage)
-			err := metricService.CounterAdd("test_counter", tt.value)
+			err := metricService.CounterAdd(context.TODO(), "test_counter", tt.value)
 			mockStorage.AssertExpectations(t)
 			assert.NoError(t, err)
 		})
@@ -155,9 +156,9 @@ func TestService_CounterByNameAccumulative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().CounterAccumulativeByName(tt.given.name).Return(tt.given.value, tt.given.err).Once()
+			mockStorage.EXPECT().CounterAccumulativeByName(context.TODO(), tt.given.name).Return(tt.given.value, tt.given.err).Once()
 			metricService := NewService(mockStorage)
-			value, err := metricService.CounterByNameAccumulative(tt.given.name)
+			value, err := metricService.CounterByNameAccumulative(context.TODO(), tt.given.name)
 
 			mockStorage.AssertExpectations(t)
 
@@ -235,9 +236,9 @@ func TestService_GaugeByName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().GaugeByName(tt.given.name).Return(tt.given.value, tt.given.err).Once()
+			mockStorage.EXPECT().GaugeByName(context.TODO(), tt.given.name).Return(tt.given.value, tt.given.err).Once()
 			metricService := NewService(mockStorage)
-			value, err := metricService.GaugeByName(tt.given.name)
+			value, err := metricService.GaugeByName(context.TODO(), tt.given.name)
 			mockStorage.AssertExpectations(t)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.value, value)
@@ -271,9 +272,9 @@ func TestService_Gauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().Gauge().Return(tt.want.value).Once()
+			mockStorage.EXPECT().Gauge(context.TODO()).Return(tt.want.value).Once()
 			metricService := NewService(mockStorage)
-			value := metricService.Gauge()
+			value := metricService.Gauge(context.TODO())
 			mockStorage.AssertExpectations(t)
 			assert.Equal(t, tt.want.value, value)
 		})
@@ -306,9 +307,9 @@ func TestService_CounterAccumulative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage := NewMockStorage(t)
-			mockStorage.EXPECT().CounterAccumulative().Return(tt.want.value).Once()
+			mockStorage.EXPECT().CounterAccumulative(context.TODO()).Return(tt.want.value).Once()
 			metricService := NewService(mockStorage)
-			value := metricService.CounterAccumulative()
+			value := metricService.CounterAccumulative(context.TODO())
 			mockStorage.AssertExpectations(t)
 			assert.Equal(t, tt.want.value, value)
 		})

@@ -70,7 +70,7 @@ func main() {
 		metricStorage = memory.NewStorage()
 		srvFlags.useMemoryStorage = true
 	} else {
-		db, err := database.New(ctx, dbConfig)
+		db, err := database.NewDB(ctx, dbConfig)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
 			logApp.Error("db", "err", err)
@@ -94,7 +94,7 @@ func main() {
 	r := router.New(h)
 
 	if srvFlags.useMemoryStorage {
-		metricSnapshotTask(metricManager, logApp, serverConfig)
+		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)
 	}
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
@@ -103,19 +103,19 @@ func main() {
 	}
 }
 
-func metricSnapshotTask(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
+func metricSnapshotTask(ctx context.Context, metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
 
 	if config.Restore() != nil && *config.Restore() {
-		err := metricManager.MetricSnapshotLoad()
+		err := metricManager.MetricSnapshotLoad(ctx)
 		if err != nil {
 			logger.Error("metricManager MetricSnapshotLoad", "err", err)
 		}
 	}
 
-	go saver(metricManager, logger, config)
+	go saver(ctx, metricManager, logger, config)
 }
 
-func saver(metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
+func saver(ctx context.Context, metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
 
 	if config.StoreInterval() == nil || *config.StoreInterval() <= 0 {
 		return
@@ -127,7 +127,7 @@ func saver(metricManager service.MetricManagementAble, logger logger.Logger, con
 	}()
 
 	for range metricStoreIntervalTicker.C {
-		err := metricManager.MetricSnapshotSave()
+		err := metricManager.MetricSnapshotSave(ctx)
 		if err != nil {
 			logger.Error("MetricInitializer", "err", err)
 		}

@@ -68,14 +68,14 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = m.metricManager.MetricUpdate(metric); err != nil {
+	if err = m.metricManager.MetricUpdate(r.Context(), metric); err != nil {
 		m.logger.Warn("Update", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
 	}
 
 	if m.config.StoreInterval() != nil && *m.config.StoreInterval() == 0 {
-		err = m.metricManager.MetricSnapshotSave()
+		err = m.metricManager.MetricSnapshotSave(r.Context())
 		if err != nil {
 			m.logger.Error("metricManager", "err", err)
 		}
@@ -113,7 +113,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metric, err = m.metricManager.MetricValue(metric.MType, metric.ID)
+	metric, err = m.metricManager.MetricValue(r.Context(), metric.MType, metric.ID)
 	if err != nil {
 		m.logger.Warn("error", "err", err)
 		http.Error(w, "Metric value not found by name", http.StatusNotFound)
@@ -153,10 +153,10 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 
 	sb.WriteString("<ul>")
 
-	gaugeMetrics := m.metricManager.MetricList(models.Gauge)
+	gaugeMetrics := m.metricManager.MetricList(r.Context(), models.Gauge)
 	m.metricListRender(&sb, "Gauge metrics", models.Gauge, gaugeMetrics)
 
-	gaugeMetrics = m.metricManager.MetricList(models.Counter)
+	gaugeMetrics = m.metricManager.MetricList(r.Context(), models.Counter)
 	m.metricListRender(&sb, "Counter metrics", models.Counter, gaugeMetrics)
 
 	sb.WriteString("</ul>")

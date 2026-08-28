@@ -12,9 +12,8 @@ export POSTGRES_HOST_TEST := postgres
 export POSTGRES_PORT_TEST := 15432
 export POSTGRES_DB_TEST := praktikum_test
 
-DB_DSN="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
-DB_DSN_TEST="postgres://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@${POSTGRES_HOST_TEST}:${POSTGRES_PORT_TEST}/${POSTGRES_DB_TEST}?sslmode=disable"
-
+export DB_DSN_TEST=postgres://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@${POSTGRES_HOST_TEST}:${POSTGRES_PORT_TEST}/${POSTGRES_DB_TEST}?sslmode=disable
+DB_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
 
 # Определение команд
 DOCKER_COMPOSE := docker-compose
@@ -104,7 +103,7 @@ test-iter10x: ## Запустить тесты практикума с 10 по 1
 .PHONY: unset-env
 unset-env: ## Удалить ENV переменные
 	@echo "$(GREEN)=== Cleaning environment ===$(NC)"
-	@for var in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB; do \
+	@for var in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DB_DSN_TEST; do \
 		unset $$var; \
 	done
 	@echo "$(GREEN)✅ Environment cleaned$(NC)"
@@ -142,6 +141,8 @@ build:  ## Собрать кластер
 	@make clean
 	@make up
 	@make status
+	@make migrate-up
+	@make migrate-upt
 	@make unset-env
 
 .PHONY: rebuild
@@ -150,6 +151,9 @@ rebuild:  ## пересобрать кластер
 	@make clean
 	@$(DOCKER_COMPOSE) up -d --no-deps --build
 	@make status
+	@sleep 5
+	@make migrate-up
+	@make migrate-upt
 	@make unset-env
 
 

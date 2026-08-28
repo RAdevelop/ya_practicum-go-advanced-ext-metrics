@@ -13,28 +13,28 @@ func NewService(storage Storage) *Service {
 	}
 }
 
-func (ms *Service) GaugeUpdate(name string, value float64) error {
-	return ms.storage.GaugeUpdate(name, value)
+func (ms *Service) GaugeUpdate(ctx context.Context, name string, value float64) error {
+	return ms.storage.GaugeUpdate(ctx, name, value)
 }
 
-func (ms *Service) CounterAdd(name string, value int64) error {
-	return ms.storage.CounterAdd(name, value)
+func (ms *Service) CounterAdd(ctx context.Context, name string, value int64) error {
+	return ms.storage.CounterAdd(ctx, name, value)
 }
 
-func (ms *Service) CounterByNameAccumulative(name string) (int64, error) {
-	return ms.storage.CounterAccumulativeByName(name)
+func (ms *Service) CounterByNameAccumulative(ctx context.Context, name string) (int64, error) {
+	return ms.storage.CounterAccumulativeByName(ctx, name)
 }
 
-func (ms *Service) GaugeByName(name string) (float64, error) {
-	return ms.storage.GaugeByName(name)
+func (ms *Service) GaugeByName(ctx context.Context, name string) (float64, error) {
+	return ms.storage.GaugeByName(ctx, name)
 }
 
-func (ms *Service) Gauge() map[string]float64 {
-	return ms.storage.Gauge()
+func (ms *Service) Gauge(ctx context.Context) map[string]float64 {
+	return ms.storage.Gauge(ctx)
 }
 
-func (ms *Service) CounterAccumulative() map[string]int64 {
-	return ms.storage.CounterAccumulative()
+func (ms *Service) CounterAccumulative(ctx context.Context) map[string]int64 {
+	return ms.storage.CounterAccumulative(ctx)
 }
 
 func (ms *Service) Ping(ctx context.Context) error {

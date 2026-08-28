@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,7 +51,7 @@ Load - получаем данные метрик из хранилища сни
 TODO чтобы такие "толстые" методы можно было покрыть тестами (с хорошим уровнем покрытия), надо из разбить на мелкие методы.
   - Тогда можно будет протестировать логику метода через моки/стабы
 */
-func (filer *Filer) Load() (err error) {
+func (filer *Filer) Load(ctx context.Context) (err error) {
 	defer func() {
 		errClose := filer.closeFile()
 		err = errors.Join(err, errClose)
@@ -87,9 +88,9 @@ func (filer *Filer) Load() (err error) {
 
 		switch modelMetric.MType {
 		case models.Gauge:
-			err = filer.metricService.GaugeUpdate(modelMetric.ID, *modelMetric.Value)
+			err = filer.metricService.GaugeUpdate(ctx, modelMetric.ID, *modelMetric.Value)
 		case models.Counter:
-			err = filer.metricService.CounterAdd(modelMetric.ID, *modelMetric.Delta)
+			err = filer.metricService.CounterAdd(ctx, modelMetric.ID, *modelMetric.Delta)
 		}
 
 		if err != nil {
@@ -104,8 +105,8 @@ func (filer *Filer) Load() (err error) {
 
 	return nil
 }
-func (filer *Filer) Save() error {
-	filer.readFromStorage()
+func (filer *Filer) Save(ctx context.Context) error {
+	filer.readFromStorage(ctx)
 
 	if len(filer.metrics) == 0 {
 		return nil
@@ -141,9 +142,9 @@ func (filer *Filer) Save() error {
 }
 
 // readFromStorage - получаем данные метрик из источника
-func (filer *Filer) readFromStorage() {
-	gaugeMetrics := filer.metricService.Gauge()
-	counterMetrics := filer.metricService.CounterAccumulative()
+func (filer *Filer) readFromStorage(ctx context.Context) {
+	gaugeMetrics := filer.metricService.Gauge(ctx)
+	counterMetrics := filer.metricService.CounterAccumulative(ctx)
 
 	if len(gaugeMetrics) == 0 && len(counterMetrics) == 0 {
 		return

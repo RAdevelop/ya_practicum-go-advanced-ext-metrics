@@ -58,7 +58,7 @@ func TestMemStorage_CounterByName(t *testing.T) {
 				counter: tt.counterMapInit,
 			}
 
-			counterMetric, err := memStorage.CounterByName(tt.counterMetricName)
+			counterMetric, err := memStorage.CounterByName(context.TODO(), tt.counterMetricName)
 
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err, "CounterByName() should return an error for name: %s", tt.counterMetricName)
@@ -133,11 +133,11 @@ func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
 			memStorage := NewStorage()
 
 			for _, counter := range tt.got.counters {
-				err := memStorage.CounterAdd(tt.got.counterMetricName, counter)
+				err := memStorage.CounterAdd(context.TODO(), tt.got.counterMetricName, counter)
 				assert.NoError(t, err)
 			}
 
-			counterAccumulative, err := memStorage.CounterAccumulativeByName(tt.got.counterMetricName)
+			counterAccumulative, err := memStorage.CounterAccumulativeByName(context.TODO(), tt.got.counterMetricName)
 			if tt.want.err != nil {
 				assert.ErrorIs(t, err, tt.want.err)
 			} else {
@@ -158,7 +158,6 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 	}
 
 	type want struct {
-		lenCounterAfterAdd           int
 		lenCounterMetricNameAfterAdd int
 		hasError                     bool
 	}
@@ -180,7 +179,6 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterAfterAdd:           1,
 				lenCounterMetricNameAfterAdd: 1,
 				hasError:                     false,
 			},
@@ -199,7 +197,6 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterAfterAdd:           1,
 				lenCounterMetricNameAfterAdd: 4,
 				hasError:                     false,
 			},
@@ -218,7 +215,6 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterAfterAdd:           2,
 				lenCounterMetricNameAfterAdd: 1,
 				hasError:                     false,
 			},
@@ -229,22 +225,21 @@ func TestMemStorage_CounterAdd(t *testing.T) {
 
 			memStorage := &tt.got.memStorage
 
-			err := memStorage.CounterAdd(tt.got.counterMetricName, tt.got.counterMetricValue)
+			err := memStorage.CounterAdd(context.TODO(), tt.got.counterMetricName, tt.got.counterMetricValue)
 			assert.NoError(t, err)
-			assert.Equal(t, memStorage.CounterSize(), tt.want.lenCounterAfterAdd)
-			assert.Equal(t, memStorage.CounterSizeByName(tt.got.counterMetricName), tt.want.lenCounterMetricNameAfterAdd)
+
+			assert.Equal(t, memStorage.CounterSizeByName(context.TODO(), tt.got.counterMetricName), tt.want.lenCounterMetricNameAfterAdd)
 		})
 	}
 }
 
 func TestMemStorage_GaugeUpdate(t *testing.T) {
 	tests := []struct {
-		name                 string
-		gaugeMapInit         map[string]float64
-		gaugeMapAfterUpdate  map[string]float64
-		gaugeMetricName      string
-		gaugeMetricValue     float64
-		gaugeSizeAfterUpdate int
+		name                string
+		gaugeMapInit        map[string]float64
+		gaugeMapAfterUpdate map[string]float64
+		gaugeMetricName     string
+		gaugeMetricValue    float64
 	}{
 		{
 			name:         "update to empty gauge map with valid metric name",
@@ -252,9 +247,8 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMapAfterUpdate: map[string]float64{
 				"validMetricName": 1,
 			},
-			gaugeMetricName:      "validMetricName",
-			gaugeMetricValue:     1,
-			gaugeSizeAfterUpdate: 1,
+			gaugeMetricName:  "validMetricName",
+			gaugeMetricValue: 1,
 		},
 		{
 			name: "update exists metric",
@@ -264,9 +258,8 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 			gaugeMapAfterUpdate: map[string]float64{
 				"validMetricName": 2,
 			},
-			gaugeMetricName:      "validMetricName",
-			gaugeMetricValue:     2,
-			gaugeSizeAfterUpdate: 1,
+			gaugeMetricName:  "validMetricName",
+			gaugeMetricValue: 2,
 		},
 		{
 			name: "add new metric",
@@ -277,9 +270,8 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 				"validMetricName":    0,
 				"validMetricNameNew": 2,
 			},
-			gaugeMetricName:      "validMetricNameNew",
-			gaugeMetricValue:     2,
-			gaugeSizeAfterUpdate: 2,
+			gaugeMetricName:  "validMetricNameNew",
+			gaugeMetricValue: 2,
 		},
 	}
 
@@ -289,12 +281,11 @@ func TestMemStorage_GaugeUpdate(t *testing.T) {
 				gauge: tt.gaugeMapInit,
 			}
 
-			err := memStorage.GaugeUpdate(tt.gaugeMetricName, tt.gaugeMetricValue)
+			err := memStorage.GaugeUpdate(context.TODO(), tt.gaugeMetricName, tt.gaugeMetricValue)
 			assert.NoError(t, err)
 
 			assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
-			assert.Equal(t, memStorage.GaugeSize(), tt.gaugeSizeAfterUpdate)
-			assert.Equal(t, memStorage.Gauge(), tt.gaugeMapAfterUpdate)
+			assert.Equal(t, memStorage.Gauge(context.TODO()), tt.gaugeMapAfterUpdate)
 		})
 	}
 }
@@ -340,13 +331,13 @@ func TestMemStorage_GaugeByName(t *testing.T) {
 				gauge: tt.gaugeMapInit,
 			}
 
-			metricValue, err := memStorage.GaugeByName(tt.gaugeMetricName)
+			metricValue, err := memStorage.GaugeByName(context.TODO(), tt.gaugeMetricName)
 
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err, "GaugeByName() should return an error for name: %s", tt.gaugeMetricName)
 			} else {
 				assert.NoError(t, err, "GaugeByName() should not return an error for name: %s", tt.gaugeMetricName)
-				assert.Equal(t, memStorage.Gauge(), tt.gaugeMapInit)
+				assert.Equal(t, memStorage.Gauge(context.TODO()), tt.gaugeMapInit)
 				assert.Equal(t, tt.gaugeMetricValue, metricValue)
 			}
 		})

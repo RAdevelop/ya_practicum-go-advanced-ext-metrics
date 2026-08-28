@@ -10,12 +10,12 @@ Storage - интерфейс по работе с хранилищем метр�
 */
 //go:generate mockery
 type Storage interface {
-	GaugeUpdate(name string, value float64) error
-	GaugeByName(name string) (float64, error)
-	Gauge() map[string]float64
+	GaugeUpdate(ctx context.Context, name string, value float64) error
+	GaugeByName(ctx context.Context, name string) (float64, error)
+	Gauge(ctx context.Context) map[string]float64
 
-	CounterAdd(name string, value int64) error
-	CounterAccumulative() map[string]int64
-	CounterAccumulativeByName(name string) (int64, error)
+	CounterAdd(ctx context.Context, name string, value int64) error
+	CounterAccumulative(ctx context.Context) map[string]int64
+	CounterAccumulativeByName(ctx context.Context, name string) (int64, error)
 	Ping(context.Context) error
 }

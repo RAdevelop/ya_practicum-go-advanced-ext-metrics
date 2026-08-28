@@ -38,16 +38,16 @@ func (_m *MockStorage) EXPECT() *MockStorage_Expecter {
 }
 
 // CounterAccumulative provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulative() map[string]int64 {
-	ret := _mock.Called()
+func (_mock *MockStorage) CounterAccumulative(ctx context.Context) map[string]int64 {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CounterAccumulative")
 	}
 
 	var r0 map[string]int64
-	if returnFunc, ok := ret.Get(0).(func() map[string]int64); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]int64); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int64)
@@ -62,13 +62,20 @@ type MockStorage_CounterAccumulative_Call struct {
 }
 
 // CounterAccumulative is a helper method to define mock.On call
-func (_e *MockStorage_Expecter) CounterAccumulative() *MockStorage_CounterAccumulative_Call {
-	return &MockStorage_CounterAccumulative_Call{Call: _e.mock.On("CounterAccumulative")}
+//   - ctx context.Context
+func (_e *MockStorage_Expecter) CounterAccumulative(ctx any) *MockStorage_CounterAccumulative_Call {
+	return &MockStorage_CounterAccumulative_Call{Call: _e.mock.On("CounterAccumulative", ctx)}
 }
 
-func (_c *MockStorage_CounterAccumulative_Call) Run(run func()) *MockStorage_CounterAccumulative_Call {
+func (_c *MockStorage_CounterAccumulative_Call) Run(run func(ctx context.Context)) *MockStorage_CounterAccumulative_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -78,14 +85,14 @@ func (_c *MockStorage_CounterAccumulative_Call) Return(stringToInt64 map[string]
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulative_Call) RunAndReturn(run func() map[string]int64) *MockStorage_CounterAccumulative_Call {
+func (_c *MockStorage_CounterAccumulative_Call) RunAndReturn(run func(ctx context.Context) map[string]int64) *MockStorage_CounterAccumulative_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CounterAccumulativeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulativeByName(name string) (int64, error) {
-	ret := _mock.Called(name)
+func (_mock *MockStorage) CounterAccumulativeByName(ctx context.Context, name string) (int64, error) {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CounterAccumulativeByName")
@@ -93,16 +100,16 @@ func (_mock *MockStorage) CounterAccumulativeByName(name string) (int64, error) 
 
 	var r0 int64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (int64, error)); ok {
-		return returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int64, error)); ok {
+		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) int64); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int64); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -115,19 +122,25 @@ type MockStorage_CounterAccumulativeByName_Call struct {
 }
 
 // CounterAccumulativeByName is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockStorage_Expecter) CounterAccumulativeByName(name any) *MockStorage_CounterAccumulativeByName_Call {
-	return &MockStorage_CounterAccumulativeByName_Call{Call: _e.mock.On("CounterAccumulativeByName", name)}
+func (_e *MockStorage_Expecter) CounterAccumulativeByName(ctx any, name any) *MockStorage_CounterAccumulativeByName_Call {
+	return &MockStorage_CounterAccumulativeByName_Call{Call: _e.mock.On("CounterAccumulativeByName", ctx, name)}
 }
 
-func (_c *MockStorage_CounterAccumulativeByName_Call) Run(run func(name string)) *MockStorage_CounterAccumulativeByName_Call {
+func (_c *MockStorage_CounterAccumulativeByName_Call) Run(run func(ctx context.Context, name string)) *MockStorage_CounterAccumulativeByName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -138,22 +151,22 @@ func (_c *MockStorage_CounterAccumulativeByName_Call) Return(n int64, err error)
 	return _c
 }
 
-func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(name string) (int64, error)) *MockStorage_CounterAccumulativeByName_Call {
+func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (int64, error)) *MockStorage_CounterAccumulativeByName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CounterAdd provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAdd(name string, value int64) error {
-	ret := _mock.Called(name, value)
+func (_mock *MockStorage) CounterAdd(ctx context.Context, name string, value int64) error {
+	ret := _mock.Called(ctx, name, value)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CounterAdd")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, int64) error); ok {
-		r0 = returnFunc(name, value)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, name, value)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -166,25 +179,31 @@ type MockStorage_CounterAdd_Call struct {
 }
 
 // CounterAdd is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
 //   - value int64
-func (_e *MockStorage_Expecter) CounterAdd(name any, value any) *MockStorage_CounterAdd_Call {
-	return &MockStorage_CounterAdd_Call{Call: _e.mock.On("CounterAdd", name, value)}
+func (_e *MockStorage_Expecter) CounterAdd(ctx any, name any, value any) *MockStorage_CounterAdd_Call {
+	return &MockStorage_CounterAdd_Call{Call: _e.mock.On("CounterAdd", ctx, name, value)}
 }
 
-func (_c *MockStorage_CounterAdd_Call) Run(run func(name string, value int64)) *MockStorage_CounterAdd_Call {
+func (_c *MockStorage_CounterAdd_Call) Run(run func(ctx context.Context, name string, value int64)) *MockStorage_CounterAdd_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int64
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(int64)
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -195,22 +214,22 @@ func (_c *MockStorage_CounterAdd_Call) Return(err error) *MockStorage_CounterAdd
 	return _c
 }
 
-func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(name string, value int64) error) *MockStorage_CounterAdd_Call {
+func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(ctx context.Context, name string, value int64) error) *MockStorage_CounterAdd_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Gauge provides a mock function for the type MockStorage
-func (_mock *MockStorage) Gauge() map[string]float64 {
-	ret := _mock.Called()
+func (_mock *MockStorage) Gauge(ctx context.Context) map[string]float64 {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Gauge")
 	}
 
 	var r0 map[string]float64
-	if returnFunc, ok := ret.Get(0).(func() map[string]float64); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) map[string]float64); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]float64)
@@ -225,13 +244,20 @@ type MockStorage_Gauge_Call struct {
 }
 
 // Gauge is a helper method to define mock.On call
-func (_e *MockStorage_Expecter) Gauge() *MockStorage_Gauge_Call {
-	return &MockStorage_Gauge_Call{Call: _e.mock.On("Gauge")}
+//   - ctx context.Context
+func (_e *MockStorage_Expecter) Gauge(ctx any) *MockStorage_Gauge_Call {
+	return &MockStorage_Gauge_Call{Call: _e.mock.On("Gauge", ctx)}
 }
 
-func (_c *MockStorage_Gauge_Call) Run(run func()) *MockStorage_Gauge_Call {
+func (_c *MockStorage_Gauge_Call) Run(run func(ctx context.Context)) *MockStorage_Gauge_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -241,14 +267,14 @@ func (_c *MockStorage_Gauge_Call) Return(stringToFloat64 map[string]float64) *Mo
 	return _c
 }
 
-func (_c *MockStorage_Gauge_Call) RunAndReturn(run func() map[string]float64) *MockStorage_Gauge_Call {
+func (_c *MockStorage_Gauge_Call) RunAndReturn(run func(ctx context.Context) map[string]float64) *MockStorage_Gauge_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GaugeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeByName(name string) (float64, error) {
-	ret := _mock.Called(name)
+func (_mock *MockStorage) GaugeByName(ctx context.Context, name string) (float64, error) {
+	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GaugeByName")
@@ -256,16 +282,16 @@ func (_mock *MockStorage) GaugeByName(name string) (float64, error) {
 
 	var r0 float64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (float64, error)); ok {
-		return returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (float64, error)); ok {
+		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) float64); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) float64); ok {
+		r0 = returnFunc(ctx, name)
 	} else {
 		r0 = ret.Get(0).(float64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -278,19 +304,25 @@ type MockStorage_GaugeByName_Call struct {
 }
 
 // GaugeByName is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
-func (_e *MockStorage_Expecter) GaugeByName(name any) *MockStorage_GaugeByName_Call {
-	return &MockStorage_GaugeByName_Call{Call: _e.mock.On("GaugeByName", name)}
+func (_e *MockStorage_Expecter) GaugeByName(ctx any, name any) *MockStorage_GaugeByName_Call {
+	return &MockStorage_GaugeByName_Call{Call: _e.mock.On("GaugeByName", ctx, name)}
 }
 
-func (_c *MockStorage_GaugeByName_Call) Run(run func(name string)) *MockStorage_GaugeByName_Call {
+func (_c *MockStorage_GaugeByName_Call) Run(run func(ctx context.Context, name string)) *MockStorage_GaugeByName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -301,22 +333,22 @@ func (_c *MockStorage_GaugeByName_Call) Return(f float64, err error) *MockStorag
 	return _c
 }
 
-func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(name string) (float64, error)) *MockStorage_GaugeByName_Call {
+func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(ctx context.Context, name string) (float64, error)) *MockStorage_GaugeByName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GaugeUpdate provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeUpdate(name string, value float64) error {
-	ret := _mock.Called(name, value)
+func (_mock *MockStorage) GaugeUpdate(ctx context.Context, name string, value float64) error {
+	ret := _mock.Called(ctx, name, value)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GaugeUpdate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, float64) error); ok {
-		r0 = returnFunc(name, value)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, float64) error); ok {
+		r0 = returnFunc(ctx, name, value)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -329,25 +361,31 @@ type MockStorage_GaugeUpdate_Call struct {
 }
 
 // GaugeUpdate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - name string
 //   - value float64
-func (_e *MockStorage_Expecter) GaugeUpdate(name any, value any) *MockStorage_GaugeUpdate_Call {
-	return &MockStorage_GaugeUpdate_Call{Call: _e.mock.On("GaugeUpdate", name, value)}
+func (_e *MockStorage_Expecter) GaugeUpdate(ctx any, name any, value any) *MockStorage_GaugeUpdate_Call {
+	return &MockStorage_GaugeUpdate_Call{Call: _e.mock.On("GaugeUpdate", ctx, name, value)}
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) Run(run func(name string, value float64)) *MockStorage_GaugeUpdate_Call {
+func (_c *MockStorage_GaugeUpdate_Call) Run(run func(ctx context.Context, name string, value float64)) *MockStorage_GaugeUpdate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 float64
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(float64)
+			arg1 = args[1].(string)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -358,7 +396,7 @@ func (_c *MockStorage_GaugeUpdate_Call) Return(err error) *MockStorage_GaugeUpda
 	return _c
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(name string, value float64) error) *MockStorage_GaugeUpdate_Call {
+func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(ctx context.Context, name string, value float64) error) *MockStorage_GaugeUpdate_Call {
 	_c.Call.Return(run)
 	return _c
 }
