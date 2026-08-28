@@ -6,13 +6,9 @@ export POSTGRES_HOST := postgres
 export POSTGRES_PORT := 5432
 export POSTGRES_DB := praktikum
 
-export POSTGRES_USER_TEST := postgres_test
-export POSTGRES_PASSWORD_TEST := postgres_test
-export POSTGRES_HOST_TEST := postgres
-export POSTGRES_PORT_TEST := 15432
 export POSTGRES_DB_TEST := praktikum_test
 
-export DB_DSN_TEST=postgres://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@${POSTGRES_HOST_TEST}:${POSTGRES_PORT_TEST}/${POSTGRES_DB_TEST}?sslmode=disable
+export DB_DSN_TEST=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB_TEST}?sslmode=disable
 DB_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
 
 # Определение команд
@@ -141,6 +137,7 @@ build:  ## Собрать кластер
 	@make clean
 	@make up
 	@make status
+	@sleep 5
 	@make migrate-up
 	@make migrate-upt
 	@make unset-env
