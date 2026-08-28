@@ -30,22 +30,22 @@ type MetricManagementAble interface {
 
 // Manager - предоставляет интерфейс (фасад) для работы с метриками
 type Manager struct {
-	metricService  *metric.Service
+	storage        metric.Storage
 	metricSnapshot snapshot.Able
 }
 
-func NewManager(metricService *metric.Service, metricSnapshot snapshot.Able) *Manager {
+func NewManager(storage metric.Storage, metricSnapshot snapshot.Able) *Manager {
 	return &Manager{
-		metricService:  metricService,
+		storage:        storage,
 		metricSnapshot: metricSnapshot,
 	}
 }
 
 func (manager *Manager) MetricUpdate(ctx context.Context, metric *models.Metrics) error {
 	if metric.MType == models.Counter && metric.Delta != nil {
-		return manager.metricService.CounterAdd(ctx, metric.ID, *metric.Delta)
+		return manager.storage.CounterAdd(ctx, metric.ID, *metric.Delta)
 	} else if metric.MType == models.Gauge && metric.Value != nil {
-		return manager.metricService.GaugeUpdate(ctx, metric.ID, *metric.Value)
+		return manager.storage.GaugeUpdate(ctx, metric.ID, *metric.Value)
 	}
 
 	return fmt.Errorf("%w: %s", ErrUnknownMetricType, metric.MType)
@@ -55,12 +55,12 @@ func (manager *Manager) MetricValue(ctx context.Context, metricType string, metr
 	var modelMetric *models.Metrics
 	var err error
 	if metricType == models.Counter {
-		modelMetric, err = manager.metricService.CounterByNameAccumulative(ctx, metricID)
+		modelMetric, err = manager.storage.CounterAccumulativeByName(ctx, metricID)
 		if err != nil {
 			return nil, err
 		}
 	} else if metricType == models.Gauge {
-		modelMetric, err = manager.metricService.GaugeByName(ctx, metricID)
+		modelMetric, err = manager.storage.GaugeByName(ctx, metricID)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +73,7 @@ func (manager *Manager) MetricList(ctx context.Context, metricType string) ([]mo
 	var metrics []models.Metrics
 
 	if metricType == models.Counter {
-		metricsCounter, err := manager.metricService.CounterAccumulative(ctx)
+		metricsCounter, err := manager.storage.CounterAccumulative(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func (manager *Manager) MetricList(ctx context.Context, metricType string) ([]mo
 			metrics = append(metrics, value)
 		}
 	} else if metricType == models.Gauge {
-		metricsGauge, err := manager.metricService.Gauge(ctx)
+		metricsGauge, err := manager.storage.Gauge(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -103,5 +103,5 @@ func (manager *Manager) MetricSnapshotSave(ctx context.Context) error {
 }
 
 func (manager *Manager) StoragePing(ctx context.Context) error {
-	return manager.metricService.Ping(ctx)
+	return manager.storage.Ping(ctx)
 }

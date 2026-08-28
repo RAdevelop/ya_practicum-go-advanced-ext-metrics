@@ -85,13 +85,12 @@ func main() {
 		metricStorage = database.NewStorage(db)
 	}
 
-	var metricService = metric.NewService(metricStorage)
-	metricSnapshot, err := snapshot.NewFiler(metricService, serverConfig.FileStoragePath())
+	metricSnapshot, err := snapshot.NewFiler(metricStorage, serverConfig.FileStoragePath())
 	if err != nil {
 		logApp.Error("snapshot.NewFiler", "err", err)
 		return
 	}
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
 	h := handler.New(metricManager, logApp, serverConfig)
 	r := router.New(h)

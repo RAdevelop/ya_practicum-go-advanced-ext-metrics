@@ -20,13 +20,13 @@ Filer - инициализатор метрик
   - загружает (инициализирует) ранее сохраненные метрики
 */
 type Filer struct {
-	metricService *metric.Service
-	fileName      string
-	file          *os.File
-	metrics       []models.Metrics
+	storage  metric.Storage
+	fileName string
+	file     *os.File
+	metrics  []models.Metrics
 }
 
-func NewFiler(metricService *metric.Service, fileName string) (*Filer, error) {
+func NewFiler(storage metric.Storage, fileName string) (*Filer, error) {
 
 	if fileName == "" {
 		return nil, fmt.Errorf("%w: fileName = %s", ErrEmptyFilePath, fileName)
@@ -40,8 +40,8 @@ func NewFiler(metricService *metric.Service, fileName string) (*Filer, error) {
 	fileName = filepath.Join(cwd, fileName)
 
 	return &Filer{
-		fileName:      fileName,
-		metricService: metricService,
+		fileName: fileName,
+		storage:  storage,
 	}, nil
 }
 
@@ -88,9 +88,9 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 
 		switch modelMetric.MType {
 		case models.Gauge:
-			err = filer.metricService.GaugeUpdate(ctx, modelMetric.ID, *modelMetric.Value)
+			err = filer.storage.GaugeUpdate(ctx, modelMetric.ID, *modelMetric.Value)
 		case models.Counter:
-			err = filer.metricService.CounterAdd(ctx, modelMetric.ID, *modelMetric.Delta)
+			err = filer.storage.CounterAdd(ctx, modelMetric.ID, *modelMetric.Delta)
 		}
 
 		if err != nil {
@@ -146,12 +146,12 @@ func (filer *Filer) Save(ctx context.Context) error {
 
 // readFromStorage - получаем данные метрик из источника
 func (filer *Filer) readFromStorage(ctx context.Context) error {
-	gaugeMetrics, err := filer.metricService.Gauge(ctx)
+	gaugeMetrics, err := filer.storage.Gauge(ctx)
 	if err != nil {
 		return err
 	}
 
-	counterMetrics, err := filer.metricService.CounterAccumulative(ctx)
+	counterMetrics, err := filer.storage.CounterAccumulative(ctx)
 	if err != nil {
 		return err
 	}

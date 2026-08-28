@@ -13,7 +13,6 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -49,9 +48,9 @@ func TestHttpAgent_Update(t *testing.T) {
 	mockConfigProvider := setupMockConfigProvider(t)
 
 	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewService(metricStorage)
+
 	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
 	h := handler.New(metricManager, setupMockLogger(t), mockConfigProvider)
 	r := router.New(h)
