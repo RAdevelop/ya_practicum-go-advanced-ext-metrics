@@ -49,7 +49,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	metric, err := metricGetFromRequest(r)
 
 	if err != nil {
-		m.logger.Warn("Update", "err", err)
+		m.logger.Error("HandlerMetricUpdate", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -69,7 +69,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = m.metricManager.MetricUpdate(r.Context(), metric); err != nil {
-		m.logger.Warn("Update", "err", err)
+		m.logger.Warn("HandlerMetricUpdate", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
 	}
@@ -77,7 +77,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	if m.config.StoreInterval() != nil && *m.config.StoreInterval() == 0 {
 		err = m.metricManager.MetricSnapshotSave(r.Context())
 		if err != nil {
-			m.logger.Error("metricManager", "err", err)
+			m.logger.Error("HandlerMetricUpdate", "err", err)
 		}
 	}
 
@@ -88,7 +88,54 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	if contentType == "application/json" {
 		err = json.NewEncoder(w).Encode(metric)
 		if err != nil {
-			m.logger.Warn("error", "err", err)
+			m.logger.Warn("HandlerMetricUpdate", "err", err)
+			http.Error(w, "Can't write response", http.StatusInternalServerError)
+		}
+	}
+}
+
+// UpdateBatch - обновляем метрики пачкой
+// TODO UpdateBatch
+func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
+
+	defer m.requestBodyClose(r)
+
+	metric, err := metricGetFromRequest(r)
+
+	if err != nil {
+		m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
+		http.Error(w, "Can't parse request body", http.StatusBadRequest)
+		return
+	}
+
+	validatorValue := validator.New()
+	validateRes := validateMetricTypeAndName(validatorValue, metric)
+	if validateRes.hasError {
+		http.Error(w, validateRes.message, validateRes.httpStatus)
+		return
+	}
+
+	validateRes = validateMetricValue(validatorValue, metric)
+
+	if validateRes.hasError {
+		http.Error(w, validateRes.message, validateRes.httpStatus)
+		return
+	}
+
+	if err = m.metricManager.MetricUpdate(r.Context(), metric); err != nil {
+		m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
+		http.Error(w, "Can't update metric", http.StatusBadRequest)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(http.StatusOK)
+
+	if contentType == "application/json" {
+		err = json.NewEncoder(w).Encode(metric)
+		if err != nil {
+			m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
 			http.Error(w, "Can't write response", http.StatusInternalServerError)
 		}
 	}
@@ -139,7 +186,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		m.logger.Error("error", "err", err)
+		m.logger.Error("HandlerMetricGet", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }
@@ -155,14 +202,14 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 
 	gaugeMetrics, err := m.metricManager.MetricList(r.Context(), models.Gauge)
 	if err != nil {
-		m.logger.Error("metricManager", "err", err)
+		m.logger.Error("HandlerMetricList", "err", err)
 	} else {
 		m.metricListRender(&sb, "Gauge metrics", models.Gauge, gaugeMetrics)
 	}
 
 	gaugeMetrics, err = m.metricManager.MetricList(r.Context(), models.Counter)
 	if err != nil {
-		m.logger.Error("metricManager", "err", err)
+		m.logger.Error("HandlerMetricList", "err", err)
 	} else {
 		m.metricListRender(&sb, "Counter metrics", models.Counter, gaugeMetrics)
 	}
@@ -173,7 +220,7 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(sb.String()))
 	if err != nil {
-		m.logger.Error("error", "err", err)
+		m.logger.Error("HandlerMetricList", "err", err)
 		http.Error(w, "Can't write response", http.StatusInternalServerError)
 	}
 }

@@ -24,7 +24,16 @@ func New(client *resty.Client) *HttpAgent {
 
 func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
 	url := "/update"
-	body, err := json.Marshal(metric)
+	return a.sendJson(url, metric)
+}
+
+func (a HttpAgent) Updates(metrics []models.Metrics) (*http.Response, error) {
+	url := "/updates"
+	return a.sendJson(url, metrics)
+}
+
+func (a HttpAgent) sendJson(url string, v any) (*http.Response, error) {
+	body, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +95,7 @@ func compress(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// 4. Копируем результат (обязательно, т.к. буфер будет переиспользован)
+	// Копируем результат (обязательно, т.к. буфер будет переиспользован)
 	result := make([]byte, buf.Len())
 	copy(result, buf.Bytes())
 	return result, nil

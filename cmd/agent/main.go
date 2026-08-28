@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"runtime"
 	"time"
 
@@ -16,8 +18,6 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-const metricNamePollCount = "PollCount"
-
 type agentSettings struct {
 	ServerAddress  string
 	IntervalReport uint
@@ -26,9 +26,9 @@ type agentSettings struct {
 
 func main() {
 	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
-	var runtimeMetrics map[string]any
+	var runtimeMetrics []models.Metrics
 
-	logMe := logger.New()
+	logApp := logger.New()
 
 	srvAddress := &agent.ServerAddress{
 		Host: "localhost",
@@ -43,7 +43,7 @@ func main() {
 
 	configAgentEnv, err := configAgent.NewEnv()
 	if err != nil {
-		logMe.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
+		logApp.Error("error", fmt.Errorf("error creating configAgent environment variable: %w", err))
 		return
 	}
 
@@ -68,10 +68,10 @@ func main() {
 	for {
 		select {
 		case <-pollInterval.C: // Обновлять метрики из пакета `runtime` с заданной частотой: `pollInterval` — 2 секунды.
-			runtimeMetrics = collectRuntimeMetrics()
 			pollCount++
+			runtimeMetrics = collectRuntimeMetrics(pollCount)
 		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(logMe, httpAgent, pollCount, runtimeMetrics)
+			runtimeMetricSend(logApp, httpAgent, pollCount, runtimeMetrics)
 			pollCount = 0
 		}
 	}
@@ -99,33 +99,41 @@ func settings(agentConfig configAgent.ConfigProvider, srvAddress string, interva
 	return cfg
 }
 
-func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) (err error) {
+func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) error {
 
 	resp, err := httpAgent.Update(metric)
-	if err != nil {
-		err = fmt.Errorf("error updating metric: %v\n err: %w", metric, err)
+
+	return handleUpdateResponse(resp, err, metric)
+
+}
+
+func metricUpdateBatch(httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
+
+	resp, err := httpAgent.Updates(metrics)
+	return handleUpdateResponse(resp, err, metrics)
+}
+
+func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err error) {
+	if errResp != nil {
+		err = fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
 		return err
 	}
 	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			if err != nil {
-				err = fmt.Errorf("%w; close body error: %w", err, closeErr)
-			} else {
-				err = fmt.Errorf("close body error: %w", closeErr)
-			}
-		}
+		closeErr := resp.Body.Close()
+		err = errors.Join(err, closeErr)
 	}()
 
 	// io.Discard выступает в качестве приёмника ненужных данных.
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
 	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		return fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
+		err = fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
+		return
 	}
 	return nil
 }
 
-func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics map[string]any) {
+func runtimeMetricSend(logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -135,52 +143,24 @@ func runtimeMetricSend(logMe logger.Logger, httpAgent *agent.HttpAgent, pollCoun
 	}
 
 	var err error
-	for name, value := range runtimeMetrics {
-		v, errConvert := converter.ToFloat64(value)
-		if errConvert != nil {
-			continue
-		}
-		m := models.Metrics{
-			MType: models.Gauge,
-			ID:    name,
-			Value: &v,
-		}
-
-		err = metricUpdate(httpAgent, m)
+	for _, metric := range runtimeMetrics {
+		err = metricUpdate(httpAgent, metric)
 		if err != nil {
-			logMe.Warn("error", "err", err)
+			logApp.Error("metricUpdate", "err", err)
 		}
 	}
 
-	m := models.Metrics{
-		MType: models.Gauge,
-		ID:    "RandomValue",
-		Value: (func(min, max float64) *float64 {
-			rnd := min + rand.Float64()*(max-min)
-			return &rnd
-		})(0, 1000),
-	}
-
-	err = metricUpdate(httpAgent, m)
+	err = metricUpdateBatch(httpAgent, runtimeMetrics)
 	if err != nil {
-		logMe.Warn("error", "err", err)
-	}
-	m = models.Metrics{
-		MType: models.Counter,
-		ID:    metricNamePollCount,
-		Delta: &pollCount,
-	}
-	err = metricUpdate(httpAgent, m)
-	if err != nil {
-		logMe.Warn("error", "err", err)
+		logApp.Error("metricUpdateBatch", "err", err)
 	}
 }
 
-func collectRuntimeMetrics() map[string]any {
+func collectRuntimeMetrics(pollCount int64) []models.Metrics {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 
-	return map[string]any{
+	runtimeMetrics := map[string]any{
 		"Alloc":         ms.Alloc,
 		"BuckHashSys":   ms.BuckHashSys,
 		"Frees":         ms.Frees,
@@ -209,4 +189,39 @@ func collectRuntimeMetrics() map[string]any {
 		"Sys":           ms.Sys,
 		"TotalAlloc":    ms.TotalAlloc,
 	}
+
+	metrics := make([]models.Metrics, 0, len(runtimeMetrics)+2)
+
+	for name, value := range runtimeMetrics {
+		v, errConvert := converter.ToFloat64(value)
+		if errConvert != nil {
+			continue
+		}
+		runtimeMetric := models.Metrics{
+			MType: models.Gauge,
+			ID:    name,
+			Value: &v,
+		}
+
+		metrics = append(metrics, runtimeMetric)
+	}
+
+	mRandomValue := models.Metrics{
+		MType: models.Gauge,
+		ID:    "RandomValue",
+		Value: (func(min, max float64) *float64 {
+			rnd := min + rand.Float64()*(max-min)
+			return &rnd
+		})(0, 1000),
+	}
+	metrics = append(metrics, mRandomValue)
+
+	mPollCount := models.Metrics{
+		MType: models.Counter,
+		ID:    "PollCount",
+		Delta: &pollCount,
+	}
+	metrics = append(metrics, mPollCount)
+
+	return metrics
 }
