@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
@@ -58,6 +57,8 @@ func validateMetricName(validator *validator.Validator, mName string) validateRe
 	return result
 }
 
+// TODO Надо пересмотреть валидацию. Странный валидатор у меня. Если metric установлена, значит Value or Delta прописаны верно.
+// Достаточно тогда проверять на nil.
 func validateMetricValue(validate *validator.Validator, metric *models.Metrics) validateResult {
 
 	result := validateResult{}
@@ -67,14 +68,14 @@ func validateMetricValue(validate *validator.Validator, metric *models.Metrics) 
 		if metric.Delta == nil {
 			err = validator.ErrValueInt64
 		} else {
-			_, err = validate.ValidateValueInt64(converter.NumericToString(*metric.Delta))
+			_, err = validate.ValidateValueInt64(metric.StrValue())
 		}
 
 	} else {
 		if metric.Value == nil {
 			err = validator.ErrValueInt64
 		} else {
-			_, err = validate.ValidateValueFloat64(converter.NumericToString(*metric.Value))
+			_, err = validate.ValidateValueFloat64(metric.StrValue())
 		}
 	}
 

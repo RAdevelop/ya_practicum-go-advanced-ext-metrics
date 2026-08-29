@@ -78,6 +78,8 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 	if _, err = decoder.Token(); err != nil {
 		return err
 	}
+
+	metrics := make([]models.Metrics, 0, 30)
 	for decoder.More() {
 		modelMetric := models.Metrics{}
 		err = decoder.Decode(&modelMetric)
@@ -85,14 +87,10 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+	}
 
-		switch modelMetric.MType {
-		case models.Gauge:
-			err = filer.storage.GaugeUpdate(ctx, modelMetric.ID, *modelMetric.Value)
-		case models.Counter:
-			err = filer.storage.CounterAdd(ctx, modelMetric.ID, *modelMetric.Delta)
-		}
-
+	if len(metrics) > 0 {
+		err = filer.storage.UpdateBatch(ctx, metrics)
 		if err != nil {
 			return err
 		}
@@ -146,12 +144,12 @@ func (filer *Filer) Save(ctx context.Context) error {
 
 // readFromStorage - получаем данные метрик из источника
 func (filer *Filer) readFromStorage(ctx context.Context) error {
-	gaugeMetrics, err := filer.storage.Gauge(ctx)
+	gaugeMetrics, err := filer.storage.MetricList(ctx, models.Gauge)
 	if err != nil {
 		return err
 	}
 
-	counterMetrics, err := filer.storage.CounterAccumulative(ctx)
+	counterMetrics, err := filer.storage.MetricList(ctx, models.Counter)
 	if err != nil {
 		return err
 	}

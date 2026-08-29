@@ -74,7 +74,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = m.metricManager.MetricUpdate(r.Context(), metric); err != nil {
+	if err = m.metricManager.MetricUpdateBatch(r.Context(), []models.Metrics{*metric}); err != nil {
 		m.logger.Warn("HandlerMetricUpdate", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
@@ -106,7 +106,7 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
 
-	metric, err := metricGetFromRequest(r)
+	metrics, err := metricsGetFromRequest(r)
 
 	if err != nil {
 		m.logger.Error("HandlerMetricUpdateBatch", "err", err)
@@ -115,21 +115,29 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	validatorValue := validator.New()
-	validateRes := validateMetricTypeAndName(validatorValue, metric)
-	if validateRes.hasError {
-		http.Error(w, validateRes.message, validateRes.httpStatus)
+
+	// копим ошибки
+	var validateErrors []error
+	for _, metric := range metrics {
+		validateRes := validateMetricTypeAndName(validatorValue, &metric)
+		if validateRes.hasError {
+			validateErrors = append(validateErrors, fmt.Errorf("metric validation type and name failed: %s", validateRes.message))
+		}
+
+		validateRes = validateMetricValue(validatorValue, &metric)
+		if validateRes.hasError {
+			validateErrors = append(validateErrors, fmt.Errorf("metric validation value failed: %s", validateRes.message))
+		}
+	}
+
+	if len(validateErrors) > 0 {
+		m.logger.Error("HandlerMetricUpdateBatch", "err", errors.Join(validateErrors...))
+		http.Error(w, "Metric validation failed", http.StatusBadRequest)
 		return
 	}
 
-	validateRes = validateMetricValue(validatorValue, metric)
-
-	if validateRes.hasError {
-		http.Error(w, validateRes.message, validateRes.httpStatus)
-		return
-	}
-
-	if err = m.metricManager.MetricUpdate(r.Context(), metric); err != nil {
-		m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
+	if err = m.metricManager.MetricUpdateBatch(r.Context(), metrics); err != nil {
+		m.logger.Error("HandlerMetricUpdateBatch", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
 	}
@@ -139,7 +147,7 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if contentType == "application/json" {
-		err = json.NewEncoder(w).Encode(metric)
+		err = json.NewEncoder(w).Encode(metrics)
 		if err != nil {
 			m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
 			http.Error(w, "Can't write response", http.StatusInternalServerError)
@@ -171,9 +179,9 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metric, err = m.metricManager.MetricValue(r.Context(), metric.MType, metric.ID)
+	metric, err = m.metricManager.Metric(r.Context(), metric)
 	if err != nil {
-		m.logger.Warn("error", "err", err)
+		m.logger.Error("HandlerMetricGet", "err", err)
 		http.Error(w, "Metric value not found by name", http.StatusNotFound)
 		return
 	}
@@ -184,16 +192,7 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	if contentType == "application/json" {
 		err = json.NewEncoder(w).Encode(metric)
 	} else {
-
-		var metricValue any
-		switch metric.MType {
-		case models.Gauge:
-			metricValue = *metric.Value
-		case models.Counter:
-			metricValue = *metric.Delta
-		}
-
-		_, err = w.Write([]byte(converter.NumericToString(metricValue)))
+		_, err = w.Write([]byte(metric.StrValue()))
 	}
 
 	if err != nil {

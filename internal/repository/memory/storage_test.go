@@ -8,6 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func cleanupStorage(t *testing.T, storage *MemStorage) {
+	t.Cleanup(func() {
+		storage = nil
+	})
+}
+
 func TestMemStorage_NewMemStorage(t *testing.T) {
 	/*
 		после создания объекта хранения метрик, у него должны быть:
@@ -18,315 +24,571 @@ func TestMemStorage_NewMemStorage(t *testing.T) {
 	storage := NewStorage()
 	assert.NotNil(t, storage)
 	assert.IsType(t, &MemStorage{}, storage)
-	assert.Equal(t, map[string]float64{}, storage.gauge)
-	assert.Equal(t, map[string][]int64{}, storage.counter)
-	assert.Len(t, storage.gauge, 0)
-	assert.Len(t, storage.counter, 0)
-
+	assert.Equal(t, map[string]float64{}, storage.gaugeMap)
+	assert.Equal(t, map[string]int64{}, storage.counterMap)
+	assert.Len(t, storage.gaugeMap, 0)
+	assert.Len(t, storage.counterMap, 0)
 }
 
-func TestMemStorage_validateName(t *testing.T) {
-
-}
-
-func TestMemStorage_CounterByNameAccumulative(t *testing.T) {
-
-	type got struct {
-		counters          []int64
-		counterMetricName string
+func TestMemStorage_Metric(t *testing.T) {
+	type given struct {
+		initGaugeMap   map[string]float64
+		initCounterMap map[string]int64
+		metric         *models.Metrics
 	}
 
 	type want struct {
-		counterAccumulative *models.Metrics
-		err                 error
+		metric   *models.Metrics
+		hasError bool
 	}
 
 	tests := []struct {
-		name string
-		got  got
-		want want
+		name  string
+		given given
+		want  want
 	}{
 		{
-			name: "counter accumulative empty",
-			got: got{
-				counters:          []int64{},
-				counterMetricName: "counter",
+			name: "metric not exists and storage is empty",
+			given: given{
+				metric: &models.Metrics{},
 			},
 			want: want{
-				counterAccumulative: nil,
-				err:                 ErrNotFoundName,
+				hasError: true,
+				metric:   nil,
 			},
 		},
 		{
-			name: "counter accumulative none empty",
-			got: got{
-				counters: []int64{
-					0,
+			name: "metric Gauge not exists and storage is empty",
+			given: given{
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: models.Gauge,
 				},
-				counterMetricName: "counter",
 			},
 			want: want{
-				counterAccumulative: &models.Metrics{
-					ID:    "counter",
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "metric Counter not exists and storage is empty",
+			given: given{
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "metric Gauge not exists but GaugeMap not empty",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 0,
+				},
+				metric: &models.Metrics{
+					ID:    "GaugeNotExists",
+					MType: models.Gauge,
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "metric Counter not exists but CounterMap not empty",
+			given: given{
+				initCounterMap: map[string]int64{
+					"Counter": 0,
+				},
+				metric: &models.Metrics{
+					ID:    "CounterNotExists",
+					MType: models.Counter,
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "metric Gauge exists in GaugeMap",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 0,
+				},
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: models.Gauge,
+				},
+			},
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: models.Gauge,
+					Value: new(float64(0)),
+				},
+			},
+		},
+		{
+			name: "metric Counter exists in CounterMap",
+			given: given{
+				initCounterMap: map[string]int64{
+					"Counter": 0,
+				},
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+				},
+			},
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Counter",
 					MType: models.Counter,
 					Delta: new(int64(0)),
 				},
-				err: nil,
-			},
-		},
-		{
-			name: "counter accumulative none empty",
-			got: got{
-				counters: []int64{
-					0, 1, 2, 3,
-				},
-				counterMetricName: "counter",
-			},
-			want: want{
-				counterAccumulative: &models.Metrics{
-					ID:    "counter",
-					MType: models.Counter,
-					Delta: new(int64(6)),
-				},
-				err: nil,
 			},
 		},
 	}
-
+	ctx := context.TODO()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			memStorage := NewStorage()
 
-			for _, counter := range tt.got.counters {
-				err := memStorage.CounterAdd(context.TODO(), tt.got.counterMetricName, counter)
-				assert.NoError(t, err)
+			storage := &MemStorage{
+				gaugeMap:   tt.given.initGaugeMap,
+				counterMap: tt.given.initCounterMap,
 			}
+			cleanupStorage(t, storage)
 
-			counterAccumulative, err := memStorage.CounterAccumulativeByName(context.TODO(), tt.got.counterMetricName)
-			if tt.want.err != nil {
-				assert.ErrorIs(t, err, tt.want.err)
+			metric, err := storage.Metric(ctx, tt.given.metric)
+			if tt.want.hasError {
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 
-			assert.Equal(t, tt.want.counterAccumulative, counterAccumulative)
+			assert.Equal(t, tt.want.metric, metric)
 		})
 	}
 }
 
-func TestMemStorage_CounterAdd(t *testing.T) {
-
-	type got struct {
-		memStorage         MemStorage
-		counterMetricName  string
-		counterMetricValue int64
+func TestMemStorage_UpdateBatch(t *testing.T) {
+	type given struct {
+		initGaugeMap   map[string]float64
+		initCounterMap map[string]int64
+		metric         *models.Metrics
 	}
 
 	type want struct {
-		lenCounterMetricNameAfterAdd int
-		hasError                     bool
+		metric   *models.Metrics
+		hasError bool
 	}
 
 	tests := []struct {
-		name string
-		got  got
-		want want
+		name  string
+		given given
+		want  want
 	}{
 		{
-			name: "add to empty counter map",
-			got: got{
-				memStorage: MemStorage{
-					counter:             map[string][]int64{},
-					gauge:               map[string]float64{},
-					counterAccumulative: map[string]int64{},
+			name: "has error cause empty ID for Gauge",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "",
+					MType: models.Gauge,
+					Value: new(float64(0)),
 				},
-				counterMetricName:  "counter",
-				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterMetricNameAfterAdd: 1,
-				hasError:                     false,
+				hasError: true,
+				metric:   nil,
 			},
 		},
 		{
-			name: "add to none empty counter map",
-			got: got{
-				memStorage: MemStorage{
-					counter: map[string][]int64{
-						"counter": {1, 2, 3},
-					},
-					gauge:               map[string]float64{},
-					counterAccumulative: map[string]int64{},
+			name: "has error cause empty ID for Counter",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "",
+					MType: models.Counter,
+					Delta: new(int64(0)),
 				},
-				counterMetricName:  "counter",
-				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterMetricNameAfterAdd: 4,
-				hasError:                     false,
+				hasError: true,
+				metric:   nil,
 			},
 		},
 		{
-			name: "add to none empty counter map with another metric",
-			got: got{
-				memStorage: MemStorage{
-					counter: map[string][]int64{
-						"counter": {1, 2, 3},
-					},
-					gauge:               map[string]float64{},
-					counterAccumulative: map[string]int64{},
+			name: "has error cause empty MType for Gauge",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: "",
+					Value: new(float64(0)),
 				},
-				counterMetricName:  "anotherCounter",
-				counterMetricValue: 123,
 			},
 			want: want{
-				lenCounterMetricNameAfterAdd: 1,
-				hasError:                     false,
+				hasError: true,
+				metric:   nil,
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			memStorage := &tt.got.memStorage
-
-			err := memStorage.CounterAdd(context.TODO(), tt.got.counterMetricName, tt.got.counterMetricValue)
-			assert.NoError(t, err)
-		})
-	}
-}
-
-func TestMemStorage_GaugeUpdate(t *testing.T) {
-	tests := []struct {
-		name                string
-		gaugeMapInit        map[string]float64
-		gaugeMapAfterUpdate []models.Metrics
-		gaugeMetricName     string
-		gaugeMetricValue    float64
-	}{
 		{
-			name:         "update to empty gauge map with valid metric name",
-			gaugeMapInit: map[string]float64{},
-			gaugeMapAfterUpdate: []models.Metrics{
-				{
-					ID:    "validMetricName",
+			name: "has error cause empty MType for Counter",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: "",
+					Delta: new(int64(0)),
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "has error cause nil value for Gauge",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: models.Gauge,
+					Value: nil,
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "has error cause nil value for Counter",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+					Delta: nil,
+				},
+			},
+			want: want{
+				hasError: true,
+				metric:   nil,
+			},
+		},
+		{
+			name: "success updated Gauge on empty map",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Gauge",
 					MType: models.Gauge,
 					Value: new(float64(1)),
 				},
 			},
-			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: 1,
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Gauge",
+					MType: models.Gauge,
+					Value: new(float64(1)),
+				},
+			},
 		},
 		{
-			name: "update exists metric",
-			gaugeMapInit: map[string]float64{
-				"validMetricName": 1,
+			name: "success updated Counter on empty map",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+					Delta: new(int64(1)),
+				},
 			},
-			gaugeMapAfterUpdate: []models.Metrics{
-				{
-					ID:    "validMetricName",
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+					Delta: new(int64(1)),
+				},
+			},
+		},
+		{
+			name: "success updated Gauge on not empty map",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 1,
+				},
+				initCounterMap: map[string]int64{},
+				metric: &models.Metrics{
+					ID:    "Gauge",
 					MType: models.Gauge,
 					Value: new(float64(2)),
 				},
 			},
-			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: 2,
-		},
-		{
-			name: "add new metric",
-			gaugeMapInit: map[string]float64{
-				"validMetricName": 0,
-			},
-			gaugeMapAfterUpdate: []models.Metrics{
-				{
-					ID:    "validMetricName",
-					MType: models.Gauge,
-					Value: new(float64(0)),
-				},
-				{
-					ID:    "validMetricNameNew",
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Gauge",
 					MType: models.Gauge,
 					Value: new(float64(2)),
 				},
 			},
-			gaugeMetricName:  "validMetricNameNew",
-			gaugeMetricValue: 2,
+		},
+		{
+			name: "success updated Counter on not empty map",
+			given: given{
+				initGaugeMap: map[string]float64{},
+				initCounterMap: map[string]int64{
+					"Counter": 1,
+				},
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+					Delta: new(int64(2)),
+				},
+			},
+			want: want{
+				hasError: false,
+				metric: &models.Metrics{
+					ID:    "Counter",
+					MType: models.Counter,
+					Delta: new(int64(3)),
+				},
+			},
 		},
 	}
-
+	ctx := context.TODO()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			memStorage := &MemStorage{
-				gauge: tt.gaugeMapInit,
+			storage := &MemStorage{
+				gaugeMap:   tt.given.initGaugeMap,
+				counterMap: tt.given.initCounterMap,
 			}
 
-			err := memStorage.GaugeUpdate(context.TODO(), tt.gaugeMetricName, tt.gaugeMetricValue)
-			assert.NoError(t, err)
-			assert.Equal(t, memStorage.gauge, tt.gaugeMapInit)
+			cleanupStorage(t, storage)
 
-			gauge, err := memStorage.Gauge(context.TODO())
-			assert.NoError(t, err)
-			assert.ElementsMatch(t, tt.gaugeMapAfterUpdate, gauge)
+			err := storage.UpdateBatch(ctx, []models.Metrics{*tt.given.metric})
+			if tt.want.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			metric, err := storage.Metric(ctx, tt.given.metric)
+			if tt.want.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.want.metric, metric)
 		})
 	}
 }
 
-func TestMemStorage_GaugeByName(t *testing.T) {
+func TestMemStorage_MetricList(t *testing.T) {
+
+	type given struct {
+		initGaugeMap   map[string]float64
+		initCounterMap map[string]int64
+		mType          string
+	}
+
+	type want struct {
+		metrics  []models.Metrics
+		hasError bool
+	}
+
 	tests := []struct {
-		name             string
-		gaugeMapInit     map[string]float64
-		gaugeMetricName  string
-		gaugeMetricValue *models.Metrics
-		err              error
+		name  string
+		given given
+		want  want
 	}{
 		{
-			name:             "get gauge by name valid metric name but not found",
-			gaugeMapInit:     map[string]float64{},
-			gaugeMetricName:  "validMetricName",
-			gaugeMetricValue: nil,
-			err:              ErrNotFoundName,
+			name: "error cause unknown metric type",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				mType:          "unknownMetricType",
+			},
+			want: want{
+				hasError: true,
+				metrics:  nil,
+			},
 		},
 		{
-			name: "success get gauge by name valid metric with value 1",
-			gaugeMapInit: map[string]float64{
-				"validMetricName": 1,
+			name: "empty list for Gauge on empty maps",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				mType:          models.Gauge,
 			},
-			gaugeMetricName: "validMetricName",
-			gaugeMetricValue: &models.Metrics{
-				ID:    "validMetricName",
-				MType: models.Gauge,
-				Value: new(float64(1)),
+			want: want{
+				hasError: false,
+				metrics:  []models.Metrics{},
 			},
-			err: nil,
 		},
 		{
-			name: "success get gauge by name valid metric with value 1.2",
-			gaugeMapInit: map[string]float64{
-				"validMetricName": 1.2,
+			name: "empty list for Counter on empty maps",
+			given: given{
+				initGaugeMap:   map[string]float64{},
+				initCounterMap: map[string]int64{},
+				mType:          models.Counter,
 			},
-			gaugeMetricName: "validMetricName",
-			gaugeMetricValue: &models.Metrics{
-				ID:    "validMetricName",
-				MType: models.Gauge,
-				Value: new(1.2),
+			want: want{
+				hasError: false,
+				metrics:  []models.Metrics{},
 			},
-			err: nil,
+		},
+		{
+			name: "empty list for Gauge on empty map and not empty Counter map",
+			given: given{
+				initGaugeMap: map[string]float64{},
+				initCounterMap: map[string]int64{
+					"Counter": 1,
+				},
+				mType: models.Gauge,
+			},
+			want: want{
+				hasError: false,
+				metrics:  []models.Metrics{},
+			},
+		},
+		{
+			name: "empty list for Counter on empty map and not empty Gauge map",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 1,
+				},
+				initCounterMap: map[string]int64{},
+				mType:          models.Counter,
+			},
+			want: want{
+				hasError: false,
+				metrics:  []models.Metrics{},
+			},
+		},
+		{
+			name: "not empty list for Gauge on not empty map and empty Counter map",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 1,
+				},
+				initCounterMap: map[string]int64{},
+				mType:          models.Gauge,
+			},
+			want: want{
+				hasError: false,
+				metrics: []models.Metrics{
+					{
+						ID:    "Gauge",
+						MType: models.Gauge,
+						Value: new(float64(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "not empty list for Counter on not empty map and empty Gauge map",
+			given: given{
+				initGaugeMap: map[string]float64{},
+				initCounterMap: map[string]int64{
+					"Counter": 1,
+				},
+				mType: models.Counter,
+			},
+			want: want{
+				hasError: false,
+				metrics: []models.Metrics{
+					{
+						ID:    "Counter",
+						MType: models.Counter,
+						Delta: new(int64(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "not empty list for Gauge on not empty map and not empty Counter map",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 1,
+				},
+				initCounterMap: map[string]int64{
+					"Counter": 1,
+				},
+				mType: models.Gauge,
+			},
+			want: want{
+				hasError: false,
+				metrics: []models.Metrics{
+					{
+						ID:    "Gauge",
+						MType: models.Gauge,
+						Value: new(float64(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "not empty list for Counter on not empty map and not empty Gauge map",
+			given: given{
+				initGaugeMap: map[string]float64{
+					"Gauge": 1,
+				},
+				initCounterMap: map[string]int64{
+					"Counter": 1,
+				},
+				mType: models.Counter,
+			},
+			want: want{
+				hasError: false,
+				metrics: []models.Metrics{
+					{
+						ID:    "Counter",
+						MType: models.Counter,
+						Delta: new(int64(1)),
+					},
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			memStorage := &MemStorage{
-				gauge: tt.gaugeMapInit,
+			storage := &MemStorage{
+				gaugeMap:   tt.given.initGaugeMap,
+				counterMap: tt.given.initCounterMap,
 			}
-
-			metricValue, err := memStorage.GaugeByName(context.TODO(), tt.gaugeMetricName)
-
-			if tt.err != nil {
-				assert.ErrorIs(t, err, tt.err, "GaugeByName() should return an error for name: %s", tt.gaugeMetricName)
+			cleanupStorage(t, storage)
+			ctx := context.TODO()
+			metrics, er := storage.MetricList(ctx, tt.given.mType)
+			if tt.want.hasError {
+				assert.Error(t, er)
 			} else {
-				assert.Equal(t, tt.gaugeMetricValue, metricValue)
+				assert.NoError(t, er)
 			}
+
+			assert.Equal(t, tt.want.metrics, metrics)
 		})
 	}
 }

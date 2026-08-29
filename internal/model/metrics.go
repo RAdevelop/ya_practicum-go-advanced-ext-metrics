@@ -1,5 +1,7 @@
 package models
 
+import "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
+
 const (
 	Counter = "counter"
 	Gauge   = "gauge"
@@ -16,4 +18,22 @@ type Metrics struct {
 	Delta *int64   `json:"delta,omitempty" db:"delta"`
 	Value *float64 `json:"value,omitempty" db:"value"`
 	Hash  string   `json:"hash,omitempty"`
+}
+
+func (m *Metrics) StrValue() string {
+	if m == nil {
+		return ""
+	}
+
+	switch m.MType {
+	case Gauge:
+		if m.Value != nil {
+			return converter.NumericToString(*m.Value)
+		}
+	case Counter:
+		if m.Delta != nil {
+			return converter.NumericToString(*m.Delta)
+		}
+	}
+	return ""
 }
