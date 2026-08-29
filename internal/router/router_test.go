@@ -44,7 +44,7 @@ type given struct {
 func setupMockLogger(t *testing.T) *logger.MockLogger {
 	logMe := logger.NewMockLogger(t)
 
-	//не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
+	//Не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
 	logMe.EXPECT().Info(mock.Anything, mock.Anything, mock.Anything).Maybe()
 	logMe.EXPECT().Error(mock.Anything, mock.Anything, mock.Anything).Maybe()
 	logMe.EXPECT().Warn(mock.Anything, mock.Anything, mock.Anything).Maybe()
@@ -694,12 +694,8 @@ func TestMetric_GetWithJson(t *testing.T) {
 
 				var err error
 				// сами сначала добавляем значения в хранилище данных
-				switch tt.given.metric.MType {
-				case models.Gauge:
-					err = metricStorage.GaugeUpdate(req.Context(), tt.given.metric.ID, *tt.given.metric.Value)
-				case models.Counter:
-					err = metricStorage.CounterAdd(req.Context(), tt.given.metric.ID, *tt.given.metric.Delta)
-				}
+				err = metricStorage.UpdateBatch(context.TODO(), []models.Metrics{*tt.given.metric})
+
 				assert.NoError(t, err)
 
 				sendBody, _ := json.Marshal(tt.given.metric)
@@ -812,7 +808,11 @@ func TestMetric_StoragePing(t *testing.T) {
 func metricBuildParamsForCounterGetValue(storage metric.Storage, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
-		_ = storage.CounterAdd(context.TODO(), metricName, value)
+		_ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+			ID:    metricName,
+			MType: metricType,
+			Delta: &value,
+		}})
 	}
 
 	return params{
@@ -824,7 +824,11 @@ func metricBuildParamsForCounterGetValue(storage metric.Storage, metricType stri
 
 func metricBuildParamsForGaugeGetValue(storage metric.Storage, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
-		_ = storage.GaugeUpdate(context.TODO(), metricName, value)
+		_ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+			ID:    metricName,
+			MType: metricType,
+			Value: &value,
+		}})
 	}
 
 	return params{
