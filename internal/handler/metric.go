@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -46,7 +48,11 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
 
-	metric, err := metricGetFromRequest(r)
+	metrics, err := metricsGetFromRequest(r)
+	metric := &models.Metrics{}
+	if len(metrics) == 1 && err == nil {
+		metric = &metrics[0]
+	}
 
 	if err != nil {
 		m.logger.Error("HandlerMetricUpdate", "err", err)
@@ -103,7 +109,7 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 	metric, err := metricGetFromRequest(r)
 
 	if err != nil {
-		m.logger.Warn("HandlerMetricUpdateBatch", "err", err)
+		m.logger.Error("HandlerMetricUpdateBatch", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
 	}
@@ -145,12 +151,17 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
 
-	metric, err := metricGetFromRequest(r)
+	metrics, err := metricsGetFromRequest(r)
 
 	if err != nil {
 		m.logger.Warn("error", "err", err)
 		http.Error(w, "Can't parse request body", http.StatusBadRequest)
 		return
+	}
+
+	metric := &models.Metrics{}
+	if len(metrics) == 1 {
+		metric = &metrics[0]
 	}
 
 	validatorValue := validator.New()
@@ -259,7 +270,7 @@ func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType 
 	sb.WriteString("</li>")
 }
 
-func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
+func metricsGetFromRequest(r *http.Request) (metrics []models.Metrics, err error) {
 
 	contentType := r.Header.Get("Content-Type")
 	switch contentType {
@@ -268,33 +279,52 @@ func metricGetFromRequest(r *http.Request) (metric *models.Metrics, err error) {
 		if r.Body == nil || r.ContentLength == 0 {
 			return nil, fmt.Errorf("body is empty")
 		}
+		var reqBody []byte
+		reqBody, err = io.ReadAll(r.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read body: %w", err)
+		}
 
-		err = json.NewDecoder(r.Body).Decode(&metric)
+		err = json.Unmarshal(reqBody, &metrics)
+		if err == nil {
+			return metrics, nil
+		}
+
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
+			metric := &models.Metrics{}
+			err = json.Unmarshal(reqBody, metric)
+			if err != nil {
+				return nil, fmt.Errorf("decode single: %w", err)
+			}
+
+			metrics = []models.Metrics{*metric}
+		}
+
 	default:
 
-		metric = &models.Metrics{}
+		metric := &models.Metrics{}
 		metric.MType = r.PathValue("metric_type")
 		metric.ID = r.PathValue("metric_name")
 
 		reqMetricValue := r.PathValue("metric_value")
 
-		if reqMetricValue == "" {
-			return metric, nil
+		if reqMetricValue != "" {
+			switch metric.MType {
+			case models.Gauge:
+				var mV float64
+				mV, err = converter.ToFloat64(reqMetricValue)
+				metric.Value = &mV
+			case models.Counter:
+				var mV int64
+				mV, err = strconv.ParseInt(reqMetricValue, 10, 64)
+				metric.Delta = &mV
+			}
 		}
 
-		switch metric.MType {
-		case models.Gauge:
-			var mV float64
-			mV, err = converter.ToFloat64(reqMetricValue)
-			metric.Value = &mV
-		case models.Counter:
-			var mV int64
-			mV, err = strconv.ParseInt(reqMetricValue, 10, 64)
-			metric.Delta = &mV
-		}
+		metrics = []models.Metrics{*metric}
 	}
 
-	return metric, err
+	return metrics, err
 }
 
 func (m *Metric) requestBodyClose(r *http.Request) {

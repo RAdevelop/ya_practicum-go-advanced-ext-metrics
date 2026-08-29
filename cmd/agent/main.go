@@ -100,11 +100,8 @@ func settings(agentConfig configAgent.ConfigProvider, srvAddress string, interva
 }
 
 func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) error {
-
 	resp, err := httpAgent.Update(metric)
-
 	return handleUpdateResponse(resp, err, metric)
-
 }
 
 func metricUpdateBatch(httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
