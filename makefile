@@ -179,4 +179,9 @@ migrate-downt: ## Откатить одну миграцию на тестово
 	@migrate -path=$(MIGRATIONS_DIR) -database=$(DB_DSN_TEST) down 1
 
 
+.PHONY: show-dsn
+show-dsn: ## показать DSN
+	@echo DATABASE_DSN: ${DB_DSN}
+	@echo DATABASE_DSN_TEST: ${DB_DSN_TEST}
+
 .DEFAULT_GOAL := help

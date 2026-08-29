@@ -17,7 +17,7 @@ type Metrics struct {
 	MType string   `json:"type" db:"m_type"`
 	Delta *int64   `json:"delta,omitempty" db:"delta"`
 	Value *float64 `json:"value,omitempty" db:"value"`
-	Hash  string   `json:"hash,omitempty"`
+	Hash  string   `json:"hash,omitempty" db:"hash"`
 }
 
 func (m *Metrics) StrValue() string {

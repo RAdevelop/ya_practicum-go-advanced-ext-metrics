@@ -2,10 +2,11 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -19,126 +20,116 @@ func NewStorage(db *DB) *Storage {
 	}
 }
 
-func (s *Storage) GaugeUpdate(ctx context.Context, name string, value float64) error {
-	return s.upsertMetric(ctx, models.Gauge, name, value)
+var availableMetricTypes = map[string]bool{
+	models.Gauge:   true,
+	models.Counter: true,
 }
 
-func (s *Storage) GaugeByName(ctx context.Context, name string) (*models.Metrics, error) {
-
+func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
 	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	return s.selectMetricRow(ctx, models.Gauge, name)
-}
-
-func (s *Storage) Gauge(ctx context.Context) ([]models.Metrics, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
+		return fmt.Errorf("%w", err)
 	}
 
-	return s.selectMetricsRows(ctx, models.Gauge)
-}
-
-func (s *Storage) CounterAdd(ctx context.Context, name string, value int64) error {
-	return s.upsertMetric(ctx, models.Counter, name, value)
-
-}
-func (s *Storage) CounterAccumulative(ctx context.Context) ([]models.Metrics, error) {
-
-	if err := ctx.Err(); err != nil {
-		return nil, err
+	if len(metrics) == 0 {
+		return fmt.Errorf("%w", perrors.ErrMetricListEmpty)
 	}
 
-	return s.selectMetricsRows(ctx, models.Counter)
+	var params = make([]any, 0, len(metrics)*4)
+	var sqlValues = make([]string, 0, len(metrics))
+	pHolderIndex := 1
+	for _, metric := range metrics {
+		params = append(params, metric.ID, metric.MType, metric.Delta, metric.Value)
+		sqlValues = append(sqlValues, fmt.Sprintf("($%d, $%d, $%d, $%d)", pHolderIndex, pHolderIndex+1, pHolderIndex+2, pHolderIndex+3))
+		pHolderIndex += 4
+	}
+
+	var queryBuilder strings.Builder
+	queryBuilder.Grow(1024)
+	queryBuilder.WriteString(`INSERT INTO metric (metric_id, m_type, delta, value) VALUES `)
+	queryBuilder.WriteString(strings.Join(sqlValues, ","))
+	queryBuilder.WriteString(`
+			ON CONFLICT (metric_id, m_type)
+			DO UPDATE SET
+				-- Gauge: заменяем, если передано новое значение, иначе оставляем как было
+				value = COALESCE(EXCLUDED.value, metric.value),
+				-- Counter: суммируем, если передано новое значение, иначе оставляем как было
+				delta = COALESCE(metric.delta + EXCLUDED.delta, metric.delta, EXCLUDED.delta),
+				updated_at = CURRENT_TIMESTAMP
+	`)
+
+	_, err := s.DB.Executor(ctx).Exec(ctx, queryBuilder.String(), params...)
+	if err != nil {
+		return fmt.Errorf("%w, %w", perrors.ErrMetricUpdate, err)
+	}
+	return nil
 }
 
-func (s *Storage) CounterAccumulativeByName(ctx context.Context, name string) (*models.Metrics, error) {
+func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w", err)
 	}
-	return s.selectMetricRow(ctx, models.Counter, name)
+
+	if metric == nil {
+		return nil, fmt.Errorf("%w", perrors.ErrMetricIsNil)
+	}
+
+	if !isTypeAvailable(metric.MType) {
+		return nil, fmt.Errorf("%w", perrors.ErrMetricUnknownType)
+	}
+
+	if metric.ID == "" {
+		return nil, fmt.Errorf("%w", perrors.ErrMetricEmptyID)
+	}
+
+	sql := `SELECT metric_id, m_type, delta, "value"  FROM metric WHERE metric_id = $1 AND m_type = $2`
+	row := s.DB.Executor(ctx).QueryRow(ctx, sql, metric.ID, metric.MType)
+
+	err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value)
+	if err != nil {
+		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
+	}
+
+	return metric, nil
+}
+
+func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+
+	if !isTypeAvailable(metricType) {
+		return nil, fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)
+	}
+
+	sql := `SELECT metric_id, m_type, delta, "value", '' AS hash  FROM metric WHERE m_type = $1`
+
+	rows, err := s.DB.Executor(ctx).Query(ctx, sql, metricType)
+	if err != nil {
+		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
+	}
+
+	metrics, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Metrics])
+
+	if err != nil {
+		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
+	}
+
+	if len(metrics) == 0 {
+		metrics = nil
+		return nil, fmt.Errorf("%w", perrors.ErrMetricNotFound)
+	}
+
+	return metrics, nil
 }
 
 func (s *Storage) Ping(ctx context.Context) error {
 	return s.DB.Ping(ctx)
 }
 
-// upsertMetric - добавляем метрику, или обновляем ее значение
-func (s *Storage) upsertMetric(ctx context.Context, mType string, mID string, mValue any) error {
-
-	if err := ctx.Err(); err != nil {
-		return err
+func isTypeAvailable(mType string) bool {
+	if isAvailable, ok := availableMetricTypes[mType]; ok {
+		return isAvailable
 	}
 
-	var delta *int64
-	var value *float64
-
-	switch v := mValue.(type) {
-	case float64:
-		value = &v
-	case int64:
-		delta = &v
-	}
-
-	_, err := s.DB.Executor(ctx).Exec(ctx, `
-		INSERT INTO metric (metric_id, m_type, delta, value)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (metric_id, m_type) 
-		DO UPDATE SET 
-			-- Gauge: заменяем, если передано новое значение, иначе оставляем как было
-			value = COALESCE(EXCLUDED.value, metric.value),
-			-- Counter: суммируем, если передано новое значение, иначе оставляем как было
-			delta = COALESCE(metric.delta + EXCLUDED.delta, metric.delta, EXCLUDED.delta),
-			updated_at = CURRENT_TIMESTAMP`,
-		mID, mType, delta, value,
-	)
-	return err
-}
-
-// selectMetricRow - ищем значения для метрики
-func (s *Storage) selectMetricRow(ctx context.Context, mType string, mID string) (*models.Metrics, error) {
-
-	sql := `SELECT metric_id, m_type, delta, "value"  FROM metric WHERE metric_id = $1 AND m_type = $2`
-
-	row := s.DB.Executor(ctx).QueryRow(ctx, sql, mID, mType)
-
-	var modelsMetric models.Metrics
-	err := row.Scan(&modelsMetric.ID, &modelsMetric.MType, &modelsMetric.Delta, &modelsMetric.Value)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("metric value not found for name: %s, %w", mID, err)
-		}
-		return nil, fmt.Errorf("scan error: %w", err)
-	}
-
-	return &modelsMetric, nil
-}
-
-// selectMetricsRows - ищем значения для метрик
-func (s *Storage) selectMetricsRows(ctx context.Context, mType string) ([]models.Metrics, error) {
-
-	sql := `SELECT metric_id, m_type, delta, "value" FROM metric WHERE m_type = $1`
-
-	rows, err := s.DB.Executor(ctx).Query(ctx, sql, mType)
-	if err != nil {
-		return nil, err
-	}
-
-	metrics := make([]models.Metrics, 0, 30) // стоит написать COUNT() метод
-	for rows.Next() {
-		var modelMetric models.Metrics
-		err = rows.Scan(&modelMetric.ID, &modelMetric.MType, &modelMetric.Delta, &modelMetric.Value)
-		if err != nil {
-			return nil, err
-		}
-		metrics = append(metrics, modelMetric)
-	}
-
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	if len(metrics) == 0 {
-		metrics = nil
-	}
-	return metrics, nil
+	return false
 }

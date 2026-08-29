@@ -24,15 +24,15 @@ func New(client *resty.Client) *HttpAgent {
 
 func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
 	url := "/update"
-	return a.sendJson(url, metric)
+	return a.sendPostJson(url, metric)
 }
 
 func (a HttpAgent) Updates(metrics []models.Metrics) (*http.Response, error) {
 	url := "/updates"
-	return a.sendJson(url, metrics)
+	return a.sendPostJson(url, metrics)
 }
 
-func (a HttpAgent) sendJson(url string, v any) (*http.Response, error) {
+func (a HttpAgent) sendPostJson(url string, v any) (*http.Response, error) {
 	body, err := json.Marshal(v)
 	if err != nil {
 		return nil, err

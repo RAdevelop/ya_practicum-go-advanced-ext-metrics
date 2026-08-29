@@ -26,7 +26,7 @@ type ExecutorAble interface {
 
 /*
 DB - выполняем запросы к БД
-ВАЖНО! Есть методы (ContextWithTx, TxFromContext), которые обновляют исходный контекст!
+ВАЖНО! Есть методы (contextWithTx, txFromContext), которые обновляют исходный контекст!
 
 Очень интересно будет узнать мнение по такому подходу работы с транзакциями - передавать через контекст.
 Почему пошел по такому пути - совсем не хотелось менять интерфейс internal/service/metric/storage.go.
@@ -81,13 +81,13 @@ func (db *DB) Ping(ctx context.Context) error {
 // txKey — типизированный ключ, чтобы избежать коллизий в context.
 type txKey struct{}
 
-// ContextWithTx кладёт транзакцию в контекст.
-func (db *DB) ContextWithTx(ctx context.Context, tx pgx.Tx) context.Context {
+// contextWithTx кладёт транзакцию в контекст.
+func (db *DB) contextWithTx(ctx context.Context, tx pgx.Tx) context.Context {
 	return context.WithValue(ctx, txKey{}, tx)
 }
 
-// TxFromContext достаёт транзакцию из контекста.
-func (db *DB) TxFromContext(ctx context.Context) (pgx.Tx, bool) {
+// txFromContext достаёт транзакцию из контекста.
+func (db *DB) txFromContext(ctx context.Context) (pgx.Tx, bool) {
 	tx, ok := ctx.Value(txKey{}).(pgx.Tx)
 	return tx, ok
 }
@@ -95,7 +95,7 @@ func (db *DB) TxFromContext(ctx context.Context) (pgx.Tx, bool) {
 func (db *DB) RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
 	}
 
 	defer func() {
@@ -106,7 +106,7 @@ func (db *DB) RunInTransaction(ctx context.Context, fn func(ctx context.Context)
 	}()
 
 	// Создаём контекст с транзакцией
-	txCtx := db.ContextWithTx(ctx, tx)
+	txCtx := db.contextWithTx(ctx, tx)
 
 	// Передаём txCtx внутрь callback fn — именно его будут использовать storage.*
 	if err = fn(txCtx); err != nil {
@@ -114,12 +114,12 @@ func (db *DB) RunInTransaction(ctx context.Context, fn func(ctx context.Context)
 		return err
 	}
 
-	return tx.Commit(ctx) // Commit/Rollback используют исходный ctx для дедлайна
+	return tx.Commit(ctx) // Commit/Rollback используют исходный ctx для дедлайна или отмены
 }
 
 func (db *DB) Executor(ctx context.Context) ExecutorAble {
 	// Пытаемся достать транзакцию из контекста
-	if tx, ok := db.TxFromContext(ctx); ok && tx != nil {
+	if tx, ok := db.txFromContext(ctx); ok && tx != nil {
 		return tx
 	}
 	// Иначе используем пул соединений

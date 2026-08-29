@@ -2,23 +2,11 @@ package memory
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
 )
-
-/*
-ErrUnknownMetricType - неизвестный тип метрики
-
-ВОПРОС К РЕВЬЮЕРУ: в разных пакетах иногда приходится объявлять одинаковые по смыслу ошибку.
-Вопрос - насколько в Go практикуется создавать своего рода общий пакет с объявлением ошибок, и уже его использовать в коде,
-чтобы не плодить идентичные по смыслу ошибку?
-*/
-var ErrUnknownMetricType = errors.New("unknown metric type")
-var ErrNotFound = errors.New("metric not found")
-var ErrEmptyID = errors.New("metric ID is empty")
-var ErrEmptyValue = errors.New("metric value is empty")
 
 // MemStorage - хранилище метрик в памяти
 type MemStorage struct {
@@ -43,18 +31,18 @@ func (ms *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics)
 	for _, metric := range metrics {
 
 		if metric.ID == "" {
-			return fmt.Errorf("%w: %+v", ErrEmptyID, metric)
+			return fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyID, metric)
 		}
 
 		if metric.StrValue() == "" {
-			return fmt.Errorf("%w: %+v", ErrEmptyValue, metric)
+			return fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyValue, metric)
 		}
 
 		switch metric.MType {
 		case models.Counter, models.Gauge:
 			ms.update(ctx, metric)
 		default:
-			return fmt.Errorf("%w: %+v", ErrUnknownMetricType, metric)
+			return fmt.Errorf("%w: %+v", perrors.ErrMetricUnknownType, metric)
 		}
 	}
 
@@ -71,7 +59,7 @@ func (ms *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*mode
 	case models.Gauge:
 		metric, err = ms.gaugeByName(ctx, metric.ID)
 	default:
-		err = fmt.Errorf("%w: metric: %+v", ErrNotFound, metric)
+		err = fmt.Errorf("%w: metric: %+v", perrors.ErrMetricNotFound, metric)
 	}
 	if err != nil {
 		return nil, err
@@ -85,11 +73,11 @@ func (ms *MemStorage) MetricList(ctx context.Context, metricType string) ([]mode
 
 	switch metricType {
 	case models.Counter:
-		metrics, err = ms.counters(ctx)
+		metrics = ms.counters(ctx)
 	case models.Gauge:
-		metrics, err = ms.gauges(ctx)
+		metrics = ms.gauges(ctx)
 	default:
-		err = fmt.Errorf("%w, metricType: %s", ErrUnknownMetricType, metricType)
+		err = fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)
 	}
 
 	if err != nil {
@@ -114,10 +102,10 @@ func (ms *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metr
 		}, nil
 	}
 
-	return nil, fmt.Errorf("%w: mID = %q", ErrNotFound, mID)
+	return nil, fmt.Errorf("%w: mID = %q", perrors.ErrMetricNotFound, mID)
 }
 
-func (ms *MemStorage) gauges(ctx context.Context) ([]models.Metrics, error) {
+func (ms *MemStorage) gauges(ctx context.Context) []models.Metrics {
 	_ = ctx
 
 	metrics := make([]models.Metrics, 0, len(ms.gaugeMap))
@@ -129,7 +117,7 @@ func (ms *MemStorage) gauges(ctx context.Context) ([]models.Metrics, error) {
 		})
 	}
 
-	return metrics, nil
+	return metrics
 }
 
 func (ms *MemStorage) update(ctx context.Context, metric models.Metrics) {
@@ -144,7 +132,7 @@ func (ms *MemStorage) update(ctx context.Context, metric models.Metrics) {
 	}
 }
 
-func (ms *MemStorage) counters(ctx context.Context) ([]models.Metrics, error) {
+func (ms *MemStorage) counters(ctx context.Context) []models.Metrics {
 	_ = ctx
 	metrics := make([]models.Metrics, 0, len(ms.counterMap))
 	for mID, value := range ms.counterMap {
@@ -155,7 +143,7 @@ func (ms *MemStorage) counters(ctx context.Context) ([]models.Metrics, error) {
 		})
 	}
 
-	return metrics, nil
+	return metrics
 }
 
 func (ms *MemStorage) counterByName(ctx context.Context, mID string) (*models.Metrics, error) {
@@ -167,7 +155,7 @@ func (ms *MemStorage) counterByName(ctx context.Context, mID string) (*models.Me
 			Delta: &value,
 		}, nil
 	}
-	return nil, fmt.Errorf("%w: mID: %q", ErrNotFound, mID)
+	return nil, fmt.Errorf("%w: mID: %q", perrors.ErrMetricNotFound, mID)
 }
 
 func (ms *MemStorage) Ping(context.Context) error {

@@ -39,8 +39,8 @@ func (_m *MockStorage) EXPECT() *MockStorage_Expecter {
 }
 
 // Metric provides a mock function for the type MockStorage
-func (_mock *MockStorage) Metric(ctx context.Context, metrics *models.Metrics) (*models.Metrics, error) {
-	ret := _mock.Called(ctx, metrics)
+func (_mock *MockStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	ret := _mock.Called(ctx, metric)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Metric")
@@ -49,17 +49,17 @@ func (_mock *MockStorage) Metric(ctx context.Context, metrics *models.Metrics) (
 	var r0 *models.Metrics
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Metrics) (*models.Metrics, error)); ok {
-		return returnFunc(ctx, metrics)
+		return returnFunc(ctx, metric)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Metrics) *models.Metrics); ok {
-		r0 = returnFunc(ctx, metrics)
+		r0 = returnFunc(ctx, metric)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Metrics)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.Metrics) error); ok {
-		r1 = returnFunc(ctx, metrics)
+		r1 = returnFunc(ctx, metric)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,12 +73,12 @@ type MockStorage_Metric_Call struct {
 
 // Metric is a helper method to define mock.On call
 //   - ctx context.Context
-//   - metrics *models.Metrics
-func (_e *MockStorage_Expecter) Metric(ctx any, metrics any) *MockStorage_Metric_Call {
-	return &MockStorage_Metric_Call{Call: _e.mock.On("Metric", ctx, metrics)}
+//   - metric *models.Metrics
+func (_e *MockStorage_Expecter) Metric(ctx any, metric any) *MockStorage_Metric_Call {
+	return &MockStorage_Metric_Call{Call: _e.mock.On("Metric", ctx, metric)}
 }
 
-func (_c *MockStorage_Metric_Call) Run(run func(ctx context.Context, metrics *models.Metrics)) *MockStorage_Metric_Call {
+func (_c *MockStorage_Metric_Call) Run(run func(ctx context.Context, metric *models.Metrics)) *MockStorage_Metric_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -96,12 +96,12 @@ func (_c *MockStorage_Metric_Call) Run(run func(ctx context.Context, metrics *mo
 	return _c
 }
 
-func (_c *MockStorage_Metric_Call) Return(metrics1 *models.Metrics, err error) *MockStorage_Metric_Call {
-	_c.Call.Return(metrics1, err)
+func (_c *MockStorage_Metric_Call) Return(metrics *models.Metrics, err error) *MockStorage_Metric_Call {
+	_c.Call.Return(metrics, err)
 	return _c
 }
 
-func (_c *MockStorage_Metric_Call) RunAndReturn(run func(ctx context.Context, metrics *models.Metrics) (*models.Metrics, error)) *MockStorage_Metric_Call {
+func (_c *MockStorage_Metric_Call) RunAndReturn(run func(ctx context.Context, metric *models.Metrics) (*models.Metrics, error)) *MockStorage_Metric_Call {
 	_c.Call.Return(run)
 	return _c
 }
