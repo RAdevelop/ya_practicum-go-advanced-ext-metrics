@@ -26,7 +26,7 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]
 
 	metrics, err := s.baseStorage.UpdateBatch(ctx, metrics)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	var params = make([]any, 0, len(metrics)*4)
@@ -63,7 +63,7 @@ func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.M
 
 	metric, err := s.baseStorage.Metric(ctx, metric)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	sql := `SELECT metric_id, m_type, delta, "value"  FROM metric WHERE metric_id = $1 AND m_type = $2`
@@ -81,7 +81,7 @@ func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.M
 
 	metrics, err := s.baseStorage.MetricList(ctx, metricType)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	sql := `SELECT metric_id, m_type, delta, "value", '' AS hash  FROM metric WHERE m_type = $1`

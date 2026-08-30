@@ -30,24 +30,24 @@ func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) 
 
 	metrics, err := s.baseStorage.UpdateBatch(ctx, metrics)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	for _, metric := range metrics {
 
 		if metric.ID == "" {
-			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyID, metric)
+			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyID, metric)
 		}
 
 		if metric.StrValue() == "" {
-			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyValue, metric)
+			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyValue, metric)
 		}
 
 		switch metric.MType {
 		case models.Counter, models.Gauge:
 			s.update(ctx, metric)
 		default:
-			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricUnknownType, metric)
+			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricUnknownType, metric)
 		}
 	}
 
@@ -59,7 +59,7 @@ func (s *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*model
 	metric, err := s.baseStorage.Metric(ctx, metric)
 
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	switch metric.MType {
@@ -80,7 +80,7 @@ func (s *MemStorage) MetricList(ctx context.Context, metricType string) ([]model
 
 	metrics, err := s.baseStorage.MetricList(ctx, metricType)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	switch metricType {

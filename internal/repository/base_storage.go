@@ -78,7 +78,7 @@ func (s *baseStorage) Ping(context.Context) error {
 
 func (s *baseStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	if metric == nil {
 		return nil, fmt.Errorf("%w", perrors.ErrMetricIsNil)
@@ -97,7 +97,7 @@ func (s *baseStorage) Metric(ctx context.Context, metric *models.Metrics) (*mode
 
 func (s *baseStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 
 	metrics = s.AddValuesForDeduplicateMetrics(metrics)
@@ -110,7 +110,7 @@ func (s *baseStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics)
 
 func (s *baseStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	if !s.IsTypeAvailable(metricType) {
 		return nil, fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)

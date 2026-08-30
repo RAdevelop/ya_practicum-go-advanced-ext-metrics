@@ -113,7 +113,7 @@ func metricUpdateBatch(httpAgent *agent.HttpAgent, metrics []models.Metrics) err
 func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err error) {
 	if errResp != nil {
 		err = fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
-		return err
+		return
 	}
 	defer func() {
 		closeErr := resp.Body.Close()
