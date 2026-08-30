@@ -2,12 +2,15 @@ package retryer
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 )
+
+// Эмуляция повторяемой ошибки
+var pgErr = &pgconn.PgError{Code: "40001", Message: "serialization failure"}
 
 /*
 ВНИМАНИЕ!!!
@@ -53,7 +56,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			given: given{
 				stepSeconds: 2,
 				attempts:    new(3),
-				result:      "123",
+				result:      nil,
 			},
 			want: want{
 				hasError: true,
@@ -61,7 +64,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 				countFnCall: 4,
 				//10с, потому что 3 попытки с шагом в stepSeconds: 1-я пауза в 1 сек, 2-я пауза в 3 сек, 2-я пауза в 5 сек: 1+3+5=9сек + погрешность jitter
 				elapsedTime: time.Duration(9) * time.Second,
-				result:      "",
+				result:      nil,
 			},
 		},
 		{
@@ -100,7 +103,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 				}
 
 				if tt.want.hasError {
-					return "", errors.New("ErrorRetryLinear")
+					return tt.want.result, pgErr
 				}
 
 				return tt.given.result, nil
@@ -126,31 +129,31 @@ func TestRetryer_RetryExponential(t *testing.T) {
 
 	t.Log("ВНИМАНИЕ!!! Медленные тесты - так как проверяют паузы во время выполнения!")
 
-	type given[T any] struct {
+	type given struct {
 		stepSeconds uint
 		attempts    *int
-		result      T
+		result      any
 	}
-	type want[T any] struct {
+	type want struct {
 		hasError    bool
 		countFnCall int //сколько раз была вызвана ф-ция
 		elapsedTime time.Duration
-		result      T
+		result      any
 	}
 
 	tests := []struct {
 		name  string
-		given given[any]
-		want  want[any]
+		given given
+		want  want
 	}{
 		{
 			name: "countFnCall must be 1 without attempts",
-			given: given[any]{
+			given: given{
 				stepSeconds: 1,
 				attempts:    new(1),
 				result:      "123",
 			},
-			want: want[any]{
+			want: want{
 				hasError:    false,
 				countFnCall: 1,
 				elapsedTime: time.Duration(0) * time.Second, //0с, потому что нет попыток
@@ -159,21 +162,21 @@ func TestRetryer_RetryExponential(t *testing.T) {
 		},
 		{
 			name: "countFnCall must be 3 after 2 attempts and error in result",
-			given: given[any]{
+			given: given{
 				stepSeconds: 2,
 				attempts:    new(2),
 				result:      0,
 			},
-			want: want[any]{
+			want: want{
 				hasError:    true,
 				countFnCall: 3,
 				elapsedTime: time.Duration(3) * time.Second, //0с, потому что нет попыток
-				result:      0,
+				result:      nil,
 			},
 		},
 		{
 			name: "don't run an endless test",
-			given: given[any]{
+			given: given{
 				attempts: nil, // в коде теста выведем лог, чтобы не запустить бесконечный тест
 			},
 		},
@@ -207,7 +210,7 @@ func TestRetryer_RetryExponential(t *testing.T) {
 				}
 
 				if tt.want.hasError {
-					return tt.given.result, errors.New("RetryExponential")
+					return tt.want.result, pgErr
 				}
 
 				return tt.given.result, nil

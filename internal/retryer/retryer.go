@@ -80,14 +80,16 @@ func retryFn[T any](ctx context.Context, fn func(ctx context.Context) (T, error)
 				// Если ошибки нет, или она не из "повторяемых" — выходим
 				if err == nil {
 					return result, nil
-				} else {
-					//TODO добавить определение ошибки по классу
+				} else if !IsRetriableError(err) {
+					var result T
+					return result, err
 				}
 
 				if attemptsCounter != nil {
 					*attemptsCounter--
 				}
 			} else {
+				var result T
 				return result, fmt.Errorf("stop retry after %d attempts: %w", *attempts, err)
 			}
 
