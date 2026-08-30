@@ -386,7 +386,7 @@ func TestMemStorage_UpdateBatch(t *testing.T) {
 
 			cleanupStorage(t, storage)
 
-			err := storage.UpdateBatch(ctx, []models.Metrics{*tt.given.metric})
+			_, err := storage.UpdateBatch(ctx, []models.Metrics{*tt.given.metric})
 			if tt.want.hasError {
 				assert.Error(t, err)
 			} else {

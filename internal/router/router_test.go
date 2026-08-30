@@ -694,7 +694,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 
 				var err error
 				// сами сначала добавляем значения в хранилище данных
-				err = metricStorage.UpdateBatch(context.TODO(), []models.Metrics{*tt.given.metric})
+				_, err = metricStorage.UpdateBatch(context.TODO(), []models.Metrics{*tt.given.metric})
 
 				assert.NoError(t, err)
 
@@ -808,7 +808,7 @@ func TestMetric_StoragePing(t *testing.T) {
 func metricBuildParamsForCounterGetValue(storage metric.Storage, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
-		_ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+		_, _ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
 			ID:    metricName,
 			MType: metricType,
 			Delta: &value,
@@ -824,7 +824,7 @@ func metricBuildParamsForCounterGetValue(storage metric.Storage, metricType stri
 
 func metricBuildParamsForGaugeGetValue(storage metric.Storage, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
-		_ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+		_, _ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
 			ID:    metricName,
 			MType: metricType,
 			Value: &value,

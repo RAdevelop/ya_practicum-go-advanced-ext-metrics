@@ -97,7 +97,7 @@ func TestStorage_UpdateBatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := storage.DB.RunInTransaction(ctx, func(ctx context.Context) error {
 
-				err := storage.UpdateBatch(ctx, tt.given.metrics)
+				_, err := storage.UpdateBatch(ctx, tt.given.metrics)
 				if tt.want.err != nil {
 					assert.ErrorIs(t, err, tt.want.err)
 				} else {
@@ -263,7 +263,7 @@ func TestStorage_Metric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := storage.DB.RunInTransaction(ctx, func(ctx context.Context) error {
 
-				_ = storage.UpdateBatch(ctx, tt.given.metrics)
+				_, _ = storage.UpdateBatch(ctx, tt.given.metrics)
 
 				metric, err := storage.Metric(ctx, tt.given.metric)
 
@@ -383,7 +383,7 @@ func TestStorage_MetricList(t *testing.T) {
 
 			err := storage.DB.RunInTransaction(ctx, func(ctx context.Context) error {
 
-				_ = storage.UpdateBatch(ctx, tt.given.metrics)
+				_, _ = storage.UpdateBatch(ctx, tt.given.metrics)
 
 				metrics, err := storage.MetricList(ctx, tt.given.metricType)
 

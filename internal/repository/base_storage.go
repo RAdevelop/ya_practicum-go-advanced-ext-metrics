@@ -110,7 +110,7 @@ func (s *BaseStorage) MetricList(ctx context.Context, metricType string) ([]mode
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	if s.IsTypeAvailable(metricType) {
+	if !s.IsTypeAvailable(metricType) {
 		return nil, fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)
 	}
 

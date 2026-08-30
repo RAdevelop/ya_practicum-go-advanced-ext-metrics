@@ -226,20 +226,31 @@ func (_c *MockStorage_Ping_Call) RunAndReturn(run func(context1 context.Context)
 }
 
 // UpdateBatch provides a mock function for the type MockStorage
-func (_mock *MockStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
+func (_mock *MockStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 	ret := _mock.Called(ctx, metrics)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateBatch")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Metrics) error); ok {
+	var r0 []models.Metrics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Metrics) ([]models.Metrics, error)); ok {
+		return returnFunc(ctx, metrics)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Metrics) []models.Metrics); ok {
 		r0 = returnFunc(ctx, metrics)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Metrics)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []models.Metrics) error); ok {
+		r1 = returnFunc(ctx, metrics)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockStorage_UpdateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateBatch'
@@ -272,12 +283,12 @@ func (_c *MockStorage_UpdateBatch_Call) Run(run func(ctx context.Context, metric
 	return _c
 }
 
-func (_c *MockStorage_UpdateBatch_Call) Return(err error) *MockStorage_UpdateBatch_Call {
-	_c.Call.Return(err)
+func (_c *MockStorage_UpdateBatch_Call) Return(metricss []models.Metrics, err error) *MockStorage_UpdateBatch_Call {
+	_c.Call.Return(metricss, err)
 	return _c
 }
 
-func (_c *MockStorage_UpdateBatch_Call) RunAndReturn(run func(ctx context.Context, metrics []models.Metrics) error) *MockStorage_UpdateBatch_Call {
+func (_c *MockStorage_UpdateBatch_Call) RunAndReturn(run func(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error)) *MockStorage_UpdateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
