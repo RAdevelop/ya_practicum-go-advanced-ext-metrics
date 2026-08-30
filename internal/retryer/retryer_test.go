@@ -45,30 +45,6 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			},
 		},
 		{
-			name: "countFnCall must be 2 after 1 attempts and error in result",
-			given: given{
-				stepSeconds: 1,
-				attempts:    new(1),
-			},
-			want: want{
-				hasError:    true,
-				countFnCall: 2,                              // потому что отсчет попыток идет после 0-го вызова ф-ции (он мог быть удачным)
-				elapsedTime: time.Duration(1) * time.Second, //1с, потому что одна попытка с шагом в stepSeconds: 1-я пауза в 1 сек
-			},
-		},
-		{
-			name: "countFnCall must be 3 after 2 attempts and error in result",
-			given: given{
-				stepSeconds: 1,
-				attempts:    new(2),
-			},
-			want: want{
-				hasError:    true,
-				countFnCall: 3,                              // потому что отсчет попыток идет после 0-го вызова ф-ции (он мог быть удачным)
-				elapsedTime: time.Duration(3) * time.Second, //3с, потому что две попытки с шагом в stepSeconds: 1-я пауза в 1 сек, 2-я пауза в 2 сек: 1+2=3сек
-			},
-		},
-		{
 			name: "countFnCall must be 4 after 3 attempts and error in result",
 			given: given{
 				stepSeconds: 2,

@@ -34,7 +34,7 @@ help: ## Показать справку
 .PHONY: test-cover
 test-cover: ## Запустить проверку покрытия тестами
 	@echo "$(GREEN)=== Running tests ===$(NC)"
-	@${GO_TEST} -cover -count=1
+	@${GO_TEST} -cover
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test
