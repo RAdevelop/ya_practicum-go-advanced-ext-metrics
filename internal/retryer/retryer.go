@@ -19,22 +19,46 @@ func NewRetryer() *Retryer {
 }
 
 /*
-RetryLinear - повторяем вызов ф-ции attempts раз, с интервалом в stepSeconds секунд.
+RetryLinear - повторяем вызов ф-ции attempts раз, с линейным ростом интервала в stepSeconds секунд.
 Если attempts задать равным nil, то будет бесконечное повторение.
 Если stepSeconds = 0, то интервалы между попытами будут равны baseInterval
 */
-func (r *Retryer) RetryLinear(ctx context.Context, fn func(ctx context.Context) error, stepSeconds int, attempts *int) error {
+func (r *Retryer) RetryLinear(ctx context.Context, fn func(ctx context.Context) error, stepSeconds uint, attempts *int) error {
+
+	linearCalc := func(sleepInterval time.Duration, stepSeconds uint) time.Duration {
+		sleepInterval += time.Duration(stepSeconds) * time.Second
+		return sleepInterval
+	}
+
+	return r.retryFn(ctx, fn, stepSeconds, attempts, linearCalc)
+}
+
+/*
+RetryExponential - повторяем вызов ф-ции attempts раз, с ростом по экспоненте интервала в stepSeconds секунд.
+Если attempts задать равным nil, то будет бесконечное повторение.
+Если stepSeconds = 0, то интервалы между попытами будут равны baseInterval
+*/
+func (r *Retryer) RetryExponential(ctx context.Context, fn func(ctx context.Context) error, stepSeconds uint, attempts *int) error {
+
+	exponentialCalc := func(sleepInterval time.Duration, stepSeconds uint) time.Duration {
+		sleepInterval *= time.Duration(stepSeconds) * time.Second
+		return sleepInterval
+	}
+
+	return r.retryFn(ctx, fn, stepSeconds, attempts, exponentialCalc)
+}
+
+func (r *Retryer) retryFn(ctx context.Context, fn func(ctx context.Context) error, stepSeconds uint, attempts *int, sleepIntervalCalc func(sleepInterval time.Duration, stepSeconds uint) time.Duration) error {
 
 	// Инициализируем счётчик попыток
 	var attemptsCounter *int
 	if attempts != nil {
 		attemptsCounter = new(int)
-		*attemptsCounter = *attempts + 1
+		*attemptsCounter = *attempts + 1 // +1, потому что "0-я" попытка это для потенциального успешного выполнения
 	}
 
 	sleepInterval := baseInterval
 	sleepDuration := 0 * time.Millisecond
-
 	var err error
 
 	for {
@@ -47,8 +71,8 @@ func (r *Retryer) RetryLinear(ctx context.Context, fn func(ctx context.Context) 
 			if sleepDuration > 0 {
 				time.Sleep(sleepDuration)
 
-				// Увеличиваем интервал (линейно)
-				sleepInterval += time.Duration(stepSeconds) * time.Second
+				// Увеличиваем интервал
+				sleepInterval = sleepIntervalCalc(sleepInterval, stepSeconds)
 				if sleepInterval > maxSleepInterval {
 					sleepInterval = maxSleepInterval
 				}

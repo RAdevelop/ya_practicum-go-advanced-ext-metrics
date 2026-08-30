@@ -10,13 +10,15 @@ import (
 )
 
 /*
-ВНИМАНИЕ!
-Медленные тесты - так как работают с паузами во время выполнения
+ВНИМАНИЕ!!!
+Медленные тесты - так как проверяют паузы во время выполнения!
 */
 func TestRetryer_RetryLinear(t *testing.T) {
 
+	t.Log("ВНИМАНИЕ!!! Медленные тесты - так как проверяют паузы во время выполнения!")
+
 	type given struct {
-		stepSeconds int
+		stepSeconds uint
 		attempts    *int
 	}
 	type want struct {
