@@ -73,7 +73,7 @@ func main() {
 		//Из задания на самом деле не понятно точно, допустим сохранять в файл не надо, но вот восстанавливать из файла надо или нет?
 		//serverConfig.RestoreSet(new(false))
 		//serverConfig.StoreIntervalSet(srvFlags.storeInterval)
-		db, err := database.NewDB(ctx, dbConfig)
+		db, err := database.NewDB(ctx, dbConfig, logApp)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
 			logApp.Error("db", "err", err)

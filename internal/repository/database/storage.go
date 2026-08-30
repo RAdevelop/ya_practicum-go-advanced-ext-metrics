@@ -7,11 +7,13 @@ import (
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/jackc/pgx/v5"
 )
 
 type Storage struct {
 	DB *DB
+	repository.BaseStorage
 }
 
 func NewStorage(db *DB) *Storage {
@@ -20,18 +22,11 @@ func NewStorage(db *DB) *Storage {
 	}
 }
 
-var availableMetricTypes = map[string]bool{
-	models.Gauge:   true,
-	models.Counter: true,
-}
+func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 
-func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if len(metrics) == 0 {
-		return fmt.Errorf("%w", perrors.ErrMetricListEmpty)
+	metrics, err := s.BaseStorage.UpdateBatch(ctx, metrics)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	var params = make([]any, 0, len(metrics)*4)
@@ -57,34 +52,24 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) err
 				updated_at = CURRENT_TIMESTAMP
 	`)
 
-	_, err := s.DB.Executor(ctx).Exec(ctx, queryBuilder.String(), params...)
+	_, err = s.DB.Executor(ctx).Exec(ctx, queryBuilder.String(), params...)
 	if err != nil {
-		return fmt.Errorf("%w, %w", perrors.ErrMetricUpdate, err)
+		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricUpdate, err)
 	}
-	return nil
+	return metrics, nil
 }
 
 func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	if err := ctx.Err(); err != nil {
+
+	metric, err := s.BaseStorage.Metric(ctx, metric)
+	if err != nil {
 		return nil, fmt.Errorf("%w", err)
-	}
-
-	if metric == nil {
-		return nil, fmt.Errorf("%w", perrors.ErrMetricIsNil)
-	}
-
-	if !isTypeAvailable(metric.MType) {
-		return nil, fmt.Errorf("%w", perrors.ErrMetricUnknownType)
-	}
-
-	if metric.ID == "" {
-		return nil, fmt.Errorf("%w", perrors.ErrMetricEmptyID)
 	}
 
 	sql := `SELECT metric_id, m_type, delta, "value"  FROM metric WHERE metric_id = $1 AND m_type = $2`
 	row := s.DB.Executor(ctx).QueryRow(ctx, sql, metric.ID, metric.MType)
 
-	err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value)
+	err = row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value)
 	if err != nil {
 		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
 	}
@@ -93,12 +78,10 @@ func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.M
 }
 
 func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
 
-	if !isTypeAvailable(metricType) {
-		return nil, fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)
+	metrics, err := s.BaseStorage.MetricList(ctx, metricType)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	sql := `SELECT metric_id, m_type, delta, "value", '' AS hash  FROM metric WHERE m_type = $1`
@@ -108,7 +91,7 @@ func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.M
 		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
 	}
 
-	metrics, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Metrics])
+	metrics, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Metrics])
 
 	if err != nil {
 		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
@@ -124,12 +107,4 @@ func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.M
 
 func (s *Storage) Ping(ctx context.Context) error {
 	return s.DB.Ping(ctx)
-}
-
-func isTypeAvailable(mType string) bool {
-	if isAvailable, ok := availableMetricTypes[mType]; ok {
-		return isAvailable
-	}
-
-	return false
 }

@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
 )
 
 //go:generate mockery
@@ -37,7 +39,7 @@ type DB struct {
 	Pool *pgxpool.Pool
 }
 
-func NewDB(ctx context.Context, cfg configDB.ConfigProvider) (*DB, error) {
+func NewDB(ctx context.Context, cfg configDB.ConfigProvider, logger logger.Logger) (*DB, error) {
 
 	config, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
@@ -55,6 +57,14 @@ func NewDB(ctx context.Context, cfg configDB.ConfigProvider) (*DB, error) {
 	}
 	if cfg.MaxConnIdleTime() > 0 {
 		config.MaxConnIdleTime = cfg.MaxConnIdleTime()
+	}
+
+	// Подключаем адаптер логгера
+	if logger != nil {
+		config.ConnConfig.Tracer = &tracelog.TraceLog{
+			Logger:   NewPgxLoggerAdapter(logger, tracelog.LogLevelError), //TODO когда будем добавлять .env?! :) надо бы настройки оттуда брать
+			LogLevel: tracelog.LogLevelError,
+		}
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)

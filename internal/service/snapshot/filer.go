@@ -90,7 +90,7 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 	}
 
 	if len(metrics) > 0 {
-		err = filer.storage.UpdateBatch(ctx, metrics)
+		_, err = filer.storage.UpdateBatch(ctx, metrics)
 		if err != nil {
 			return err
 		}

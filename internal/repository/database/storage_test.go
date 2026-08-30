@@ -27,7 +27,7 @@ func setUpStorage(t *testing.T) (*Storage, context.Context) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	db, err := NewDB(ctx, envDB)
+	db, err := NewDB(ctx, envDB, nil)
 	assert.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -446,7 +446,7 @@ func TestStorage_Ping(t *testing.T) {
 			assert.NoError(t, err)
 
 			ctx := context.Background()
-			db, err := NewDB(ctx, envDB)
+			db, err := NewDB(ctx, envDB, nil)
 			assert.NoError(t, err)
 
 			t.Cleanup(func() {

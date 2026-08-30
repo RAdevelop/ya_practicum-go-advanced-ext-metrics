@@ -6,12 +6,14 @@ import (
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 )
 
 // MemStorage - хранилище метрик в памяти
 type MemStorage struct {
 	gaugeMap   map[string]float64
 	counterMap map[string]int64
+	repository.BaseStorage
 }
 
 /*
@@ -25,39 +27,47 @@ func NewStorage() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
-	_ = ctx
+func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
+
+	metrics, err := s.BaseStorage.UpdateBatch(ctx, metrics)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
 
 	for _, metric := range metrics {
 
 		if metric.ID == "" {
-			return fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyID, metric)
+			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyID, metric)
 		}
 
 		if metric.StrValue() == "" {
-			return fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyValue, metric)
+			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricEmptyValue, metric)
 		}
 
 		switch metric.MType {
 		case models.Counter, models.Gauge:
-			ms.update(ctx, metric)
+			s.update(ctx, metric)
 		default:
-			return fmt.Errorf("%w: %+v", perrors.ErrMetricUnknownType, metric)
+			return nil, fmt.Errorf("%w: %+v", perrors.ErrMetricUnknownType, metric)
 		}
 	}
 
-	return nil
+	return metrics, nil
 }
 
-func (ms *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+func (s *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 
-	var err error
+	metric, err := s.BaseStorage.Metric(ctx, metric)
+
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
 
 	switch metric.MType {
 	case models.Counter:
-		metric, err = ms.counterByName(ctx, metric.ID)
+		metric, err = s.counterByName(ctx, metric.ID)
 	case models.Gauge:
-		metric, err = ms.gaugeByName(ctx, metric.ID)
+		metric, err = s.gaugeByName(ctx, metric.ID)
 	default:
 		err = fmt.Errorf("%w: metric: %+v", perrors.ErrMetricNotFound, metric)
 	}
@@ -67,34 +77,37 @@ func (ms *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*mode
 	return metric, nil
 }
 
-func (ms *MemStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
-	var metrics []models.Metrics
-	var err error
+func (s *MemStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+
+	metrics, err := s.BaseStorage.MetricList(ctx, metricType)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
 
 	switch metricType {
 	case models.Counter:
-		metrics = ms.counters(ctx)
+		metrics = s.counters(ctx)
 	case models.Gauge:
-		metrics = ms.gauges(ctx)
+		metrics = s.gauges(ctx)
 	default:
-		err = fmt.Errorf("%w, metricType: %s", perrors.ErrMetricUnknownType, metricType)
+		err = fmt.Errorf("%w, metricType: %s", perrors.ErrMetricNotFound, metricType)
 	}
 
 	if err != nil {
-		return nil, err
+		metrics = nil
 	}
 
-	return metrics, nil
+	return metrics, err
 }
 
-func (ms *MemStorage) gaugeUpdate(ctx context.Context, metric models.Metrics) {
+func (s *MemStorage) gaugeUpdate(ctx context.Context, metric models.Metrics) {
 	_ = ctx
-	ms.gaugeMap[metric.ID] = *metric.Value
+	s.gaugeMap[metric.ID] = *metric.Value
 }
 
-func (ms *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metrics, error) {
+func (s *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metrics, error) {
 	_ = ctx
-	if value, ok := ms.gaugeMap[mID]; ok {
+	if value, ok := s.gaugeMap[mID]; ok {
 		return &models.Metrics{
 			ID:    mID,
 			MType: models.Gauge,
@@ -105,11 +118,11 @@ func (ms *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metr
 	return nil, fmt.Errorf("%w: mID = %q", perrors.ErrMetricNotFound, mID)
 }
 
-func (ms *MemStorage) gauges(ctx context.Context) []models.Metrics {
+func (s *MemStorage) gauges(ctx context.Context) []models.Metrics {
 	_ = ctx
 
-	metrics := make([]models.Metrics, 0, len(ms.gaugeMap))
-	for mID, value := range ms.gaugeMap {
+	metrics := make([]models.Metrics, 0, len(s.gaugeMap))
+	for mID, value := range s.gaugeMap {
 		metrics = append(metrics, models.Metrics{
 			ID:    mID,
 			MType: models.Gauge,
@@ -120,22 +133,22 @@ func (ms *MemStorage) gauges(ctx context.Context) []models.Metrics {
 	return metrics
 }
 
-func (ms *MemStorage) update(ctx context.Context, metric models.Metrics) {
+func (s *MemStorage) update(ctx context.Context, metric models.Metrics) {
 	_ = ctx
 
 	switch metric.MType {
 	case models.Counter:
 
-		ms.counterMap[metric.ID] += *metric.Delta
+		s.counterMap[metric.ID] += *metric.Delta
 	case models.Gauge:
-		ms.gaugeMap[metric.ID] = *metric.Value
+		s.gaugeMap[metric.ID] = *metric.Value
 	}
 }
 
-func (ms *MemStorage) counters(ctx context.Context) []models.Metrics {
+func (s *MemStorage) counters(ctx context.Context) []models.Metrics {
 	_ = ctx
-	metrics := make([]models.Metrics, 0, len(ms.counterMap))
-	for mID, value := range ms.counterMap {
+	metrics := make([]models.Metrics, 0, len(s.counterMap))
+	for mID, value := range s.counterMap {
 		metrics = append(metrics, models.Metrics{
 			ID:    mID,
 			MType: models.Counter,
@@ -146,9 +159,9 @@ func (ms *MemStorage) counters(ctx context.Context) []models.Metrics {
 	return metrics
 }
 
-func (ms *MemStorage) counterByName(ctx context.Context, mID string) (*models.Metrics, error) {
+func (s *MemStorage) counterByName(ctx context.Context, mID string) (*models.Metrics, error) {
 	_ = ctx
-	if value, ok := ms.counterMap[mID]; ok {
+	if value, ok := s.counterMap[mID]; ok {
 		return &models.Metrics{
 			ID:    mID,
 			MType: models.Counter,
@@ -156,8 +169,4 @@ func (ms *MemStorage) counterByName(ctx context.Context, mID string) (*models.Me
 		}, nil
 	}
 	return nil, fmt.Errorf("%w: mID: %q", perrors.ErrMetricNotFound, mID)
-}
-
-func (ms *MemStorage) Ping(context.Context) error {
-	return nil
 }

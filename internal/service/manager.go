@@ -9,7 +9,7 @@ import (
 )
 
 type MetricManagementAble interface {
-	MetricUpdateBatch(context.Context, []models.Metrics) error
+	MetricUpdateBatch(context.Context, []models.Metrics) ([]models.Metrics, error)
 	Metric(context.Context, *models.Metrics) (*models.Metrics, error)
 	MetricList(context.Context, string) ([]models.Metrics, error)
 	MetricSnapshotLoad(context.Context) error
@@ -30,7 +30,7 @@ func NewManager(storage metric.Storage, metricSnapshot snapshot.Able) *Manager {
 	}
 }
 
-func (manager *Manager) MetricUpdateBatch(ctx context.Context, metrics []models.Metrics) error {
+func (manager *Manager) MetricUpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 	return manager.storage.UpdateBatch(ctx, metrics)
 }
 

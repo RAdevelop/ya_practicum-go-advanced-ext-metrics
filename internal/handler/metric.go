@@ -74,7 +74,7 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = m.metricManager.MetricUpdateBatch(r.Context(), []models.Metrics{*metric}); err != nil {
+	if _, err = m.metricManager.MetricUpdateBatch(r.Context(), []models.Metrics{*metric}); err != nil {
 		m.logger.Warn("HandlerMetricUpdate", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
@@ -101,7 +101,6 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateBatch - обновляем метрики пачкой
-// TODO UpdateBatch
 func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
@@ -136,7 +135,7 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = m.metricManager.MetricUpdateBatch(r.Context(), metrics); err != nil {
+	if metrics, err = m.metricManager.MetricUpdateBatch(r.Context(), metrics); err != nil {
 		m.logger.Error("HandlerMetricUpdateBatch", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return

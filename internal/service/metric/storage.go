@@ -11,7 +11,7 @@ Storage - интерфейс по работе с хранилищем метр�
 */
 //go:generate mockery
 type Storage interface {
-	UpdateBatch(ctx context.Context, metrics []models.Metrics) error
+	UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error)
 	Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error)
 	MetricList(ctx context.Context, metricType string) ([]models.Metrics, error)
 	Ping(context.Context) error
