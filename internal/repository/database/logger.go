@@ -10,22 +10,23 @@ import (
 	"github.com/jackc/pgx/v5/tracelog"
 )
 
-// PgxLoggerAdapter адаптирует logger.Logger к tracelog.TraceLog
-type PgxLoggerAdapter struct {
+// pgxLoggerAdapter адаптирует logger.Logger к tracelog.TraceLog
+// только для db структуры, поэтому приватный
+type pgxLoggerAdapter struct {
 	log      logger.Logger
 	logLevel tracelog.LogLevel
 }
 
-// NewPgxLoggerAdapter создаёт адаптер
-func NewPgxLoggerAdapter(log logger.Logger, logLevel tracelog.LogLevel) *PgxLoggerAdapter {
-	return &PgxLoggerAdapter{
+// newPgxLoggerAdapter создаёт адаптер
+func newPgxLoggerAdapter(log logger.Logger, logLevel tracelog.LogLevel) *pgxLoggerAdapter {
+	return &pgxLoggerAdapter{
 		log:      log,
 		logLevel: logLevel,
 	}
 }
 
 // Log реализует интерфейс pgx.Logger
-func (pg *PgxLoggerAdapter) Log(ctx context.Context, level tracelog.LogLevel, msg string, data map[string]interface{}) {
+func (pg *pgxLoggerAdapter) Log(ctx context.Context, level tracelog.LogLevel, msg string, data map[string]interface{}) {
 	_ = ctx
 
 	// Если есть SQL и args — подставляем значения для отладки

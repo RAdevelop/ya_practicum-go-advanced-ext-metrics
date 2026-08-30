@@ -1,4 +1,4 @@
-package database
+package repository
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
 	"github.com/caarlos0/env/v11"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,14 +28,14 @@ func setUpStorage(t *testing.T) (*Storage, context.Context) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	db, err := NewDB(ctx, envDB, nil)
+	db, err := database.NewDB(ctx, envDB, nil)
 	assert.NoError(t, err)
 
 	t.Cleanup(func() {
 		db.Close()
 	})
 
-	return NewStorage(db), ctx
+	return NewDatabase(db), ctx
 }
 
 func TestStorage_UpdateBatch(t *testing.T) {
@@ -446,14 +447,14 @@ func TestStorage_Ping(t *testing.T) {
 			assert.NoError(t, err)
 
 			ctx := context.Background()
-			db, err := NewDB(ctx, envDB, nil)
+			db, err := database.NewDB(ctx, envDB, nil)
 			assert.NoError(t, err)
 
 			t.Cleanup(func() {
 				db.Close()
 			})
 
-			storage := NewStorage(db)
+			storage := NewDatabase(db)
 
 			err = storage.Ping(ctx)
 			if tt.want.hasError {

@@ -31,7 +31,7 @@ DB - выполняем запросы к БД
 ВАЖНО! Есть методы (contextWithTx, txFromContext), которые обновляют исходный контекст!
 
 Очень интересно будет узнать мнение по такому подходу работы с транзакциями - передавать через контекст.
-Почему пошел по такому пути - совсем не хотелось менять интерфейс internal/service/metric/storage.go.
+Почему пошел по такому пути - совсем не хотелось менять интерфейс internal/service/metric/memory.go.
 Так как для работы с хранилищем в памяти транзакция не требуется. С другой стороны, можно ее там тоже реализовать с
 блокировкой/разблокировкой при изменении свойств, в которых хранятся метрики...
 */
@@ -62,7 +62,7 @@ func NewDB(ctx context.Context, cfg configDB.ConfigProvider, logger logger.Logge
 	// Подключаем адаптер логгера
 	if logger != nil {
 		config.ConnConfig.Tracer = &tracelog.TraceLog{
-			Logger:   NewPgxLoggerAdapter(logger, tracelog.LogLevelError), //TODO когда будем добавлять .env?! :) надо бы настройки оттуда брать
+			Logger:   newPgxLoggerAdapter(logger, tracelog.LogLevelError), //TODO когда будем добавлять .env?! :) надо бы настройки оттуда брать
 			LogLevel: tracelog.LogLevelError,
 		}
 	}

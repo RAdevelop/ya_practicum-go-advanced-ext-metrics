@@ -1,4 +1,4 @@
-package database
+package repository
 
 import (
 	"context"
@@ -7,16 +7,16 @@ import (
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
 	"github.com/jackc/pgx/v5"
 )
 
 type Storage struct {
-	DB *DB
-	repository.BaseStorage
+	DB *database.DB
+	baseStorage
 }
 
-func NewStorage(db *DB) *Storage {
+func NewDatabase(db *database.DB) *Storage {
 	return &Storage{
 		DB: db,
 	}
@@ -24,7 +24,7 @@ func NewStorage(db *DB) *Storage {
 
 func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 
-	metrics, err := s.BaseStorage.UpdateBatch(ctx, metrics)
+	metrics, err := s.baseStorage.UpdateBatch(ctx, metrics)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -61,7 +61,7 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]
 
 func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 
-	metric, err := s.BaseStorage.Metric(ctx, metric)
+	metric, err := s.baseStorage.Metric(ctx, metric)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -79,7 +79,7 @@ func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.M
 
 func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
 
-	metrics, err := s.BaseStorage.MetricList(ctx, metricType)
+	metrics, err := s.baseStorage.MetricList(ctx, metricType)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}

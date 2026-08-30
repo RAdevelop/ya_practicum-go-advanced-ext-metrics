@@ -1,4 +1,4 @@
-package memory
+package repository
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func TestMemStorage_NewMemStorage(t *testing.T) {
 		- пустая карта counter (len(...) == 0)
 	*/
 
-	storage := NewStorage()
+	storage := NewMemory()
 	assert.NotNil(t, storage)
 	assert.IsType(t, &MemStorage{}, storage)
 	assert.Equal(t, map[string]float64{}, storage.gaugeMap)
@@ -595,7 +595,7 @@ func TestMemStorage_MetricList(t *testing.T) {
 
 func TestMemStorage_Ping(t *testing.T) {
 	t.Run("ping is nil", func(t *testing.T) {
-		memStorage := NewStorage()
+		memStorage := NewMemory()
 		assert.NoError(t, memStorage.Ping(context.TODO()))
 	})
 }

@@ -8,7 +8,9 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
 )
 
-type BaseStorage struct {
+// baseStorage - родительский объект для реализации хранилищ.
+// Приватный, чтобы от него не создавали реальные объекты
+type baseStorage struct {
 }
 
 var availableMetricTypes = map[string]bool{
@@ -18,7 +20,7 @@ var availableMetricTypes = map[string]bool{
 
 // AddValuesForDeduplicateMetrics - если в `metrics` если несколько "Counter" метрик с одинаковым ID, то их значения суммируются.
 // А если несколько "Gauge" метрик с одинаковым ID, то остается последняя.
-func (s *BaseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) []models.Metrics {
+func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) []models.Metrics {
 
 	if len(metrics) == 0 {
 		return metrics
@@ -62,7 +64,7 @@ func (s *BaseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) [
 	return summarizedMetrics
 }
 
-func (s *BaseStorage) IsTypeAvailable(mType string) bool {
+func (s *baseStorage) IsTypeAvailable(mType string) bool {
 	if isAvailable, ok := availableMetricTypes[mType]; ok {
 		return isAvailable
 	}
@@ -70,11 +72,11 @@ func (s *BaseStorage) IsTypeAvailable(mType string) bool {
 	return false
 }
 
-func (s *BaseStorage) Ping(context.Context) error {
+func (s *baseStorage) Ping(context.Context) error {
 	return nil
 }
 
-func (s *BaseStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+func (s *baseStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -93,7 +95,7 @@ func (s *BaseStorage) Metric(ctx context.Context, metric *models.Metrics) (*mode
 	return metric, nil
 }
 
-func (s *BaseStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
+func (s *baseStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -106,7 +108,7 @@ func (s *BaseStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics)
 	return metrics, nil
 }
 
-func (s *BaseStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+func (s *baseStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}

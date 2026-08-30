@@ -10,8 +10,8 @@ import (
 	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
@@ -67,7 +67,7 @@ func main() {
 	var metricStorage metric.Storage
 
 	if dbConfig.DSN() == "" {
-		metricStorage = memory.NewStorage()
+		metricStorage = repository.NewMemory()
 		srvFlags.useMemoryStorage = true
 	} else {
 		//Из задания на самом деле не понятно точно, допустим сохранять в файл не надо, но вот восстанавливать из файла надо или нет?
@@ -82,7 +82,7 @@ func main() {
 			srvFlags.useMemoryStorage = false
 		}
 
-		metricStorage = database.NewStorage(db)
+		metricStorage = repository.NewDatabase(db)
 	}
 
 	metricSnapshot, err := snapshot.NewFiler(metricStorage, serverConfig.FileStoragePath())

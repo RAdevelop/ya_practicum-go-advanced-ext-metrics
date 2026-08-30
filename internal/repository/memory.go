@@ -1,4 +1,4 @@
-package memory
+package repository
 
 import (
 	"context"
@@ -6,20 +6,19 @@ import (
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 )
 
 // MemStorage - хранилище метрик в памяти
 type MemStorage struct {
 	gaugeMap   map[string]float64
 	counterMap map[string]int64
-	repository.BaseStorage
+	baseStorage
 }
 
 /*
-NewStorage - конструктор для структуры хранения метрик
+NewMemory - конструктор для структуры хранения метрик
 */
-func NewStorage() *MemStorage {
+func NewMemory() *MemStorage {
 
 	return &MemStorage{
 		gaugeMap:   make(map[string]float64),
@@ -29,7 +28,7 @@ func NewStorage() *MemStorage {
 
 func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
 
-	metrics, err := s.BaseStorage.UpdateBatch(ctx, metrics)
+	metrics, err := s.baseStorage.UpdateBatch(ctx, metrics)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -57,7 +56,7 @@ func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) 
 
 func (s *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 
-	metric, err := s.BaseStorage.Metric(ctx, metric)
+	metric, err := s.baseStorage.Metric(ctx, metric)
 
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -79,7 +78,7 @@ func (s *MemStorage) Metric(ctx context.Context, metric *models.Metrics) (*model
 
 func (s *MemStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
 
-	metrics, err := s.BaseStorage.MetricList(ctx, metricType)
+	metrics, err := s.baseStorage.MetricList(ctx, metricType)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}

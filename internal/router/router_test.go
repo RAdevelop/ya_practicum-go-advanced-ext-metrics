@@ -15,7 +15,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
@@ -248,7 +248,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
-	memStorage := memory.NewStorage()
+	memStorage := repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
@@ -420,7 +420,7 @@ Use one of the supported metric types: [counter gauge]`,
 	var err error
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
-	memStorage := memory.NewStorage()
+	memStorage := repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
@@ -456,7 +456,7 @@ Use one of the supported metric types: [counter gauge]`,
 
 func TestMetric_GetWithTextPlain(t *testing.T) {
 
-	var metricStorage = memory.NewStorage()
+	var metricStorage = repository.NewMemory()
 
 	tests := []struct {
 		name  string
@@ -612,7 +612,7 @@ Use one of the supported metric types: [counter gauge]
 
 func TestMetric_GetWithJson(t *testing.T) {
 
-	var metricStorage = memory.NewStorage()
+	var metricStorage = repository.NewMemory()
 
 	type given struct {
 		metric *models.Metrics
