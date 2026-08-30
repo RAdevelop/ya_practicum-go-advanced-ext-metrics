@@ -41,7 +41,7 @@ RetryExponential - повторяем вызов ф-ции attempts раз, с �
 func (r *Retryer) RetryExponential(ctx context.Context, fn func(ctx context.Context) error, stepSeconds uint, attempts *int) error {
 
 	exponentialCalc := func(sleepInterval time.Duration, stepSeconds uint) time.Duration {
-		sleepInterval *= time.Duration(stepSeconds) * time.Second
+		sleepInterval *= time.Duration(stepSeconds)
 		return sleepInterval
 	}
 
@@ -70,19 +70,24 @@ func (r *Retryer) retryFn(ctx context.Context, fn func(ctx context.Context) erro
 			// Если была ошибка — делаем паузу
 			if sleepDuration > 0 {
 				time.Sleep(sleepDuration)
+				sleepDuration = 0
 
 				// Увеличиваем интервал
 				sleepInterval = sleepIntervalCalc(sleepInterval, stepSeconds)
+
 				if sleepInterval > maxSleepInterval {
 					sleepInterval = maxSleepInterval
 				}
-				sleepDuration = 0
 			}
 
 			// Проверяем, есть ли ещё попытки
 			hasAttempts := attemptsCounter == nil || *attemptsCounter > 0
 			if hasAttempts {
 				err = fn(ctx)
+
+				if attemptsCounter != nil {
+					*attemptsCounter--
+				}
 			} else {
 				return fmt.Errorf("stop retry after %d attempts: %w", *attempts, err)
 			}
@@ -92,18 +97,14 @@ func (r *Retryer) retryFn(ctx context.Context, fn func(ctx context.Context) erro
 				return nil
 			}
 
-			if attemptsCounter != nil {
-				*attemptsCounter--
-			}
-
 			// Готовим паузу для следующей итерации
-			sleepDuration = r.jitter(sleepInterval)
+			sleepDuration = sleepInterval + r.jitter()
+
 		}
 	}
 }
 
 // jitter - Добавляем случайность ±20%
-func (r *Retryer) jitter(sleepInterval time.Duration) time.Duration {
-	jitter := time.Duration(rand.Float64() * float64(sleepInterval) * 0.2)
-	return sleepInterval + jitter
+func (r *Retryer) jitter() time.Duration {
+	return time.Duration(rand.Float64() * float64(baseInterval) * 0.2)
 }
