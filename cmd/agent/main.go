@@ -140,14 +140,14 @@ func runtimeMetricSend(logApp logger.Logger, httpAgent *agent.HttpAgent, pollCou
 	}
 
 	var err error
-	/*
-		for _, metric := range runtimeMetrics {
-			err = metricUpdate(httpAgent, metric)
-			if err != nil {
-				logApp.Error("metricUpdate", "err", err)
-			}
+
+	for _, metric := range runtimeMetrics {
+		err = metricUpdate(httpAgent, metric)
+		if err != nil {
+			logApp.Error("metricUpdate", "err", err)
 		}
-	*/
+	}
+
 	err = metricUpdateBatch(httpAgent, runtimeMetrics)
 	if err != nil {
 		logApp.Error("metricUpdateBatch", "err", err)
