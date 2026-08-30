@@ -20,11 +20,13 @@ func TestRetryer_RetryLinear(t *testing.T) {
 	type given struct {
 		stepSeconds uint
 		attempts    *int
+		result      any
 	}
 	type want struct {
 		hasError    bool
 		countFnCall int //сколько раз была вызвана ф-ция
 		elapsedTime time.Duration
+		result      any
 	}
 
 	tests := []struct {
@@ -37,11 +39,13 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			given: given{
 				stepSeconds: 1,
 				attempts:    new(1),
+				result:      []int{1, 2, 3},
 			},
 			want: want{
 				hasError:    false,
 				countFnCall: 1,
 				elapsedTime: time.Duration(0) * time.Second, //0с, потому что нет попыток
+				result:      []int{1, 2, 3},
 			},
 		},
 		{
@@ -49,6 +53,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			given: given{
 				stepSeconds: 2,
 				attempts:    new(3),
+				result:      "123",
 			},
 			want: want{
 				hasError: true,
@@ -56,6 +61,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 				countFnCall: 4,
 				//10с, потому что 3 попытки с шагом в stepSeconds: 1-я пауза в 1 сек, 2-я пауза в 3 сек, 2-я пауза в 5 сек: 1+3+5=9сек + погрешность jitter
 				elapsedTime: time.Duration(9) * time.Second,
+				result:      "",
 			},
 		},
 		{
@@ -66,7 +72,6 @@ func TestRetryer_RetryLinear(t *testing.T) {
 		},
 	}
 
-	r := NewRetryer()
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -81,7 +86,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			var zeroCallTime time.Time
 			var elapsed time.Duration
 
-			err := r.RetryLinear(ctx, func(ctx context.Context) error {
+			result, err := RetryLinear(ctx, func(ctx context.Context) (any, error) {
 
 				counter++
 
@@ -95,10 +100,10 @@ func TestRetryer_RetryLinear(t *testing.T) {
 				}
 
 				if tt.want.hasError {
-					return errors.New("ErrorRetryLinear")
+					return "", errors.New("ErrorRetryLinear")
 				}
 
-				return nil
+				return tt.given.result, nil
 
 			}, tt.given.stepSeconds, tt.given.attempts)
 
@@ -107,7 +112,7 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-
+			assert.Equal(t, tt.want.result, result)
 			assert.Equal(t, tt.want.countFnCall, counter)
 
 			elapsedRound := elapsed.Round(time.Millisecond)
@@ -121,54 +126,59 @@ func TestRetryer_RetryExponential(t *testing.T) {
 
 	t.Log("ВНИМАНИЕ!!! Медленные тесты - так как проверяют паузы во время выполнения!")
 
-	type given struct {
+	type given[T any] struct {
 		stepSeconds uint
 		attempts    *int
+		result      T
 	}
-	type want struct {
+	type want[T any] struct {
 		hasError    bool
 		countFnCall int //сколько раз была вызвана ф-ция
 		elapsedTime time.Duration
+		result      T
 	}
 
 	tests := []struct {
 		name  string
-		given given
-		want  want
+		given given[any]
+		want  want[any]
 	}{
 		{
 			name: "countFnCall must be 1 without attempts",
-			given: given{
+			given: given[any]{
 				stepSeconds: 1,
 				attempts:    new(1),
+				result:      "123",
 			},
-			want: want{
+			want: want[any]{
 				hasError:    false,
 				countFnCall: 1,
 				elapsedTime: time.Duration(0) * time.Second, //0с, потому что нет попыток
+				result:      "123",
 			},
 		},
 		{
 			name: "countFnCall must be 3 after 2 attempts and error in result",
-			given: given{
+			given: given[any]{
 				stepSeconds: 2,
 				attempts:    new(2),
+				result:      0,
 			},
-			want: want{
+			want: want[any]{
 				hasError:    true,
 				countFnCall: 3,
 				elapsedTime: time.Duration(3) * time.Second, //0с, потому что нет попыток
+				result:      0,
 			},
 		},
 		{
 			name: "don't run an endless test",
-			given: given{
+			given: given[any]{
 				attempts: nil, // в коде теста выведем лог, чтобы не запустить бесконечный тест
 			},
 		},
 	}
 
-	r := NewRetryer()
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -183,7 +193,7 @@ func TestRetryer_RetryExponential(t *testing.T) {
 			var zeroCallTime time.Time
 			var elapsed time.Duration
 
-			err := r.RetryExponential(ctx, func(ctx context.Context) error {
+			result, err := RetryExponential(ctx, func(ctx context.Context) (any, error) {
 
 				counter++
 
@@ -197,10 +207,10 @@ func TestRetryer_RetryExponential(t *testing.T) {
 				}
 
 				if tt.want.hasError {
-					return errors.New("RetryExponential")
+					return tt.given.result, errors.New("RetryExponential")
 				}
 
-				return nil
+				return tt.given.result, nil
 
 			}, tt.given.stepSeconds, tt.given.attempts)
 
@@ -209,6 +219,7 @@ func TestRetryer_RetryExponential(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			assert.Equal(t, tt.want.result, result)
 
 			assert.Equal(t, tt.want.countFnCall, counter)
 			elapsedRound := elapsed.Round(time.Millisecond)

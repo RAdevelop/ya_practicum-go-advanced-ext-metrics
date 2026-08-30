@@ -4,6 +4,7 @@ import (
 	"context"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
@@ -31,15 +32,21 @@ func NewManager(storage metric.Storage, metricSnapshot snapshot.Able) *Manager {
 }
 
 func (manager *Manager) MetricUpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
-	return manager.storage.UpdateBatch(ctx, metrics)
+	return retryer.RetryLinear(ctx, func(ctx context.Context) ([]models.Metrics, error) {
+		return manager.storage.UpdateBatch(ctx, metrics)
+	}, 2, new(3))
 }
 
 func (manager *Manager) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	return manager.storage.Metric(ctx, metric)
+	return retryer.RetryLinear(ctx, func(ctx context.Context) (*models.Metrics, error) {
+		return manager.storage.Metric(ctx, metric)
+	}, 2, new(3))
 }
 
 func (manager *Manager) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
-	return manager.storage.MetricList(ctx, metricType)
+	return retryer.RetryLinear(ctx, func(ctx context.Context) ([]models.Metrics, error) {
+		return manager.storage.MetricList(ctx, metricType)
+	}, 2, new(3))
 }
 
 func (manager *Manager) MetricSnapshotLoad(ctx context.Context) error {
