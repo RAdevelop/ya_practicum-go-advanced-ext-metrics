@@ -87,6 +87,8 @@ func (filer *Filer) Load(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+
+		metrics = append(metrics, modelMetric)
 	}
 
 	if len(metrics) > 0 {

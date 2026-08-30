@@ -31,6 +31,12 @@ help: ## Показать справку
 
 ######## Tests
 
+.PHONY: test-cover
+test-cover: ## Запустить проверку покрытия тестами
+	@echo "$(GREEN)=== Running tests ===$(NC)"
+	@${GO_TEST} -cover -count=1
+	@echo "$(GREEN)✅ Tests completed$(NC)"
+
 .PHONY: test
 test: ## Запустить локальные тесты
 	@echo "$(GREEN)=== Running tests ===$(NC)"
@@ -74,7 +80,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 		-source-path=. \
 		-test.failfast \
 		-file-storage-path=$${TEMP_FILE} \
-	&& echo $$ADDRESS && rm -f $$TEMP_FILE
+	&& echo $$ADDRESS
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter10x
