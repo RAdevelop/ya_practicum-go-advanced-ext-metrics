@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"go/types"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
@@ -57,5 +58,11 @@ func (manager *Manager) MetricSnapshotSave(ctx context.Context) error {
 }
 
 func (manager *Manager) StoragePing(ctx context.Context) error {
-	return manager.storage.Ping(ctx)
+	var err error
+	_, err = retryer.RetryLinear(ctx, func(ctx context.Context) (types.Nil, error) {
+		var tNil types.Nil
+		err = manager.storage.Ping(ctx)
+		return tNil, err
+	}, 2, new(3))
+	return err
 }
