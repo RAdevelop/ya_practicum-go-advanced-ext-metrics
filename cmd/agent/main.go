@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -60,9 +61,12 @@ func main() {
 	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
 	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	defer func() {
 		pollInterval.Stop()
 		reportInterval.Stop()
+		cancel()
 	}()
 
 	for {
@@ -71,7 +75,7 @@ func main() {
 			pollCount++
 			runtimeMetrics = collectRuntimeMetrics(pollCount)
 		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(logApp, httpAgent, pollCount, runtimeMetrics)
+			runtimeMetricSend(ctx, logApp, httpAgent, pollCount, runtimeMetrics)
 			pollCount = 0
 		}
 	}
@@ -99,14 +103,31 @@ func settings(agentConfig configAgent.ConfigProvider, srvAddress string, interva
 	return cfg
 }
 
-func metricUpdate(httpAgent *agent.HttpAgent, metric models.Metrics) error {
-	resp, err := httpAgent.Update(metric)
+/*
+```
+
+	В runtimeMetricSend метрики отправляются дважды: сначала по одной в цикле через metricUpdate, а затем всем списком через metricUpdateBatch. Итого за один тик агент делает N + 1 HTTP-запросов вместо одного -- это лишняя нагрузка и на агент, и на сервер.
+
+	Цикл с единичными отправками стоит убрать полностью и оставить только metricUpdateBatch. Вместе с этим можно удалить и саму функцию metricUpdate, и метод Update у HttpAgent -- они больше не нужны агенту. Эндпоинт POST /update на сервере при этом никуда не девается: он остаётся для обратной совместимости с другими клиентами, просто сам агент перестаёт им пользоваться
+
+```
+
+В цикле через metricUpdate - да, я это видел. Я это и убирал изначально, пока не стал запускать тесты от практикума перед пушем.
+Тест инкремента №7 (TestIteration7) - падает, если закомментировать цикл отправки через metricUpdate (или в методе metricUpdate вернуть nil) :)
+Поэтому и оставил metricUpdate в цикле.
+
+Я подумал, что специально сделано, чтобы в следующих инкрементах обрабатывать ситуации с конкурентными запросами :) В данном случае, наверное, сложно назвать это конкурентностью. Но все же. Внутренности сами тестов практикума я не смотрел все еще, как и рекомендовали наставники.
+*/
+func metricUpdate(ctx context.Context, httpAgent *agent.HttpAgent, metric models.Metrics) error {
+
+	//return nil //если не вызвать метод, то тест TestIteration7 падает
+	resp, err := httpAgent.Update(ctx, metric)
 	return handleUpdateResponse(resp, err, metric)
 }
 
-func metricUpdateBatch(httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
+func metricUpdateBatch(ctx context.Context, httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
 
-	resp, err := httpAgent.Updates(metrics)
+	resp, err := httpAgent.Updates(ctx, metrics)
 	return handleUpdateResponse(resp, err, metrics)
 }
 
@@ -130,7 +151,7 @@ func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err e
 	return nil
 }
 
-func runtimeMetricSend(logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
+func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -142,13 +163,13 @@ func runtimeMetricSend(logApp logger.Logger, httpAgent *agent.HttpAgent, pollCou
 	var err error
 
 	for _, metric := range runtimeMetrics {
-		err = metricUpdate(httpAgent, metric)
+		err = metricUpdate(ctx, httpAgent, metric)
 		if err != nil {
 			logApp.Error("metricUpdate", "err", err)
 		}
 	}
 
-	err = metricUpdateBatch(httpAgent, runtimeMetrics)
+	err = metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
 	if err != nil {
 		logApp.Error("metricUpdateBatch", "err", err)
 	}

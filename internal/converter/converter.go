@@ -18,6 +18,10 @@ func NumericToString(v any) string {
 		return strconv.FormatInt(int64(val), 10)
 	case int64:
 		return strconv.FormatInt(val, 10)
+	case uint:
+		return strconv.FormatInt(int64(val), 10)
+	case uint32:
+		return strconv.FormatInt(int64(val), 10)
 	case uint64:
 		return strconv.FormatUint(val, 10)
 	case float32:

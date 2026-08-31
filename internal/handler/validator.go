@@ -57,7 +57,6 @@ func validateMetricName(validator *validator.Validator, mName string) validateRe
 	return result
 }
 
-// TODO Надо пересмотреть валидацию. Странный валидатор у меня. Если metric установлена, значит Value or Delta прописаны верно.
 // Достаточно тогда проверять на nil.
 func validateMetricValue(validate *validator.Validator, metric *models.Metrics) validateResult {
 

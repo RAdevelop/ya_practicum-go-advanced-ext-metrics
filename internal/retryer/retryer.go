@@ -13,6 +13,35 @@ const (
 )
 
 /*
+Серегй, спасибо за оценку, и в частности по дженерикам :)
+
+Меня вот смущает то, что если метод, который надо будет обернуть в Retry*, будет возвращать больше 2-х параметров - что посоветуете на это счет?
+На N+1 возвращаемых параметров создавать "дубль" функций Retry* - как-то не очень хочется. Это я на перспективу если...
+
+Интересно знать возможные подходы.
+
+Делать что-то вроде:
+
+func (s *SomeStruct) SomeMethod(ctx context.Context, v1 V1, v2 V2, ..., vN VN) (t1 Type1, t1 Type2, tN TypeN, , error) {
+	var t1 Type1
+	var t2 Type2
+	...
+	var tN TypeN
+	var err error
+
+	_, err = retryer.RetryLinear(ctx, func(ctx context.Context) (struct{}, error) {
+
+		t1, t2, ..., tN, err = s.callMe(ctx, v1, v2, ..., vN)
+		return struct{}{}, err
+	}, 2, new(3))
+	//Возврат нужных параметров
+	return t1, t2, ..., tN, err
+}
+
+Но тогда как будто и дженерики не нужны для самих Retry*?!
+*/
+
+/*
 RetryLinear - повторяем вызов ф-ции attempts раз, с линейным ростом интервала в stepSeconds секунд.
 Если attempts задать равным nil, то будет бесконечное повторение.
 Если stepSeconds = 0, то интервалы между попытами будут равны baseInterval
@@ -62,13 +91,21 @@ func retryFn[T any](ctx context.Context, fn func(ctx context.Context) (T, error)
 
 			// Если была ошибка — делаем паузу
 			if sleepDuration > 0 {
-				time.Sleep(sleepDuration)
-				sleepDuration = 0
+				timer := time.NewTimer(sleepDuration)
+				select {
+				case <-timer.C:
+					timer.Stop()
+					sleepDuration = 0
 
-				// Увеличиваем интервал
-				sleepInterval = sleepIntervalCalc(sleepInterval, stepSeconds)
-				if sleepInterval > maxSleepInterval {
-					sleepInterval = maxSleepInterval
+					// Увеличиваем интервал
+					sleepInterval = sleepIntervalCalc(sleepInterval, stepSeconds)
+					if sleepInterval > maxSleepInterval {
+						sleepInterval = maxSleepInterval
+					}
+				case <-ctx.Done():
+					timer.Stop()
+					var result T
+					return result, ctx.Err()
 				}
 			}
 

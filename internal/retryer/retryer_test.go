@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package retryer
 
 import (
@@ -26,10 +29,11 @@ func TestRetryer_RetryLinear(t *testing.T) {
 		result      any
 	}
 	type want struct {
-		hasError    bool
-		countFnCall int //сколько раз была вызвана ф-ция
-		elapsedTime time.Duration
-		result      any
+		hasError        bool
+		countFnCall     int //сколько раз была вызвана ф-ция
+		elapsedTime     time.Duration
+		result          any
+		checkCtxTimeout bool
 	}
 
 	tests := []struct {
@@ -68,6 +72,21 @@ func TestRetryer_RetryLinear(t *testing.T) {
 			},
 		},
 		{
+			name: "checkCtxTimeout",
+			given: given{
+				stepSeconds: 2,
+				attempts:    new(3),
+				result:      nil,
+			},
+			want: want{
+				hasError:        true,
+				countFnCall:     1,
+				elapsedTime:     time.Duration(0) * time.Second,
+				result:          nil,
+				checkCtxTimeout: true,
+			},
+		},
+		{
 			name: "don't run an endless test",
 			given: given{
 				attempts: nil, // в коде теста выведем лог, чтобы не запустить бесконечный тест
@@ -75,7 +94,6 @@ func TestRetryer_RetryLinear(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -88,6 +106,11 @@ func TestRetryer_RetryLinear(t *testing.T) {
 
 			var zeroCallTime time.Time
 			var elapsed time.Duration
+
+			ctx := t.Context()
+			if tt.want.checkCtxTimeout && tt.want.hasError && tt.given.stepSeconds > 0 {
+				ctx, _ = context.WithTimeout(t.Context(), 1*time.Second)
+			}
 
 			result, err := RetryLinear(ctx, func(ctx context.Context) (any, error) {
 
@@ -112,6 +135,9 @@ func TestRetryer_RetryLinear(t *testing.T) {
 
 			if tt.want.hasError {
 				assert.Error(t, err)
+				if tt.want.checkCtxTimeout && tt.given.stepSeconds > 0 {
+					assert.ErrorIs(t, err, context.DeadlineExceeded)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
@@ -135,10 +161,11 @@ func TestRetryer_RetryExponential(t *testing.T) {
 		result      any
 	}
 	type want struct {
-		hasError    bool
-		countFnCall int //сколько раз была вызвана ф-ция
-		elapsedTime time.Duration
-		result      any
+		hasError        bool
+		countFnCall     int //сколько раз была вызвана ф-ция
+		elapsedTime     time.Duration
+		result          any
+		checkCtxTimeout bool
 	}
 
 	tests := []struct {
@@ -170,8 +197,23 @@ func TestRetryer_RetryExponential(t *testing.T) {
 			want: want{
 				hasError:    true,
 				countFnCall: 3,
-				elapsedTime: time.Duration(3) * time.Second, //0с, потому что нет попыток
+				elapsedTime: time.Duration(3) * time.Second,
 				result:      nil,
+			},
+		},
+		{
+			name: "checkCtxTimeout",
+			given: given{
+				stepSeconds: 2,
+				attempts:    new(2),
+				result:      0,
+			},
+			want: want{
+				checkCtxTimeout: true,
+				hasError:        true,
+				countFnCall:     1,
+				elapsedTime:     time.Duration(0) * time.Second,
+				result:          nil,
 			},
 		},
 		{
@@ -182,7 +224,6 @@ func TestRetryer_RetryExponential(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -195,6 +236,11 @@ func TestRetryer_RetryExponential(t *testing.T) {
 
 			var zeroCallTime time.Time
 			var elapsed time.Duration
+
+			ctx := t.Context()
+			if tt.want.checkCtxTimeout && tt.want.hasError && tt.given.stepSeconds > 0 {
+				ctx, _ = context.WithTimeout(t.Context(), 1*time.Second)
+			}
 
 			result, err := RetryExponential(ctx, func(ctx context.Context) (any, error) {
 
@@ -219,6 +265,10 @@ func TestRetryer_RetryExponential(t *testing.T) {
 
 			if tt.want.hasError {
 				assert.Error(t, err)
+
+				if tt.want.checkCtxTimeout && tt.given.stepSeconds > 0 {
+					assert.ErrorIs(t, err, context.DeadlineExceeded)
+				}
 			} else {
 				assert.NoError(t, err)
 			}

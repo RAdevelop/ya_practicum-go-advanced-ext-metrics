@@ -47,6 +47,21 @@ func TestNumericToString(t *testing.T) {
 			want: "-1",
 		},
 		{
+			name: "uint(1)",
+			args: args{v: uint(1)},
+			want: "1",
+		},
+		{
+			name: "uint32(1)",
+			args: args{v: uint32(1)},
+			want: "1",
+		},
+		{
+			name: "uint64(1)",
+			args: args{v: uint64(1)},
+			want: "1",
+		},
+		{
 			name: "math.MaxInt64",
 			args: args{v: math.MaxInt64},
 			want: "9223372036854775807",
@@ -76,6 +91,11 @@ func TestNumericToString(t *testing.T) {
 			args: args{v: float64(-123.123)},
 			want: "-123.123",
 		},
+		{
+			name: "empty string",
+			args: args{v: ""},
+			want: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -95,6 +115,24 @@ func TestToFloat64(t *testing.T) {
 		{
 			name:    "int(1)",
 			value:   1,
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "uint(1)",
+			value:   uint(1),
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "uint32(1)",
+			value:   uint32(1),
+			want:    1,
+			wantErr: false,
+		},
+		{
+			name:    "uint64(1)",
+			value:   uint64(1),
 			want:    1,
 			wantErr: false,
 		},
@@ -133,6 +171,12 @@ func TestToFloat64(t *testing.T) {
 			value:   "-123.123",
 			want:    -123.123,
 			wantErr: false,
+		},
+		{
+			name:    "string()",
+			value:   "",
+			want:    0,
+			wantErr: true,
 		},
 		{
 			name:    "nil",
