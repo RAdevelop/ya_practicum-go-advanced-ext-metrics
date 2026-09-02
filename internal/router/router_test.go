@@ -253,7 +253,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -425,7 +425,7 @@ Use one of the supported metric types: [counter gauge]`,
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -582,7 +582,7 @@ Use one of the supported metric types: [counter gauge]
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -677,7 +677,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 	client := resty.New()
@@ -783,7 +783,7 @@ func TestMetric_StoragePing(t *testing.T) {
 			var metricManager = service.NewManager(tt.given.metricStorage, metricSnapshot)
 
 			h := handler.New(metricManager, loggerTest, mockConfigProvider)
-			r := New(h)
+			r := New(h, loggerTest)
 			mockServer := httptest.NewServer(r)
 			defer mockServer.Close()
 			client := resty.New()

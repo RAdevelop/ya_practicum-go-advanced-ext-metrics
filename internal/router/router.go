@@ -4,13 +4,19 @@ import (
 	"net/http"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	appMiddleware "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/middleware"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func New(h *handler.Handlers) http.Handler {
+func New(h *handler.Handlers, logger logger.Logger) http.Handler {
 
 	r := chi.NewRouter()
+
+	r.NotFound(appMiddleware.WithLogging(logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Page not found", http.StatusNotFound)
+	})).ServeHTTP)
 
 	r.Route("/update", func(r chi.Router) {
 

@@ -93,7 +93,7 @@ func main() {
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
 	h := handler.New(metricManager, logApp, serverConfig)
-	r := router.New(h)
+	r := router.New(h, logApp)
 
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)

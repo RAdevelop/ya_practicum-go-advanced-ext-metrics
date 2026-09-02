@@ -51,9 +51,9 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
-
-	h := handler.New(metricManager, setupMockLogger(t), mockConfigProvider)
-	r := router.New(h)
+	logApp := setupMockLogger(t)
+	h := handler.New(metricManager, logApp, mockConfigProvider)
+	r := router.New(h, logApp)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 

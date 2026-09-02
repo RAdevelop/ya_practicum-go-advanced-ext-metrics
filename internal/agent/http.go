@@ -31,7 +31,7 @@ func (a HttpAgent) Update(ctx context.Context, metric models.Metrics) (*http.Res
 }
 
 func (a HttpAgent) Updates(ctx context.Context, metrics []models.Metrics) (*http.Response, error) {
-	url := "/updates"
+	url := "/updates/"
 
 	return a.sendPostJsonRetryLinear(ctx, url, metrics)
 }
