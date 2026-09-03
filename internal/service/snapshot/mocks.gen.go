@@ -5,6 +5,8 @@
 package snapshot
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,16 +38,16 @@ func (_m *MockAble) EXPECT() *MockAble_Expecter {
 }
 
 // Load provides a mock function for the type MockAble
-func (_mock *MockAble) Load() error {
-	ret := _mock.Called()
+func (_mock *MockAble) Load(context1 context.Context) error {
+	ret := _mock.Called(context1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Load")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(context1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,13 +60,20 @@ type MockAble_Load_Call struct {
 }
 
 // Load is a helper method to define mock.On call
-func (_e *MockAble_Expecter) Load() *MockAble_Load_Call {
-	return &MockAble_Load_Call{Call: _e.mock.On("Load")}
+//   - context1 context.Context
+func (_e *MockAble_Expecter) Load(context1 any) *MockAble_Load_Call {
+	return &MockAble_Load_Call{Call: _e.mock.On("Load", context1)}
 }
 
-func (_c *MockAble_Load_Call) Run(run func()) *MockAble_Load_Call {
+func (_c *MockAble_Load_Call) Run(run func(context1 context.Context)) *MockAble_Load_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -74,22 +83,22 @@ func (_c *MockAble_Load_Call) Return(err error) *MockAble_Load_Call {
 	return _c
 }
 
-func (_c *MockAble_Load_Call) RunAndReturn(run func() error) *MockAble_Load_Call {
+func (_c *MockAble_Load_Call) RunAndReturn(run func(context1 context.Context) error) *MockAble_Load_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type MockAble
-func (_mock *MockAble) Save() error {
-	ret := _mock.Called()
+func (_mock *MockAble) Save(context1 context.Context) error {
+	ret := _mock.Called(context1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(context1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -102,13 +111,20 @@ type MockAble_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-func (_e *MockAble_Expecter) Save() *MockAble_Save_Call {
-	return &MockAble_Save_Call{Call: _e.mock.On("Save")}
+//   - context1 context.Context
+func (_e *MockAble_Expecter) Save(context1 any) *MockAble_Save_Call {
+	return &MockAble_Save_Call{Call: _e.mock.On("Save", context1)}
 }
 
-func (_c *MockAble_Save_Call) Run(run func()) *MockAble_Save_Call {
+func (_c *MockAble_Save_Call) Run(run func(context1 context.Context)) *MockAble_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -118,7 +134,7 @@ func (_c *MockAble_Save_Call) Return(err error) *MockAble_Save_Call {
 	return _c
 }
 
-func (_c *MockAble_Save_Call) RunAndReturn(run func() error) *MockAble_Save_Call {
+func (_c *MockAble_Save_Call) RunAndReturn(run func(context1 context.Context) error) *MockAble_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

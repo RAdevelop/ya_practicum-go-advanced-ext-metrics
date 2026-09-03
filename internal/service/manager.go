@@ -1,103 +1,67 @@
 package service
 
 import (
+	"context"
+
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
 
 type MetricManagementAble interface {
-	MetricUpdate(*models.Metrics)
-	MetricValue(string, string) (*models.Metrics, error)
-	MetricList(string) map[string]models.Metrics
-	MetricSnapshotLoad() error
-	MetricSnapshotSave() error
+	MetricUpdateBatch(context.Context, []models.Metrics) ([]models.Metrics, error)
+	Metric(context.Context, *models.Metrics) (*models.Metrics, error)
+	MetricList(context.Context, string) ([]models.Metrics, error)
+	MetricSnapshotLoad(context.Context) error
+	MetricSnapshotSave(context.Context) error
+	StoragePing(context.Context) error
 }
 
 // Manager - предоставляет интерфейс (фасад) для работы с метриками
 type Manager struct {
-	metricService  *metric.Service
+	storage        metric.Storage
 	metricSnapshot snapshot.Able
 }
 
-func NewManager(metricService *metric.Service, metricSnapshot snapshot.Able) *Manager {
+func NewManager(storage metric.Storage, metricSnapshot snapshot.Able) *Manager {
 	return &Manager{
-		metricService:  metricService,
+		storage:        storage,
 		metricSnapshot: metricSnapshot,
 	}
 }
 
-func (manager *Manager) MetricUpdate(metric *models.Metrics) {
-	if metric.MType == models.Counter {
-		if metric.Delta != nil {
-			manager.metricService.CounterAdd(metric.ID, *metric.Delta)
-		}
-	} else {
-		if metric.Value != nil {
-			manager.metricService.GaugeUpdate(metric.ID, *metric.Value)
-		}
-	}
+func (manager *Manager) MetricUpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
+	return retryer.RetryLinear(ctx, func(ctx context.Context) ([]models.Metrics, error) {
+		return manager.storage.UpdateBatch(ctx, metrics)
+	}, 2, new(3))
 }
 
-func (manager *Manager) MetricValue(metricType string, metricID string) (*models.Metrics, error) {
-	var modelMetric *models.Metrics
-
-	if metricType == models.Counter {
-		value, err := manager.metricService.CounterByNameAccumulative(metricID)
-		if err != nil {
-			return nil, err
-		}
-		modelMetric = &models.Metrics{
-			MType: models.Counter,
-			ID:    metricID,
-			Delta: &value,
-		}
-	} else if metricType == models.Gauge {
-		value, err := manager.metricService.GaugeByName(metricID)
-		if err != nil {
-			return nil, err
-		}
-		modelMetric = &models.Metrics{
-			MType: models.Gauge,
-			ID:    metricID,
-			Value: &value,
-		}
-	}
-
-	return modelMetric, nil
+func (manager *Manager) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	return retryer.RetryLinear(ctx, func(ctx context.Context) (*models.Metrics, error) {
+		return manager.storage.Metric(ctx, metric)
+	}, 2, new(3))
 }
 
-func (manager *Manager) MetricList(metricType string) map[string]models.Metrics {
-
-	metricsCounter := manager.metricService.CounterAccumulative()
-	metricsGauge := manager.metricService.Gauge()
-
-	metrics := make(map[string]models.Metrics, len(metricsCounter)+len(metricsGauge))
-
-	if metricType == models.Counter {
-		for name, value := range metricsCounter {
-			metrics[name] = models.Metrics{
-				MType: models.Counter,
-				ID:    name,
-				Delta: &value,
-			}
-		}
-	} else if metricType == models.Gauge {
-		for name, value := range metricsGauge {
-			metrics[name] = models.Metrics{
-				MType: models.Gauge,
-				ID:    name,
-				Value: &value,
-			}
-		}
-	}
-
-	return metrics
+func (manager *Manager) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+	return retryer.RetryLinear(ctx, func(ctx context.Context) ([]models.Metrics, error) {
+		return manager.storage.MetricList(ctx, metricType)
+	}, 2, new(3))
 }
 
-func (manager *Manager) MetricSnapshotLoad() error {
-	return manager.metricSnapshot.Load()
+func (manager *Manager) MetricSnapshotLoad(ctx context.Context) error {
+	return manager.metricSnapshot.Load(ctx)
 }
-func (manager *Manager) MetricSnapshotSave() error {
-	return manager.metricSnapshot.Save()
+func (manager *Manager) MetricSnapshotSave(ctx context.Context) error {
+	return manager.metricSnapshot.Save(ctx)
+}
+
+func (manager *Manager) StoragePing(ctx context.Context) error {
+	var err error
+	_, err = retryer.RetryLinear(ctx, func(ctx context.Context) (struct{}, error) {
+
+		err = manager.storage.Ping(ctx)
+		return struct{}{}, err
+	}, 2, new(3))
+	return err
 }

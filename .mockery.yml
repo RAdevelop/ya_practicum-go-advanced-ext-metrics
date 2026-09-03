@@ -32,11 +32,21 @@ packages:
       all: false
     interfaces:
       ConfigProvider:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db:
+    config:
+      all: false
+    interfaces:
+      ConfigProvider:
   github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot:
     config:
       all: false
     interfaces:
       Able:
+  github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database:
+    config:
+      all: false
+    interfaces:
+      Database:
   github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger:
     config:
       all: false

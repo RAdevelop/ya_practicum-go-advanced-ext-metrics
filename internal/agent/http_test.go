@@ -10,10 +10,9 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -48,13 +47,13 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	mockConfigProvider := setupMockConfigProvider(t)
 
-	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewService(metricStorage)
-	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricStorage = repository.NewMemory()
 
-	h := handler.New(metricManager, setupMockLogger(t), mockConfigProvider)
-	r := router.New(h)
+	metricSnapshot := snapshot.NewMockAble(t)
+	var metricManager = service.NewManager(metricStorage, metricSnapshot)
+	logApp := setupMockLogger(t)
+	h := handler.New(metricManager, logApp, mockConfigProvider)
+	r := router.New(h, logApp)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -128,7 +127,7 @@ func TestHttpAgent_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := agent.Update(tt.given)
+			resp, err := agent.Update(t.Context(), tt.given)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 

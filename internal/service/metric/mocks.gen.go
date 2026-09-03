@@ -5,6 +5,9 @@
 package metric
 
 import (
+	"context"
+
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -35,139 +38,55 @@ func (_m *MockStorage) EXPECT() *MockStorage_Expecter {
 	return &MockStorage_Expecter{mock: &_m.Mock}
 }
 
-// CounterAccumulative provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulative() map[string]int64 {
-	ret := _mock.Called()
+// Metric provides a mock function for the type MockStorage
+func (_mock *MockStorage) Metric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	ret := _mock.Called(ctx, metric)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CounterAccumulative")
+		panic("no return value specified for Metric")
 	}
 
-	var r0 map[string]int64
-	if returnFunc, ok := ret.Get(0).(func() map[string]int64); ok {
-		r0 = returnFunc()
+	var r0 *models.Metrics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Metrics) (*models.Metrics, error)); ok {
+		return returnFunc(ctx, metric)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Metrics) *models.Metrics); ok {
+		r0 = returnFunc(ctx, metric)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]int64)
+			r0 = ret.Get(0).(*models.Metrics)
 		}
 	}
-	return r0
-}
-
-// MockStorage_CounterAccumulative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CounterAccumulative'
-type MockStorage_CounterAccumulative_Call struct {
-	*mock.Call
-}
-
-// CounterAccumulative is a helper method to define mock.On call
-func (_e *MockStorage_Expecter) CounterAccumulative() *MockStorage_CounterAccumulative_Call {
-	return &MockStorage_CounterAccumulative_Call{Call: _e.mock.On("CounterAccumulative")}
-}
-
-func (_c *MockStorage_CounterAccumulative_Call) Run(run func()) *MockStorage_CounterAccumulative_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockStorage_CounterAccumulative_Call) Return(stringToInt64 map[string]int64) *MockStorage_CounterAccumulative_Call {
-	_c.Call.Return(stringToInt64)
-	return _c
-}
-
-func (_c *MockStorage_CounterAccumulative_Call) RunAndReturn(run func() map[string]int64) *MockStorage_CounterAccumulative_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CounterAccumulativeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAccumulativeByName(name string) (int64, error) {
-	ret := _mock.Called(name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CounterAccumulativeByName")
-	}
-
-	var r0 int64
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (int64, error)); ok {
-		return returnFunc(name)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) int64); ok {
-		r0 = returnFunc(name)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.Metrics) error); ok {
+		r1 = returnFunc(ctx, metric)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockStorage_CounterAccumulativeByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CounterAccumulativeByName'
-type MockStorage_CounterAccumulativeByName_Call struct {
+// MockStorage_Metric_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Metric'
+type MockStorage_Metric_Call struct {
 	*mock.Call
 }
 
-// CounterAccumulativeByName is a helper method to define mock.On call
-//   - name string
-func (_e *MockStorage_Expecter) CounterAccumulativeByName(name any) *MockStorage_CounterAccumulativeByName_Call {
-	return &MockStorage_CounterAccumulativeByName_Call{Call: _e.mock.On("CounterAccumulativeByName", name)}
+// Metric is a helper method to define mock.On call
+//   - ctx context.Context
+//   - metric *models.Metrics
+func (_e *MockStorage_Expecter) Metric(ctx any, metric any) *MockStorage_Metric_Call {
+	return &MockStorage_Metric_Call{Call: _e.mock.On("Metric", ctx, metric)}
 }
 
-func (_c *MockStorage_CounterAccumulativeByName_Call) Run(run func(name string)) *MockStorage_CounterAccumulativeByName_Call {
+func (_c *MockStorage_Metric_Call) Run(run func(ctx context.Context, metric *models.Metrics)) *MockStorage_Metric_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStorage_CounterAccumulativeByName_Call) Return(n int64, err error) *MockStorage_CounterAccumulativeByName_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockStorage_CounterAccumulativeByName_Call) RunAndReturn(run func(name string) (int64, error)) *MockStorage_CounterAccumulativeByName_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CounterAdd provides a mock function for the type MockStorage
-func (_mock *MockStorage) CounterAdd(name string, value int64) {
-	_mock.Called(name, value)
-	return
-}
-
-// MockStorage_CounterAdd_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CounterAdd'
-type MockStorage_CounterAdd_Call struct {
-	*mock.Call
-}
-
-// CounterAdd is a helper method to define mock.On call
-//   - name string
-//   - value int64
-func (_e *MockStorage_Expecter) CounterAdd(name any, value any) *MockStorage_CounterAdd_Call {
-	return &MockStorage_CounterAdd_Call{Call: _e.mock.On("CounterAdd", name, value)}
-}
-
-func (_c *MockStorage_CounterAdd_Call) Run(run func(name string, value int64)) *MockStorage_CounterAdd_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 int64
+		var arg1 *models.Metrics
 		if args[1] != nil {
-			arg1 = args[1].(int64)
+			arg1 = args[1].(*models.Metrics)
 		}
 		run(
 			arg0,
@@ -177,149 +96,65 @@ func (_c *MockStorage_CounterAdd_Call) Run(run func(name string, value int64)) *
 	return _c
 }
 
-func (_c *MockStorage_CounterAdd_Call) Return() *MockStorage_CounterAdd_Call {
-	_c.Call.Return()
+func (_c *MockStorage_Metric_Call) Return(metrics *models.Metrics, err error) *MockStorage_Metric_Call {
+	_c.Call.Return(metrics, err)
 	return _c
 }
 
-func (_c *MockStorage_CounterAdd_Call) RunAndReturn(run func(name string, value int64)) *MockStorage_CounterAdd_Call {
-	_c.Run(run)
-	return _c
-}
-
-// Gauge provides a mock function for the type MockStorage
-func (_mock *MockStorage) Gauge() map[string]float64 {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Gauge")
-	}
-
-	var r0 map[string]float64
-	if returnFunc, ok := ret.Get(0).(func() map[string]float64); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]float64)
-		}
-	}
-	return r0
-}
-
-// MockStorage_Gauge_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Gauge'
-type MockStorage_Gauge_Call struct {
-	*mock.Call
-}
-
-// Gauge is a helper method to define mock.On call
-func (_e *MockStorage_Expecter) Gauge() *MockStorage_Gauge_Call {
-	return &MockStorage_Gauge_Call{Call: _e.mock.On("Gauge")}
-}
-
-func (_c *MockStorage_Gauge_Call) Run(run func()) *MockStorage_Gauge_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockStorage_Gauge_Call) Return(stringToFloat64 map[string]float64) *MockStorage_Gauge_Call {
-	_c.Call.Return(stringToFloat64)
-	return _c
-}
-
-func (_c *MockStorage_Gauge_Call) RunAndReturn(run func() map[string]float64) *MockStorage_Gauge_Call {
+func (_c *MockStorage_Metric_Call) RunAndReturn(run func(ctx context.Context, metric *models.Metrics) (*models.Metrics, error)) *MockStorage_Metric_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GaugeByName provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeByName(name string) (float64, error) {
-	ret := _mock.Called(name)
+// MetricList provides a mock function for the type MockStorage
+func (_mock *MockStorage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
+	ret := _mock.Called(ctx, metricType)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GaugeByName")
+		panic("no return value specified for MetricList")
 	}
 
-	var r0 float64
+	var r0 []models.Metrics
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (float64, error)); ok {
-		return returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]models.Metrics, error)); ok {
+		return returnFunc(ctx, metricType)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) float64); ok {
-		r0 = returnFunc(name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []models.Metrics); ok {
+		r0 = returnFunc(ctx, metricType)
 	} else {
-		r0 = ret.Get(0).(float64)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Metrics)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, metricType)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockStorage_GaugeByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GaugeByName'
-type MockStorage_GaugeByName_Call struct {
+// MockStorage_MetricList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MetricList'
+type MockStorage_MetricList_Call struct {
 	*mock.Call
 }
 
-// GaugeByName is a helper method to define mock.On call
-//   - name string
-func (_e *MockStorage_Expecter) GaugeByName(name any) *MockStorage_GaugeByName_Call {
-	return &MockStorage_GaugeByName_Call{Call: _e.mock.On("GaugeByName", name)}
+// MetricList is a helper method to define mock.On call
+//   - ctx context.Context
+//   - metricType string
+func (_e *MockStorage_Expecter) MetricList(ctx any, metricType any) *MockStorage_MetricList_Call {
+	return &MockStorage_MetricList_Call{Call: _e.mock.On("MetricList", ctx, metricType)}
 }
 
-func (_c *MockStorage_GaugeByName_Call) Run(run func(name string)) *MockStorage_GaugeByName_Call {
+func (_c *MockStorage_MetricList_Call) Run(run func(ctx context.Context, metricType string)) *MockStorage_MetricList_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStorage_GaugeByName_Call) Return(f float64, err error) *MockStorage_GaugeByName_Call {
-	_c.Call.Return(f, err)
-	return _c
-}
-
-func (_c *MockStorage_GaugeByName_Call) RunAndReturn(run func(name string) (float64, error)) *MockStorage_GaugeByName_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GaugeUpdate provides a mock function for the type MockStorage
-func (_mock *MockStorage) GaugeUpdate(name string, value float64) {
-	_mock.Called(name, value)
-	return
-}
-
-// MockStorage_GaugeUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GaugeUpdate'
-type MockStorage_GaugeUpdate_Call struct {
-	*mock.Call
-}
-
-// GaugeUpdate is a helper method to define mock.On call
-//   - name string
-//   - value float64
-func (_e *MockStorage_Expecter) GaugeUpdate(name any, value any) *MockStorage_GaugeUpdate_Call {
-	return &MockStorage_GaugeUpdate_Call{Call: _e.mock.On("GaugeUpdate", name, value)}
-}
-
-func (_c *MockStorage_GaugeUpdate_Call) Run(run func(name string, value float64)) *MockStorage_GaugeUpdate_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 float64
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(float64)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
@@ -329,12 +164,131 @@ func (_c *MockStorage_GaugeUpdate_Call) Run(run func(name string, value float64)
 	return _c
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) Return() *MockStorage_GaugeUpdate_Call {
-	_c.Call.Return()
+func (_c *MockStorage_MetricList_Call) Return(metricss []models.Metrics, err error) *MockStorage_MetricList_Call {
+	_c.Call.Return(metricss, err)
 	return _c
 }
 
-func (_c *MockStorage_GaugeUpdate_Call) RunAndReturn(run func(name string, value float64)) *MockStorage_GaugeUpdate_Call {
-	_c.Run(run)
+func (_c *MockStorage_MetricList_Call) RunAndReturn(run func(ctx context.Context, metricType string) ([]models.Metrics, error)) *MockStorage_MetricList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Ping provides a mock function for the type MockStorage
+func (_mock *MockStorage) Ping(context1 context.Context) error {
+	ret := _mock.Called(context1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Ping")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(context1)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStorage_Ping_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Ping'
+type MockStorage_Ping_Call struct {
+	*mock.Call
+}
+
+// Ping is a helper method to define mock.On call
+//   - context1 context.Context
+func (_e *MockStorage_Expecter) Ping(context1 any) *MockStorage_Ping_Call {
+	return &MockStorage_Ping_Call{Call: _e.mock.On("Ping", context1)}
+}
+
+func (_c *MockStorage_Ping_Call) Run(run func(context1 context.Context)) *MockStorage_Ping_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStorage_Ping_Call) Return(err error) *MockStorage_Ping_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStorage_Ping_Call) RunAndReturn(run func(context1 context.Context) error) *MockStorage_Ping_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateBatch provides a mock function for the type MockStorage
+func (_mock *MockStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error) {
+	ret := _mock.Called(ctx, metrics)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateBatch")
+	}
+
+	var r0 []models.Metrics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Metrics) ([]models.Metrics, error)); ok {
+		return returnFunc(ctx, metrics)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Metrics) []models.Metrics); ok {
+		r0 = returnFunc(ctx, metrics)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Metrics)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []models.Metrics) error); ok {
+		r1 = returnFunc(ctx, metrics)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStorage_UpdateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateBatch'
+type MockStorage_UpdateBatch_Call struct {
+	*mock.Call
+}
+
+// UpdateBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - metrics []models.Metrics
+func (_e *MockStorage_Expecter) UpdateBatch(ctx any, metrics any) *MockStorage_UpdateBatch_Call {
+	return &MockStorage_UpdateBatch_Call{Call: _e.mock.On("UpdateBatch", ctx, metrics)}
+}
+
+func (_c *MockStorage_UpdateBatch_Call) Run(run func(ctx context.Context, metrics []models.Metrics)) *MockStorage_UpdateBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []models.Metrics
+		if args[1] != nil {
+			arg1 = args[1].([]models.Metrics)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStorage_UpdateBatch_Call) Return(metricss []models.Metrics, err error) *MockStorage_UpdateBatch_Call {
+	_c.Call.Return(metricss, err)
+	return _c
+}
+
+func (_c *MockStorage_UpdateBatch_Call) RunAndReturn(run func(ctx context.Context, metrics []models.Metrics) ([]models.Metrics, error)) *MockStorage_UpdateBatch_Call {
+	_c.Call.Return(run)
 	return _c
 }

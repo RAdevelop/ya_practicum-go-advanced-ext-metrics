@@ -3,11 +3,13 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -22,9 +24,26 @@ func New(client *resty.Client) *HttpAgent {
 	}
 }
 
-func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
+func (a HttpAgent) Update(ctx context.Context, metric models.Metrics) (*http.Response, error) {
 	url := "/update"
-	body, err := json.Marshal(metric)
+	return a.sendPostJsonRetryLinear(ctx, url, metric)
+
+}
+
+func (a HttpAgent) Updates(ctx context.Context, metrics []models.Metrics) (*http.Response, error) {
+	url := "/updates/"
+
+	return a.sendPostJsonRetryLinear(ctx, url, metrics)
+}
+
+func (a HttpAgent) sendPostJsonRetryLinear(ctx context.Context, url string, v any) (*http.Response, error) {
+	return retryer.RetryLinear(ctx, func(ctx context.Context) (*http.Response, error) {
+		return a.sendPostJson(ctx, url, v)
+	}, 2, new(3))
+}
+
+func (a HttpAgent) sendPostJson(ctx context.Context, url string, v any) (*http.Response, error) {
+	body, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +54,7 @@ func (a HttpAgent) Update(metric models.Metrics) (*http.Response, error) {
 	}
 
 	resp, err := a.client.R().
+		SetContext(ctx).
 		SetHeader("Content-Type", "application/json").
 		SetDoNotParseResponse(true).
 		SetHeader("Content-Encoding", "gzip").
@@ -86,7 +106,7 @@ func compress(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// 4. Копируем результат (обязательно, т.к. буфер будет переиспользован)
+	// Копируем результат (обязательно, т.к. буфер будет переиспользован)
 	result := make([]byte, buf.Len())
 	copy(result, buf.Bytes())
 	return result, nil

@@ -2,7 +2,9 @@ package router
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +15,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/memory"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
@@ -42,7 +44,7 @@ type given struct {
 func setupMockLogger(t *testing.T) *logger.MockLogger {
 	logMe := logger.NewMockLogger(t)
 
-	//не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
+	//Не знаю как лучше сделать возможное переменное количество параметров для вызова таких методов... :(
 	logMe.EXPECT().Info(mock.Anything, mock.Anything, mock.Anything).Maybe()
 	logMe.EXPECT().Error(mock.Anything, mock.Anything, mock.Anything).Maybe()
 	logMe.EXPECT().Warn(mock.Anything, mock.Anything, mock.Anything).Maybe()
@@ -246,12 +248,12 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
-	memStorage := memory.NewStorage()
-	metricService := metric.NewService(memStorage)
+	memStorage := repository.NewMemory()
+
 	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(memStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -418,12 +420,12 @@ Use one of the supported metric types: [counter gauge]`,
 	var err error
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
-	memStorage := memory.NewStorage()
-	metricService := metric.NewService(memStorage)
+	memStorage := repository.NewMemory()
+
 	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(memStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -454,8 +456,7 @@ Use one of the supported metric types: [counter gauge]`,
 
 func TestMetric_GetWithTextPlain(t *testing.T) {
 
-	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewService(metricStorage)
+	var metricStorage = repository.NewMemory()
 
 	tests := []struct {
 		name  string
@@ -468,7 +469,7 @@ func TestMetric_GetWithTextPlain(t *testing.T) {
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForCounterGetValue(metricService, "counter", "someMetric", []int64{527}),
+				reqParams:   metricBuildParamsForCounterGetValue(metricStorage, "counter", "someMetric", []int64{527}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -481,7 +482,7 @@ func TestMetric_GetWithTextPlain(t *testing.T) {
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForCounterGetValue(metricService, "counter", "someMetric2", []int64{1, 2}),
+				reqParams:   metricBuildParamsForCounterGetValue(metricStorage, "counter", "someMetric2", []int64{1, 2}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -494,7 +495,7 @@ func TestMetric_GetWithTextPlain(t *testing.T) {
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForCounterGetValue(metricService, "counter", "notFound" /*причина StatusNotFound*/, []int64{} /*причина StatusNotFound*/),
+				reqParams:   metricBuildParamsForCounterGetValue(metricStorage, "counter", "notFound" /*причина StatusNotFound*/, []int64{} /*причина StatusNotFound*/),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -508,7 +509,7 @@ func TestMetric_GetWithTextPlain(t *testing.T) {
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForCounterGetValue(metricService, "unknownType" /*причина StatusBadRequest*/, "notFound", []int64{}),
+				reqParams:   metricBuildParamsForCounterGetValue(metricStorage, "unknownType" /*причина StatusBadRequest*/, "notFound", []int64{}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -525,7 +526,7 @@ Use one of the supported metric types: [counter gauge]
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForGaugeGetValue(metricService, "gauge", "someMetric", []float64{527.123}),
+				reqParams:   metricBuildParamsForGaugeGetValue(metricStorage, "gauge", "someMetric", []float64{527.123}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -538,7 +539,7 @@ Use one of the supported metric types: [counter gauge]
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForGaugeGetValue(metricService, "gauge", "someMetric2", []float64{527.123, 0.123}),
+				reqParams:   metricBuildParamsForGaugeGetValue(metricStorage, "gauge", "someMetric2", []float64{527.123, 0.123}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -551,7 +552,7 @@ Use one of the supported metric types: [counter gauge]
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForGaugeGetValue(metricService, "gauge", "NotFound", []float64{} /*причина StatusBadRequest*/),
+				reqParams:   metricBuildParamsForGaugeGetValue(metricStorage, "gauge", "NotFound", []float64{} /*причина StatusBadRequest*/),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -565,7 +566,7 @@ Use one of the supported metric types: [counter gauge]
 			given: given{
 				contentType: "text/plain",
 				method:      http.MethodGet,
-				reqParams:   metricBuildParamsForGaugeGetValue(metricService, "unknownType" /*причина StatusBadRequest*/, "NotFound", []float64{}),
+				reqParams:   metricBuildParamsForGaugeGetValue(metricStorage, "unknownType" /*причина StatusBadRequest*/, "NotFound", []float64{}),
 			},
 			want: want{
 				contentType: "text/plain",
@@ -579,9 +580,9 @@ Use one of the supported metric types: [counter gauge]
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
 	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -601,9 +602,9 @@ Use one of the supported metric types: [counter gauge]
 			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
 
 			metricValue, err := io.ReadAll(result.RawResponse.Body)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.metricValue, string(metricValue), "given: %+v", tt.given)
 
-			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
 		})
 	}
@@ -611,8 +612,7 @@ Use one of the supported metric types: [counter gauge]
 
 func TestMetric_GetWithJson(t *testing.T) {
 
-	var metricStorage = memory.NewStorage()
-	var metricService = metric.NewService(metricStorage)
+	var metricStorage = repository.NewMemory()
 
 	type given struct {
 		metric *models.Metrics
@@ -675,9 +675,9 @@ func TestMetric_GetWithJson(t *testing.T) {
 	loggerTest := setupMockLogger(t)
 	mockConfigProvider := setupMockConfigProvider(t)
 	metricSnapshot := snapshot.NewMockAble(t)
-	var metricManager = service.NewManager(metricService, metricSnapshot)
+	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h)
+	r := New(h, loggerTest)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 	client := resty.New()
@@ -692,13 +692,11 @@ func TestMetric_GetWithJson(t *testing.T) {
 
 			if tt.given.metric != nil {
 
+				var err error
 				// сами сначала добавляем значения в хранилище данных
-				switch tt.given.metric.MType {
-				case models.Gauge:
-					metricService.GaugeUpdate(tt.given.metric.ID, *tt.given.metric.Value)
-				case models.Counter:
-					metricService.CounterAdd(tt.given.metric.ID, *tt.given.metric.Delta)
-				}
+				_, err = metricStorage.UpdateBatch(context.TODO(), []models.Metrics{*tt.given.metric})
+
+				assert.NoError(t, err)
 
 				sendBody, _ := json.Marshal(tt.given.metric)
 				req.SetBody(sendBody)
@@ -729,10 +727,92 @@ func TestMetric_GetWithJson(t *testing.T) {
 	}
 }
 
-func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []int64) params {
+func TestMetric_StoragePing(t *testing.T) {
+
+	type given struct {
+		contentType   string
+		metricStorage metric.Storage
+	}
+	type want struct {
+		statusCode int
+	}
+
+	var tests = []struct {
+		name  string
+		given given
+		want  want
+	}{
+		{
+			name: "ping return StatusOK",
+			given: given{
+				contentType: "text/plain",
+				metricStorage: (func() metric.Storage {
+					var metricStorage = metric.NewMockStorage(t)
+					metricStorage.EXPECT().Ping(mock.Anything).Return(nil)
+
+					return metricStorage
+				})(),
+			},
+			want: want{
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name: "ping return StatusInternalServerError",
+			given: given{
+				contentType: "text/plain",
+				metricStorage: (func() metric.Storage {
+					var metricStorage = metric.NewMockStorage(t)
+					metricStorage.EXPECT().Ping(mock.Anything).Return(errors.New("ping error"))
+
+					return metricStorage
+				})(),
+			},
+			want: want{
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			loggerTest := setupMockLogger(t)
+			mockConfigProvider := setupMockConfigProvider(t)
+			metricSnapshot := snapshot.NewMockAble(t)
+			var metricManager = service.NewManager(tt.given.metricStorage, metricSnapshot)
+
+			h := handler.New(metricManager, loggerTest, mockConfigProvider)
+			r := New(h, loggerTest)
+			mockServer := httptest.NewServer(r)
+			defer mockServer.Close()
+			client := resty.New()
+			client.SetBaseURL(mockServer.URL)
+
+			req := client.R().
+				SetHeader("Content-Type", tt.given.contentType).
+				SetDoNotParseResponse(true)
+
+			result, err := req.Get("/ping")
+
+			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
+
+			_, err = io.Copy(io.Discard, result.RawResponse.Body)
+
+			assert.NoError(t, err)
+			assert.NoError(t, result.RawResponse.Body.Close())
+		})
+	}
+}
+
+func metricBuildParamsForCounterGetValue(storage metric.Storage, metricType string, metricName string, metricValues []int64) params {
 
 	for _, value := range metricValues {
-		metricService.CounterAdd(metricName, value)
+		_, _ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+			ID:    metricName,
+			MType: metricType,
+			Delta: &value,
+		}})
 	}
 
 	return params{
@@ -742,9 +822,13 @@ func metricBuildParamsForCounterGetValue(metricService *metric.Service, metricTy
 	}
 }
 
-func metricBuildParamsForGaugeGetValue(metricService *metric.Service, metricType string, metricName string, metricValues []float64) params {
+func metricBuildParamsForGaugeGetValue(storage metric.Storage, metricType string, metricName string, metricValues []float64) params {
 	for _, value := range metricValues {
-		metricService.GaugeUpdate(metricName, value)
+		_, _ = storage.UpdateBatch(context.TODO(), []models.Metrics{{
+			ID:    metricName,
+			MType: metricType,
+			Value: &value,
+		}})
 	}
 
 	return params{
