@@ -60,16 +60,16 @@ func main() {
 
 	agentConfig := configAgent.New(configAgentEnv)
 
-	agSettings := settings(agentConfig, srvAddress.String(), agFlags)
+	agentConfigUpdate(agentConfig, srvAddress.String(), agFlags)
 
 	httpClient := resty.New()
-	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
+	httpClient.SetBaseURL("http://" + agentConfig.Address())
 
 	httpAgent := agent.New(httpClient)
 	var pollCount = int64(0)
 
-	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
+	pollInterval := time.NewTicker(time.Duration(agentConfig.PollInterval()) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(agentConfig.ReportInterval()) * time.Second)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -91,37 +91,31 @@ func main() {
 	}
 }
 
-func settings(agentConfig configAgent.ConfigProvider, srvAddress string, agFlags *agentFlags) *agentSettings {
+func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFlags *agentFlags) {
 
-	cfg := &agentSettings{}
-
-	if agFlags != nil {
-		cfg.ServerAddress = srvAddress
-		if agFlags.IntervalReport != nil {
-			cfg.IntervalReport = *agFlags.IntervalReport
-		}
-		if agFlags.IntervalPoll != nil {
-			cfg.IntervalPoll = *agFlags.IntervalPoll
-		}
-
-		cfg.SingKey = *agFlags.SingKey
+	if agentConfig == nil {
+		return
 	}
 
-	if agentConfig.Address() != "" {
-		cfg.ServerAddress = agentConfig.Address()
+	if srvAddress != "" {
+		agentConfig.AddressSet(srvAddress)
 	}
 
-	if agentConfig.ReportInterval() > 0 {
-		cfg.IntervalReport = agentConfig.ReportInterval()
-	}
-	if agentConfig.PollInterval() > 0 {
-		cfg.IntervalPoll = agentConfig.PollInterval()
-	}
-	if agentConfig.SignKey() != "" {
-		cfg.SingKey = agentConfig.SignKey()
+	if agFlags == nil {
+		return
 	}
 
-	return cfg
+	if agFlags.IntervalReport != nil {
+		agentConfig.ReportIntervalSet(*agFlags.IntervalReport)
+	}
+
+	if agFlags.IntervalPoll != nil {
+		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
+	}
+
+	if agFlags.SingKey != nil {
+		agentConfig.SignKeySet(*agFlags.SingKey)
+	}
 }
 
 func metricUpdateBatch(ctx context.Context, httpAgent *agent.HttpAgent, metrics []models.Metrics) error {

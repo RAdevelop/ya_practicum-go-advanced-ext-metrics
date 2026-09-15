@@ -9,29 +9,52 @@ type ConfigProvider interface {
 }
 
 type Config struct {
-	cfgProvider ConfigProvider
+	addr           string
+	intervalReport uint
+	intervalPoll   uint
+	signKey        string
 }
 
 func New(cfgProvider ConfigProvider) *Config {
-	return &Config{cfgProvider: cfgProvider}
+
+	cfg := &Config{}
+
+	cfg.addr = cfgProvider.Address()
+	cfg.intervalReport = cfgProvider.ReportInterval()
+	cfg.intervalPoll = cfgProvider.PollInterval()
+	cfg.signKey = cfgProvider.SignKey()
+
+	return cfg
 }
 
 // ReportInterval - позволяет переопределять `reportInterval`.
 func (c *Config) ReportInterval() uint {
-	return c.cfgProvider.ReportInterval()
+	return c.intervalReport
+}
+func (c *Config) ReportIntervalSet(intervalReport uint) {
+	c.intervalReport = intervalReport
 }
 
 // PollInterval - позволяет переопределять `pollInterval`.
 func (c *Config) PollInterval() uint {
-	return c.cfgProvider.PollInterval()
+	return c.intervalPoll
+}
+func (c *Config) PollIntervalSet(intervalPoll uint) {
+	c.intervalPoll = intervalPoll
 }
 
 // Address - отвечает за адрес эндпоинта HTTP-сервера.
 func (c *Config) Address() string {
-	return c.cfgProvider.Address()
+	return c.addr
+}
+func (c *Config) AddressSet(addr string) {
+	c.addr = addr
 }
 
 // SignKey - отвечает за ключ для подписи запроса
 func (c *Config) SignKey() string {
-	return c.cfgProvider.SignKey()
+	return c.signKey
+}
+func (c *Config) SignKeySet(signKey string) {
+	c.signKey = signKey
 }
