@@ -20,11 +20,19 @@ func New(metricManager service.MetricManagementAble, serverContext *server.Conte
 
 	metric := NewMetric(metricManager, serverContext)
 
-	var metricUpdate = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Update), middleware.SingCheck, middleware.Decompression, middleware.Compression, middleware.WithLogging)
-	var metricUpdateBatch = middleware.PipeLine(serverContext, http.HandlerFunc(metric.UpdateBatch), middleware.SingCheck, middleware.Decompression, middleware.Compression, middleware.WithLogging)
-	var metricGet = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Get), middleware.SingCheck, middleware.Decompression, middleware.Compression, middleware.WithLogging)
-	var metricList = middleware.PipeLine(serverContext, http.HandlerFunc(metric.List), middleware.SingCheck, middleware.Decompression, middleware.Compression, middleware.WithLogging)
-	var metricStoragePing = middleware.PipeLine(serverContext, http.HandlerFunc(metric.StoragePing), middleware.SingCheck, middleware.Decompression, middleware.Compression, middleware.WithLogging)
+	middlewares := []middleware.Middleware{
+		middleware.SingCheck,
+		middleware.Decompression,
+		middleware.Compression,
+		middleware.SignAdd,
+		middleware.WithLogging,
+	}
+
+	var metricUpdate = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Update), middlewares...)
+	var metricUpdateBatch = middleware.PipeLine(serverContext, http.HandlerFunc(metric.UpdateBatch), middlewares...)
+	var metricGet = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Get), middlewares...)
+	var metricList = middleware.PipeLine(serverContext, http.HandlerFunc(metric.List), middlewares...)
+	var metricStoragePing = middleware.PipeLine(serverContext, http.HandlerFunc(metric.StoragePing), middlewares...)
 
 	return &Handlers{
 		MetricUpdate:      metricUpdate,

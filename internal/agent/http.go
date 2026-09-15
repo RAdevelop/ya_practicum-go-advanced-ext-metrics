@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/http/headers"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"
@@ -66,7 +67,7 @@ func (a HttpAgent) sendPostJson(ctx context.Context, url string, v any) (*http.R
 		SetBody(body)
 
 	if a.config.SignKey() != "" {
-		req.SetHeader("HashSHA256", sign.SHA256(body, a.config.SignKey()))
+		req.SetHeader(headers.HashHeader, sign.SHA256(body, a.config.SignKey()))
 	}
 
 	resp, err := req.Post(url)

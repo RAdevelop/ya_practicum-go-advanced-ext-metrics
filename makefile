@@ -95,7 +95,7 @@ test-iter10x: ## Запустить тесты практикума с 10 по 1
 		-agent-binary-path=cmd/agent/agent \
 		-binary-path=cmd/server/server \
 		-database-dsn=${DB_DSN} \
-		-key="${TEMP_FILE}" \
+		-key="$$TEMP_FILE" \
 		-server-port=$${SERVER_PORT} \
 		-source-path=. \
 		-test.failfast \
