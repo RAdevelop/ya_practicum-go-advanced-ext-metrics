@@ -111,7 +111,7 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 	}
 }
 
-func metricUpdateBatch(ctx context.Context, httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
+func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics []models.Metrics) error {
 
 	resp, err := httpAgent.Updates(ctx, metrics)
 	return handleUpdateResponse(resp, err, metrics)
@@ -137,7 +137,7 @@ func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err e
 	return nil
 }
 
-func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
+func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HTTPAgent, pollCount int64, runtimeMetrics []models.Metrics) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -146,9 +146,7 @@ func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *age
 		return
 	}
 
-	var err error
-
-	err = metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
+	err := metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
 	if err != nil {
 		logApp.Error("metricUpdateBatch", "err", err)
 	}

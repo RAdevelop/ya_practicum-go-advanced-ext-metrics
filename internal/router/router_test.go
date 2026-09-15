@@ -607,7 +607,7 @@ Use one of the supported metric types: [counter gauge]
 				SetDoNotParseResponse(true)
 
 			result, err := req.Get(tt.given.reqParams.url)
-
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
 
 			metricValue, err := io.ReadAll(result.RawResponse.Body)
@@ -698,10 +698,9 @@ func TestMetric_GetWithJson(t *testing.T) {
 			req := client.R().
 				SetHeader("Content-Type", "application/json").
 				SetDoNotParseResponse(true)
-
+			var err error
 			if tt.given.metric != nil {
 
-				var err error
 				// сами сначала добавляем значения в хранилище данных
 				_, err = metricStorage.UpdateBatch(context.TODO(), []models.Metrics{*tt.given.metric})
 
@@ -803,6 +802,7 @@ func TestMetric_StoragePing(t *testing.T) {
 				SetDoNotParseResponse(true)
 
 			result, err := req.Get("/ping")
+			assert.NoError(t, err)
 
 			assert.Equalf(t, tt.want.statusCode, result.StatusCode(), "given: %+v", tt.given)
 
