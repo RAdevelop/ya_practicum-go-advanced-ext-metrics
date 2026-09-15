@@ -15,6 +15,7 @@ type envCfg struct {
 	MetricStoreInterval   *uint  `env:"STORE_INTERVAL"`
 	MetricFileStoragePath string `env:"FILE_STORAGE_PATH"`
 	MetricRestore         *bool  `env:"RESTORE"`
+	Key                   string `env:"KEY"`
 }
 
 func NewEnv() (*Env, error) {
@@ -56,4 +57,7 @@ func (env *Env) FileStoragePath() string {
 }
 func (env *Env) Restore() *bool {
 	return env.cfg.MetricRestore
+}
+func (env *Env) SignKey() string {
+	return env.cfg.Key
 }

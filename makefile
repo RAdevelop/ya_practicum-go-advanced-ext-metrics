@@ -84,7 +84,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter10x
-test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter iter=номер_задания)
+test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter10x iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
 	@go build -o ./cmd/server/server ./cmd/server/*.go \
 	&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
@@ -95,6 +95,7 @@ test-iter10x: ## Запустить тесты практикума с 10 по 1
 		-agent-binary-path=cmd/agent/agent \
 		-binary-path=cmd/server/server \
 		-database-dsn=${DB_DSN} \
+		-key="${TEMP_FILE}" \
 		-server-port=$${SERVER_PORT} \
 		-source-path=. \
 		-test.failfast \

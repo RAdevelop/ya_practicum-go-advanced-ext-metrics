@@ -23,6 +23,13 @@ type agentSettings struct {
 	ServerAddress  string
 	IntervalReport uint
 	IntervalPoll   uint
+	SingKey        string
+}
+
+type agentFlags struct {
+	IntervalReport *uint
+	IntervalPoll   *uint
+	SingKey        *string
 }
 
 func main() {
@@ -37,9 +44,12 @@ func main() {
 	}
 	_ = flag.Value(srvAddress)
 
+	agFlags := &agentFlags{}
+
 	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	rInterval := flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
-	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
+	agFlags.IntervalReport = flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
+	agFlags.IntervalPoll = flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
+	agFlags.SingKey = flag.String("k", "", `The key used to sign the request`)
 	flag.Parse()
 
 	configAgentEnv, err := configAgent.NewEnv()
@@ -50,7 +60,7 @@ func main() {
 
 	agentConfig := configAgent.New(configAgentEnv)
 
-	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
+	agSettings := settings(agentConfig, srvAddress.String(), agFlags)
 
 	httpClient := resty.New()
 	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
@@ -81,12 +91,20 @@ func main() {
 	}
 }
 
-func settings(agentConfig configAgent.ConfigProvider, srvAddress string, intervalReport *uint, intervalPoll *uint) agentSettings {
+func settings(agentConfig configAgent.ConfigProvider, srvAddress string, agFlags *agentFlags) *agentSettings {
 
-	cfg := agentSettings{
-		ServerAddress:  srvAddress,
-		IntervalReport: *intervalReport,
-		IntervalPoll:   *intervalPoll,
+	cfg := &agentSettings{}
+
+	if agFlags != nil {
+		cfg.ServerAddress = srvAddress
+		if agFlags.IntervalReport != nil {
+			cfg.IntervalReport = *agFlags.IntervalReport
+		}
+		if agFlags.IntervalPoll != nil {
+			cfg.IntervalPoll = *agFlags.IntervalPoll
+		}
+
+		cfg.SingKey = *agFlags.SingKey
 	}
 
 	if agentConfig.Address() != "" {
@@ -98,6 +116,9 @@ func settings(agentConfig configAgent.ConfigProvider, srvAddress string, interva
 	}
 	if agentConfig.PollInterval() > 0 {
 		cfg.IntervalPoll = agentConfig.PollInterval()
+	}
+	if agentConfig.SignKey() != "" {
+		cfg.SingKey = agentConfig.SignKey()
 	}
 
 	return cfg

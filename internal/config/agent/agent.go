@@ -5,6 +5,7 @@ type ConfigProvider interface {
 	Address() string
 	ReportInterval() uint
 	PollInterval() uint
+	SignKey() string
 }
 
 type Config struct {
@@ -28,4 +29,9 @@ func (c *Config) PollInterval() uint {
 // Address - отвечает за адрес эндпоинта HTTP-сервера.
 func (c *Config) Address() string {
 	return c.cfgProvider.Address()
+}
+
+// SignKey - отвечает за ключ для подписи запроса
+func (c *Config) SignKey() string {
+	return c.cfgProvider.SignKey()
 }

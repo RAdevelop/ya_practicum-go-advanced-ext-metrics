@@ -8,6 +8,7 @@ type Env struct {
 	Addr           string `env:"ADDRESS"`
 	IntervalReport uint   `env:"REPORT_INTERVAL"`
 	IntervalPoll   uint   `env:"POLL_INTERVAL"`
+	Key            string `env:"KEY"`
 }
 
 func NewEnv() (*Env, error) {
@@ -42,4 +43,8 @@ func (env *Env) ReportInterval() uint {
 
 func (env *Env) PollInterval() uint {
 	return env.IntervalPoll
+}
+
+func (env *Env) SignKey() string {
+	return env.Key
 }

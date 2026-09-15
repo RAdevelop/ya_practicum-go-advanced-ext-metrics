@@ -25,6 +25,7 @@ type serverFlags struct {
 	restore          *bool
 	dbDSN            *string
 	useMemoryStorage bool
+	signKey          *string
 }
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	srvFlags.fileStoragePath = flag.String("f", "dump/metrics/iter9.json", `путь до файла, куда сохраняются текущие значения`)
 	srvFlags.restore = flag.Bool("r", true, `булево значение (true/false), определяющее, следует ли загружать ранее сохранённые значения из указанного файла при старте сервера.`)
 	srvFlags.dbDSN = flag.String("d", "", `Строка с адресом подключения к БД`)
+	srvFlags.signKey = flag.String("k", "", `Ключ для проверки подписи запроса, и для подписи ответа`)
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -137,18 +139,26 @@ func saver(ctx context.Context, metricManager service.MetricManagementAble, logg
 }
 
 func serverConfigUpdateByFlags(serverConfig *configServer.Config, srvFlags *serverFlags) {
-	if serverConfig.Address() == "" {
+
+	if serverConfig == nil || srvFlags == nil {
+		return
+	}
+
+	if serverConfig.Address() == "" && srvFlags.address != nil {
 		serverConfig.AddressSet(*srvFlags.address)
 	}
 
 	if serverConfig.StoreInterval() == nil {
 		serverConfig.StoreIntervalSet(srvFlags.storeInterval)
 	}
-	if serverConfig.FileStoragePath() == "" {
+	if serverConfig.FileStoragePath() == "" && srvFlags.fileStoragePath != nil {
 		serverConfig.FileStoragePathSet(*srvFlags.fileStoragePath)
 	}
 
 	if serverConfig.Restore() == nil {
 		serverConfig.RestoreSet(srvFlags.restore)
+	}
+	if serverConfig.SignKey() == "" && srvFlags.signKey != nil {
+		serverConfig.SignKeySet(*srvFlags.signKey)
 	}
 }
