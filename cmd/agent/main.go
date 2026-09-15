@@ -115,8 +115,10 @@ func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics 
 
 	resp, err := httpAgent.Updates(ctx, metrics)
 	defer func() {
-		closeErr := resp.Body.Close()
-		err = errors.Join(err, closeErr)
+		if resp != nil && resp.Body != nil {
+			closeErr := resp.Body.Close()
+			err = errors.Join(err, closeErr)
+		}
 	}()
 
 	return handleUpdateResponse(resp, err, metrics)
