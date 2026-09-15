@@ -9,6 +9,7 @@ import (
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
 	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
@@ -72,9 +73,6 @@ func main() {
 		metricStorage = repository.NewMemory()
 		srvFlags.useMemoryStorage = true
 	} else {
-		//Из задания на самом деле не понятно точно, допустим сохранять в файл не надо, но вот восстанавливать из файла надо или нет?
-		//serverConfig.RestoreSet(new(false))
-		//serverConfig.StoreIntervalSet(srvFlags.storeInterval)
 		db, err := database.NewDB(ctx, dbConfig, logApp)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
@@ -94,8 +92,12 @@ func main() {
 	}
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
-	h := handler.New(metricManager, logApp, serverConfig)
-	r := router.New(h, logApp)
+	serverContext := &server.Context{
+		Logger: logApp,
+		Config: serverConfig,
+	}
+	h := handler.New(metricManager, serverContext)
+	r := router.New(h, serverContext)
 
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)

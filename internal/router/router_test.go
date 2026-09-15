@@ -13,6 +13,7 @@ import (
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	hServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
@@ -53,7 +54,7 @@ func setupMockLogger(t *testing.T) *logger.MockLogger {
 	return logMe
 }
 
-func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
+func setupMockConfigProviderServer(t *testing.T) *server.MockConfigProvider {
 	cfg := server.NewMockConfigProvider(t)
 
 	cfg.EXPECT().FileStoragePath().Maybe().Return("mock.file")
@@ -62,6 +63,13 @@ func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
 	cfg.EXPECT().Restore().Maybe().Return(nil)
 
 	return cfg
+}
+
+func setupServerContext(t *testing.T) *hServer.Context {
+	return &hServer.Context{
+		Logger: setupMockLogger(t),
+		Config: setupMockConfigProviderServer(t),
+	}
 }
 
 func TestMetric_UpdateWithTextPlain(t *testing.T) {
@@ -246,14 +254,14 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	var err error
 
-	loggerTest := setupMockLogger(t)
-	mockConfigProvider := setupMockConfigProvider(t)
+	serverContext := setupServerContext(t)
+
 	memStorage := repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, loggerTest)
+	h := handler.New(metricManager, serverContext)
+	r := New(h, serverContext)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -418,14 +426,14 @@ Use one of the supported metric types: [counter gauge]`,
 	}
 
 	var err error
-	loggerTest := setupMockLogger(t)
-	mockConfigProvider := setupMockConfigProvider(t)
+
+	serverContext := setupServerContext(t)
 	memStorage := repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(memStorage, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, loggerTest)
+	h := handler.New(metricManager, serverContext)
+	r := New(h, serverContext)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -577,12 +585,13 @@ Use one of the supported metric types: [counter gauge]
 			},
 		},
 	}
-	loggerTest := setupMockLogger(t)
-	mockConfigProvider := setupMockConfigProvider(t)
+
+	serverContext := setupServerContext(t)
+
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, loggerTest)
+	h := handler.New(metricManager, serverContext)
+	r := New(h, serverContext)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 
@@ -672,12 +681,12 @@ func TestMetric_GetWithJson(t *testing.T) {
 		},
 	}
 
-	loggerTest := setupMockLogger(t)
-	mockConfigProvider := setupMockConfigProvider(t)
+	serverContext := setupServerContext(t)
+
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
-	h := handler.New(metricManager, loggerTest, mockConfigProvider)
-	r := New(h, loggerTest)
+	h := handler.New(metricManager, serverContext)
+	r := New(h, serverContext)
 	mockServer := httptest.NewServer(r)
 	defer mockServer.Close()
 	client := resty.New()
@@ -777,13 +786,13 @@ func TestMetric_StoragePing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			loggerTest := setupMockLogger(t)
-			mockConfigProvider := setupMockConfigProvider(t)
+			serverContext := setupServerContext(t)
+
 			metricSnapshot := snapshot.NewMockAble(t)
 			var metricManager = service.NewManager(tt.given.metricStorage, metricSnapshot)
 
-			h := handler.New(metricManager, loggerTest, mockConfigProvider)
-			r := New(h, loggerTest)
+			h := handler.New(metricManager, serverContext)
+			r := New(h, serverContext)
 			mockServer := httptest.NewServer(r)
 			defer mockServer.Close()
 			client := resty.New()

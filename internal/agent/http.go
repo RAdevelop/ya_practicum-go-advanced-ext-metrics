@@ -8,19 +8,23 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"
 	"github.com/go-resty/resty/v2"
 )
 
 // HttpAgent - http клиент для отправки метрик на сервер
 type HttpAgent struct {
 	client *resty.Client
+	config agent.ConfigProvider
 }
 
-func New(client *resty.Client) *HttpAgent {
+func New(client *resty.Client, config agent.ConfigProvider) *HttpAgent {
 	return &HttpAgent{
 		client: client,
+		config: config,
 	}
 }
 
@@ -53,14 +57,19 @@ func (a HttpAgent) sendPostJson(ctx context.Context, url string, v any) (*http.R
 		return nil, err
 	}
 
-	resp, err := a.client.R().
+	req := a.client.R().
 		SetContext(ctx).
 		SetHeader("Content-Type", "application/json").
 		SetDoNotParseResponse(true).
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip").
-		SetBody(body).
-		Post(url)
+		SetBody(body)
+
+	if a.config.SignKey() != "" {
+		req.SetHeader("HashSHA256", sign.SHA256(body, a.config.SignKey()))
+	}
+
+	resp, err := req.Post(url)
 
 	if err != nil {
 		return nil, err

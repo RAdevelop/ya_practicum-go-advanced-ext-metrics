@@ -8,7 +8,7 @@ import (
 
 func TestSHA256(t *testing.T) {
 	type given struct {
-		str       string
+		str       []byte
 		secretKey string
 	}
 	tests := []struct {
@@ -19,7 +19,7 @@ func TestSHA256(t *testing.T) {
 		{
 			name: "empty key",
 			given: given{
-				str:       "str",
+				str:       []byte("str"),
 				secretKey: "",
 			},
 			want: "d966114df9e8c208b8e2577e29ca716d3d13f511f5c12e9a9137af917d4d4b1d",
@@ -27,7 +27,7 @@ func TestSHA256(t *testing.T) {
 		{
 			name: "not empty key",
 			given: given{
-				str:       "str",
+				str:       []byte("str"),
 				secretKey: "secretKey",
 			},
 			want: "97f5f0af93f954f8ec5e8f48b52f8d539ce90df241529394a1ea6528ce3bb41c",
@@ -42,7 +42,7 @@ func TestSHA256(t *testing.T) {
 
 func TestSHA256Verify(t *testing.T) {
 	type given struct {
-		str       string
+		str       []byte
 		secretKey string
 		sign      string
 	}
@@ -54,7 +54,7 @@ func TestSHA256Verify(t *testing.T) {
 		{
 			name: "empty key",
 			given: given{
-				str:       "str",
+				str:       []byte("str"),
 				secretKey: "",
 				sign:      "d966114df9e8c208b8e2577e29ca716d3d13f511f5c12e9a9137af917d4d4b1d",
 			},
@@ -63,7 +63,7 @@ func TestSHA256Verify(t *testing.T) {
 		{
 			name: "not empty key",
 			given: given{
-				str:       "str",
+				str:       []byte("str"),
 				secretKey: "secretKey",
 				sign:      "97f5f0af93f954f8ec5e8f48b52f8d539ce90df241529394a1ea6528ce3bb41c",
 			},
@@ -72,7 +72,7 @@ func TestSHA256Verify(t *testing.T) {
 		{
 			name: "not empty key",
 			given: given{
-				str:       "str",
+				str:       []byte("str"),
 				secretKey: "secretKey",
 				sign:      "d966114df9e8c208b8e2577e29ca716d3d13f511f5c12e9a9137af917d4d4b1d",
 			},

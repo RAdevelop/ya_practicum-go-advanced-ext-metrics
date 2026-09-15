@@ -19,13 +19,6 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type agentSettings struct {
-	ServerAddress  string
-	IntervalReport uint
-	IntervalPoll   uint
-	SingKey        string
-}
-
 type agentFlags struct {
 	IntervalReport *uint
 	IntervalPoll   *uint
@@ -65,7 +58,7 @@ func main() {
 	httpClient := resty.New()
 	httpClient.SetBaseURL("http://" + agentConfig.Address())
 
-	httpAgent := agent.New(httpClient)
+	httpAgent := agent.New(httpClient, agentConfig)
 	var pollCount = int64(0)
 
 	pollInterval := time.NewTicker(time.Duration(agentConfig.PollInterval()) * time.Second)
