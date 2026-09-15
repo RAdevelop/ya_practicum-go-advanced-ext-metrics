@@ -111,9 +111,14 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 	}
 }
 
-func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics []models.Metrics) error {
+func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics []models.Metrics) (err error) {
 
 	resp, err := httpAgent.Updates(ctx, metrics)
+	defer func() {
+		closeErr := resp.Body.Close()
+		err = errors.Join(err, closeErr)
+	}()
+
 	return handleUpdateResponse(resp, err, metrics)
 }
 
@@ -122,10 +127,6 @@ func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err e
 		err = fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
 		return
 	}
-	defer func() {
-		closeErr := resp.Body.Close()
-		err = errors.Join(err, closeErr)
-	}()
 
 	// io.Discard выступает в качестве приёмника ненужных данных.
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
