@@ -723,11 +723,12 @@ func TestMetric_GetWithJson(t *testing.T) {
 				defer assert.NoError(t, reader.Close())
 
 				body, err = io.ReadAll(reader)
+				assert.NoError(t, err)
 			} else {
 				body, err = io.ReadAll(result.RawResponse.Body)
+				assert.NoError(t, err)
 			}
 
-			assert.NoError(t, err)
 			assert.NoError(t, result.RawResponse.Body.Close())
 			assert.Equal(t, tt.want.body, strings.TrimSpace(string(body)))
 
