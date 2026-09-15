@@ -90,7 +90,7 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 		return
 	}
 
-	if srvAddress != "" {
+	if agentConfig.Address() == "" {
 		agentConfig.AddressSet(srvAddress)
 	}
 
@@ -98,15 +98,15 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 		return
 	}
 
-	if agFlags.IntervalReport != nil {
+	if agentConfig.ReportInterval() == 0 {
 		agentConfig.ReportIntervalSet(*agFlags.IntervalReport)
 	}
 
-	if agFlags.IntervalPoll != nil {
+	if agentConfig.PollInterval() == 0 {
 		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
 	}
 
-	if agFlags.SingKey != nil {
+	if agentConfig.SignKey() == "" {
 		agentConfig.SignKeySet(*agFlags.SingKey)
 	}
 }
