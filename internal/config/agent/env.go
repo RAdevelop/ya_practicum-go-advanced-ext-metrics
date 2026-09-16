@@ -5,9 +5,13 @@ import (
 )
 
 type Env struct {
+	cfg envCfg
+}
+type envCfg struct {
 	Addr           string `env:"ADDRESS"`
 	IntervalReport uint   `env:"REPORT_INTERVAL"`
 	IntervalPoll   uint   `env:"POLL_INTERVAL"`
+	Key            string `env:"KEY"`
 }
 
 func NewEnv() (*Env, error) {
@@ -16,7 +20,7 @@ func NewEnv() (*Env, error) {
 
 // NewEnvWithOptions - Конструктор с опциями
 func NewEnvWithOptions(opts *env.Options) (*Env, error) {
-	var cfg Env
+	var cfg envCfg
 	var err error
 
 	if opts != nil {
@@ -29,17 +33,23 @@ func NewEnvWithOptions(opts *env.Options) (*Env, error) {
 		return nil, err
 	}
 
-	return &cfg, nil
+	return &Env{
+		cfg: cfg,
+	}, nil
 }
 
 func (env *Env) Address() string {
-	return env.Addr
+	return env.cfg.Addr
 }
 
 func (env *Env) ReportInterval() uint {
-	return env.IntervalReport
+	return env.cfg.IntervalReport
 }
 
 func (env *Env) PollInterval() uint {
-	return env.IntervalPoll
+	return env.cfg.IntervalPoll
+}
+
+func (env *Env) SignKey() string {
+	return env.cfg.Key
 }

@@ -2,11 +2,9 @@
 // github.com/vektra/mockery
 // template: testify
 
-package server
+package agent
 
 import (
-	"time"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -81,92 +79,90 @@ func (_c *MockConfigProvider_Address_Call) RunAndReturn(run func() string) *Mock
 	return _c
 }
 
-// FileStoragePath provides a mock function for the type MockConfigProvider
-func (_mock *MockConfigProvider) FileStoragePath() string {
+// PollInterval provides a mock function for the type MockConfigProvider
+func (_mock *MockConfigProvider) PollInterval() uint {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for FileStoragePath")
+		panic("no return value specified for PollInterval")
 	}
 
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
+	var r0 uint
+	if returnFunc, ok := ret.Get(0).(func() uint); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(uint)
 	}
 	return r0
 }
 
-// MockConfigProvider_FileStoragePath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FileStoragePath'
-type MockConfigProvider_FileStoragePath_Call struct {
+// MockConfigProvider_PollInterval_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PollInterval'
+type MockConfigProvider_PollInterval_Call struct {
 	*mock.Call
 }
 
-// FileStoragePath is a helper method to define mock.On call
-func (_e *MockConfigProvider_Expecter) FileStoragePath() *MockConfigProvider_FileStoragePath_Call {
-	return &MockConfigProvider_FileStoragePath_Call{Call: _e.mock.On("FileStoragePath")}
+// PollInterval is a helper method to define mock.On call
+func (_e *MockConfigProvider_Expecter) PollInterval() *MockConfigProvider_PollInterval_Call {
+	return &MockConfigProvider_PollInterval_Call{Call: _e.mock.On("PollInterval")}
 }
 
-func (_c *MockConfigProvider_FileStoragePath_Call) Run(run func()) *MockConfigProvider_FileStoragePath_Call {
+func (_c *MockConfigProvider_PollInterval_Call) Run(run func()) *MockConfigProvider_PollInterval_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockConfigProvider_FileStoragePath_Call) Return(s string) *MockConfigProvider_FileStoragePath_Call {
-	_c.Call.Return(s)
+func (_c *MockConfigProvider_PollInterval_Call) Return(v uint) *MockConfigProvider_PollInterval_Call {
+	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *MockConfigProvider_FileStoragePath_Call) RunAndReturn(run func() string) *MockConfigProvider_FileStoragePath_Call {
+func (_c *MockConfigProvider_PollInterval_Call) RunAndReturn(run func() uint) *MockConfigProvider_PollInterval_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Restore provides a mock function for the type MockConfigProvider
-func (_mock *MockConfigProvider) Restore() *bool {
+// ReportInterval provides a mock function for the type MockConfigProvider
+func (_mock *MockConfigProvider) ReportInterval() uint {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Restore")
+		panic("no return value specified for ReportInterval")
 	}
 
-	var r0 *bool
-	if returnFunc, ok := ret.Get(0).(func() *bool); ok {
+	var r0 uint
+	if returnFunc, ok := ret.Get(0).(func() uint); ok {
 		r0 = returnFunc()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*bool)
-		}
+		r0 = ret.Get(0).(uint)
 	}
 	return r0
 }
 
-// MockConfigProvider_Restore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Restore'
-type MockConfigProvider_Restore_Call struct {
+// MockConfigProvider_ReportInterval_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReportInterval'
+type MockConfigProvider_ReportInterval_Call struct {
 	*mock.Call
 }
 
-// Restore is a helper method to define mock.On call
-func (_e *MockConfigProvider_Expecter) Restore() *MockConfigProvider_Restore_Call {
-	return &MockConfigProvider_Restore_Call{Call: _e.mock.On("Restore")}
+// ReportInterval is a helper method to define mock.On call
+func (_e *MockConfigProvider_Expecter) ReportInterval() *MockConfigProvider_ReportInterval_Call {
+	return &MockConfigProvider_ReportInterval_Call{Call: _e.mock.On("ReportInterval")}
 }
 
-func (_c *MockConfigProvider_Restore_Call) Run(run func()) *MockConfigProvider_Restore_Call {
+func (_c *MockConfigProvider_ReportInterval_Call) Run(run func()) *MockConfigProvider_ReportInterval_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockConfigProvider_Restore_Call) Return(b *bool) *MockConfigProvider_Restore_Call {
-	_c.Call.Return(b)
+func (_c *MockConfigProvider_ReportInterval_Call) Return(v uint) *MockConfigProvider_ReportInterval_Call {
+	_c.Call.Return(v)
 	return _c
 }
 
-func (_c *MockConfigProvider_Restore_Call) RunAndReturn(run func() *bool) *MockConfigProvider_Restore_Call {
+func (_c *MockConfigProvider_ReportInterval_Call) RunAndReturn(run func() uint) *MockConfigProvider_ReportInterval_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -211,52 +207,6 @@ func (_c *MockConfigProvider_SignKey_Call) Return(s string) *MockConfigProvider_
 }
 
 func (_c *MockConfigProvider_SignKey_Call) RunAndReturn(run func() string) *MockConfigProvider_SignKey_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// StoreInterval provides a mock function for the type MockConfigProvider
-func (_mock *MockConfigProvider) StoreInterval() *time.Duration {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for StoreInterval")
-	}
-
-	var r0 *time.Duration
-	if returnFunc, ok := ret.Get(0).(func() *time.Duration); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*time.Duration)
-		}
-	}
-	return r0
-}
-
-// MockConfigProvider_StoreInterval_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StoreInterval'
-type MockConfigProvider_StoreInterval_Call struct {
-	*mock.Call
-}
-
-// StoreInterval is a helper method to define mock.On call
-func (_e *MockConfigProvider_Expecter) StoreInterval() *MockConfigProvider_StoreInterval_Call {
-	return &MockConfigProvider_StoreInterval_Call{Call: _e.mock.On("StoreInterval")}
-}
-
-func (_c *MockConfigProvider_StoreInterval_Call) Run(run func()) *MockConfigProvider_StoreInterval_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockConfigProvider_StoreInterval_Call) Return(duration *time.Duration) *MockConfigProvider_StoreInterval_Call {
-	_c.Call.Return(duration)
-	return _c
-}
-
-func (_c *MockConfigProvider_StoreInterval_Call) RunAndReturn(run func() *time.Duration) *MockConfigProvider_StoreInterval_Call {
 	_c.Call.Return(run)
 	return _c
 }

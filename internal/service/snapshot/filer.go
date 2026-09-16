@@ -160,15 +160,11 @@ func (filer *Filer) readFromStorage(ctx context.Context) error {
 	filer.metrics = make([]models.Metrics, 0, len(gaugeMetrics)+len(counterMetrics))
 
 	if len(gaugeMetrics) > 0 {
-		for _, modelMetric := range gaugeMetrics {
-			filer.metrics = append(filer.metrics, modelMetric)
-		}
+		filer.metrics = append(filer.metrics, gaugeMetrics...)
 	}
 
 	if len(counterMetrics) > 0 {
-		for _, modelMetric := range counterMetrics {
-			filer.metrics = append(filer.metrics, modelMetric)
-		}
+		filer.metrics = append(filer.metrics, counterMetrics...)
 	}
 	return nil
 }

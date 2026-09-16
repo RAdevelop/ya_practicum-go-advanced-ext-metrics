@@ -19,10 +19,10 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type agentSettings struct {
-	ServerAddress  string
-	IntervalReport uint
-	IntervalPoll   uint
+type agentFlags struct {
+	IntervalReport *uint
+	IntervalPoll   *uint
+	SingKey        *string
 }
 
 func main() {
@@ -37,9 +37,12 @@ func main() {
 	}
 	_ = flag.Value(srvAddress)
 
+	agFlags := &agentFlags{}
+
 	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	rInterval := flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
-	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
+	agFlags.IntervalReport = flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
+	agFlags.IntervalPoll = flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
+	agFlags.SingKey = flag.String("k", "", `The key used to sign the request`)
 	flag.Parse()
 
 	configAgentEnv, err := configAgent.NewEnv()
@@ -50,16 +53,16 @@ func main() {
 
 	agentConfig := configAgent.New(configAgentEnv)
 
-	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
+	agentConfigUpdate(agentConfig, srvAddress.String(), agFlags)
 
 	httpClient := resty.New()
-	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
+	httpClient.SetBaseURL("http://" + agentConfig.Address())
 
-	httpAgent := agent.New(httpClient)
+	httpAgent := agent.New(httpClient, agentConfig)
 	var pollCount = int64(0)
 
-	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
+	pollInterval := time.NewTicker(time.Duration(agentConfig.PollInterval()) * time.Second)
+	reportInterval := time.NewTicker(time.Duration(agentConfig.ReportInterval()) * time.Second)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -81,31 +84,43 @@ func main() {
 	}
 }
 
-func settings(agentConfig configAgent.ConfigProvider, srvAddress string, intervalReport *uint, intervalPoll *uint) agentSettings {
+func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFlags *agentFlags) {
 
-	cfg := agentSettings{
-		ServerAddress:  srvAddress,
-		IntervalReport: *intervalReport,
-		IntervalPoll:   *intervalPoll,
+	if agentConfig == nil {
+		return
 	}
 
-	if agentConfig.Address() != "" {
-		cfg.ServerAddress = agentConfig.Address()
+	if agentConfig.Address() == "" {
+		agentConfig.AddressSet(srvAddress)
 	}
 
-	if agentConfig.ReportInterval() > 0 {
-		cfg.IntervalReport = agentConfig.ReportInterval()
-	}
-	if agentConfig.PollInterval() > 0 {
-		cfg.IntervalPoll = agentConfig.PollInterval()
+	if agFlags == nil {
+		return
 	}
 
-	return cfg
+	if agentConfig.ReportInterval() == 0 {
+		agentConfig.ReportIntervalSet(*agFlags.IntervalReport)
+	}
+
+	if agentConfig.PollInterval() == 0 {
+		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
+	}
+
+	if agentConfig.SignKey() == "" {
+		agentConfig.SignKeySet(*agFlags.SingKey)
+	}
 }
 
-func metricUpdateBatch(ctx context.Context, httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
+func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics []models.Metrics) (err error) {
 
 	resp, err := httpAgent.Updates(ctx, metrics)
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			closeErr := resp.Body.Close()
+			err = errors.Join(err, closeErr)
+		}
+	}()
+
 	return handleUpdateResponse(resp, err, metrics)
 }
 
@@ -114,10 +129,6 @@ func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err e
 		err = fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
 		return
 	}
-	defer func() {
-		closeErr := resp.Body.Close()
-		err = errors.Join(err, closeErr)
-	}()
 
 	// io.Discard выступает в качестве приёмника ненужных данных.
 	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
@@ -129,7 +140,7 @@ func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err e
 	return nil
 }
 
-func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
+func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HTTPAgent, pollCount int64, runtimeMetrics []models.Metrics) {
 	/*
 		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
 		Поэтому, метрики без данных не отправляем.
@@ -138,9 +149,7 @@ func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *age
 		return
 	}
 
-	var err error
-
-	err = metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
+	err := metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
 	if err != nil {
 		logApp.Error("metricUpdateBatch", "err", err)
 	}
