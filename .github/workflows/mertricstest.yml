@@ -361,4 +361,10 @@ jobs:
           github.ref == 'refs/heads/main' ||
           github.head_ref == 'iter14'
         run: |
+          migrate -path ./migrations \
+            -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' \
+            down -all
+          migrate -path ./migrations \
+            -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' \
+            up
           go test -v -race ./...
