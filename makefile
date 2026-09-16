@@ -65,6 +65,13 @@ test-vc: ## Запустить тесты с подробным выводом �
 	@${GO_TEST} -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
+.PHONY: test-vr
+test-vr: ## Запустить тесты с подробным выводом без кэширования с проверкой race detection
+	@echo "$(GREEN)=== Running tests (race detection) ===$(NC)"
+	@${GO_GENERATE}
+	@${GO_TEST} -v -race
+	@echo "$(GREEN)✅ Tests completed$(NC)"
+
 .PHONY: test-iter
 test-iter: ## Запустить тесты практикума (make test-iter iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
