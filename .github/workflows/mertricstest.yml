@@ -75,8 +75,8 @@ jobs:
       - name: Run migrations
         run: |
           migrate -path ./migrations -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' up
-          migrate -path ./migrations -database 'postgres://postgres:postgres@postgres-test:5432/postgres_test?sslmode=disable' up
-          echo "DB_DSN_TEST=postgres://postgres:postgres@praktikum-test:5432/praktikum_test?sslmode=disable" >> $GITHUB_ENV
+          migrate -path ./migrations -database 'postgres://postgres:postgres@postgres-test:5432/praktikum_test?sslmode=disable' up
+          echo "DB_DSN_TEST=postgres://postgres:postgres@postgres-test:5432/praktikum_test?sslmode=disable" >> $GITHUB_ENV
 
       - name: Build server binary
         run: |
