@@ -21,10 +21,11 @@ func New(cfgProvider ConfigProvider) *Config {
 
 	cfg := &Config{}
 
-	cfg.addr = cfgProvider.Address()
-	cfg.intervalReport = cfgProvider.ReportInterval()
-	cfg.intervalPoll = cfgProvider.PollInterval()
-	cfg.signKey = cfgProvider.SignKey()
+	cfg.AddressSet(cfgProvider.Address())
+	cfg.ReportIntervalSet(cfgProvider.ReportInterval())
+	cfg.PollIntervalSet(cfgProvider.PollInterval())
+	cfg.SignKeySet(cfgProvider.SignKey())
+	cfg.RateLimitSet(cfgProvider.RateLimit())
 
 	return cfg
 }
