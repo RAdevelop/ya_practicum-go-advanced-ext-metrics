@@ -12,6 +12,7 @@ type envCfg struct {
 	IntervalReport uint   `env:"REPORT_INTERVAL"`
 	IntervalPoll   uint   `env:"POLL_INTERVAL"`
 	Key            string `env:"KEY"`
+	RateLimit      uint   `env:"RATE_LIMIT"`
 }
 
 func NewEnv() (*Env, error) {
@@ -52,4 +53,8 @@ func (env *Env) PollInterval() uint {
 
 func (env *Env) SignKey() string {
 	return env.cfg.Key
+}
+
+func (env *Env) RateLimit() uint {
+	return env.cfg.RateLimit
 }

@@ -123,6 +123,50 @@ func (_c *MockConfigProvider_PollInterval_Call) RunAndReturn(run func() uint) *M
 	return _c
 }
 
+// RateLimit provides a mock function for the type MockConfigProvider
+func (_mock *MockConfigProvider) RateLimit() uint {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for RateLimit")
+	}
+
+	var r0 uint
+	if returnFunc, ok := ret.Get(0).(func() uint); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(uint)
+	}
+	return r0
+}
+
+// MockConfigProvider_RateLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RateLimit'
+type MockConfigProvider_RateLimit_Call struct {
+	*mock.Call
+}
+
+// RateLimit is a helper method to define mock.On call
+func (_e *MockConfigProvider_Expecter) RateLimit() *MockConfigProvider_RateLimit_Call {
+	return &MockConfigProvider_RateLimit_Call{Call: _e.mock.On("RateLimit")}
+}
+
+func (_c *MockConfigProvider_RateLimit_Call) Run(run func()) *MockConfigProvider_RateLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockConfigProvider_RateLimit_Call) Return(v uint) *MockConfigProvider_RateLimit_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *MockConfigProvider_RateLimit_Call) RunAndReturn(run func() uint) *MockConfigProvider_RateLimit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReportInterval provides a mock function for the type MockConfigProvider
 func (_mock *MockConfigProvider) ReportInterval() uint {
 	ret := _mock.Called()

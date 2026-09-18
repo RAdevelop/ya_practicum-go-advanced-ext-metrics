@@ -13,6 +13,7 @@ func TestConfig(t *testing.T) {
 		reportIntervalMock uint
 		pollIntervalMock   uint
 		key                string
+		rateLimit          uint
 	}
 
 	type want struct {
@@ -20,6 +21,7 @@ func TestConfig(t *testing.T) {
 		reportInterval uint
 		pollInterval   uint
 		key            string
+		rateLimit      uint
 	}
 
 	tests := []struct {
@@ -34,12 +36,14 @@ func TestConfig(t *testing.T) {
 				reportIntervalMock: 0,
 				pollIntervalMock:   0,
 				key:                "",
+				rateLimit:          0,
 			},
 			want: want{
 				address:        "",
 				reportInterval: 0,
 				pollInterval:   0,
 				key:            "",
+				rateLimit:      0,
 			},
 		},
 		{
@@ -49,12 +53,14 @@ func TestConfig(t *testing.T) {
 				reportIntervalMock: 5,
 				pollIntervalMock:   2,
 				key:                "key",
+				rateLimit:          2,
 			},
 			want: want{
 				address:        "127.0.0.1:9090",
 				reportInterval: 5,
 				pollInterval:   2,
 				key:            "key",
+				rateLimit:      2,
 			},
 		},
 	}
@@ -66,12 +72,14 @@ func TestConfig(t *testing.T) {
 			cfgProvider.EXPECT().ReportInterval().Return(tt.given.reportIntervalMock)
 			cfgProvider.EXPECT().PollInterval().Return(tt.given.pollIntervalMock)
 			cfgProvider.EXPECT().SignKey().Return(tt.given.key)
+			cfgProvider.EXPECT().RateLimit().Return(tt.given.rateLimit)
 
 			agentConfig := New(cfgProvider)
 			assert.Equal(t, tt.want.address, agentConfig.Address())
 			assert.Equal(t, tt.want.reportInterval, agentConfig.ReportInterval())
 			assert.Equal(t, tt.want.pollInterval, agentConfig.PollInterval())
 			assert.Equal(t, tt.want.key, agentConfig.SignKey())
+			assert.Equal(t, tt.want.rateLimit, agentConfig.RateLimit())
 		})
 	}
 }

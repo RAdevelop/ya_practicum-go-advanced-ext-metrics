@@ -69,6 +69,21 @@ func TestEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "env with error for RATE_LIMIT",
+			env: &env.Options{
+				Environment: map[string]string{
+					"ADDRESS":         "localhost:8080",
+					"REPORT_INTERVAL": "10",
+					"POLL_INTERVAL":   "2",
+					"KEY":             "key",
+					"RATE_LIMIT":      "-2",
+				},
+			},
+			want: want{
+				hasErr: true,
+			},
+		},
+		{
 			name: "env with empty values",
 			env: &env.Options{
 				Environment: map[string]string{
@@ -76,6 +91,7 @@ func TestEnv(t *testing.T) {
 					"REPORT_INTERVAL": "",
 					"POLL_INTERVAL":   "",
 					"KEY":             "",
+					"RATE_LIMIT":      "",
 				},
 			},
 			want: want{

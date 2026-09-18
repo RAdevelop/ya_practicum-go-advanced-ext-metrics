@@ -6,6 +6,7 @@ type ConfigProvider interface {
 	ReportInterval() uint
 	PollInterval() uint
 	SignKey() string
+	RateLimit() uint
 }
 
 type Config struct {
@@ -13,6 +14,7 @@ type Config struct {
 	intervalReport uint
 	intervalPoll   uint
 	signKey        string
+	rateLimit      uint
 }
 
 func New(cfgProvider ConfigProvider) *Config {
@@ -57,4 +59,10 @@ func (c *Config) SignKey() string {
 }
 func (c *Config) SignKeySet(signKey string) {
 	c.signKey = signKey
+}
+func (c *Config) RateLimit() uint {
+	return c.rateLimit
+}
+func (c *Config) RateLimitSet(rateLimit uint) {
+	c.rateLimit = rateLimit
 }

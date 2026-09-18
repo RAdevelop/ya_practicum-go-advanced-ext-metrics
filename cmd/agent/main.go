@@ -23,6 +23,7 @@ type agentFlags struct {
 	IntervalReport *uint
 	IntervalPoll   *uint
 	SingKey        *string
+	RateLimit      *uint
 }
 
 func main() {
@@ -39,10 +40,11 @@ func main() {
 
 	agFlags := &agentFlags{}
 
-	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	agFlags.IntervalReport = flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
-	agFlags.IntervalPoll = flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
-	agFlags.SingKey = flag.String("k", "", `The key used to sign the request`)
+	flag.Var(srvAddress, "a", `Адрес сервера: "host:port" без схемы`)
+	agFlags.IntervalReport = flag.Uint("r", 10, `Частота в секундах для отправки метрик на сервер`)
+	agFlags.IntervalPoll = flag.Uint("p", 2, `Частота в секундах для сбора метрик`)
+	agFlags.SingKey = flag.String("k", "", `Ключ для подписи запроса`)
+	agFlags.RateLimit = flag.Uint("l", 10, `Количество одновременно исходящих запросов на сервер`)
 	flag.Parse()
 
 	configAgentEnv, err := configAgent.NewEnv()
@@ -98,16 +100,20 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 		return
 	}
 
-	if agentConfig.ReportInterval() == 0 {
+	if agentConfig.ReportInterval() == 0 && agFlags.IntervalReport != nil {
 		agentConfig.ReportIntervalSet(*agFlags.IntervalReport)
 	}
 
-	if agentConfig.PollInterval() == 0 {
+	if agentConfig.PollInterval() == 0 && agFlags.IntervalPoll != nil {
 		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
 	}
 
-	if agentConfig.SignKey() == "" {
+	if agentConfig.SignKey() == "" && agFlags.SingKey != nil {
 		agentConfig.SignKeySet(*agFlags.SingKey)
+	}
+
+	if agentConfig.RateLimit() == 0 && agFlags.RateLimit != nil {
+		agentConfig.RateLimitSet(*agFlags.RateLimit)
 	}
 }
 
