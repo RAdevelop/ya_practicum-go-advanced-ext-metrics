@@ -15,6 +15,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/collector"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric/sender"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -62,8 +63,9 @@ func main() {
 		rateLimit = 1
 	}
 
+	metricSender := sender.New(httpAgent, logApp)
 	// Общий буфер метрик, защищённый мьютексом.
-	metricCollector := collector.New(httpAgent, logApp)
+	metricCollector := collector.New(logApp)
 
 	var wg sync.WaitGroup
 
@@ -87,7 +89,7 @@ func main() {
 	for i := 0; i < rateLimit; i++ {
 		go func(id int) {
 			defer wg.Done()
-			metricCollector.RunSenderWorker(ctx, id, jobs)
+			metricSender.RunWorker(ctx, id, jobs)
 		}(i)
 	}
 

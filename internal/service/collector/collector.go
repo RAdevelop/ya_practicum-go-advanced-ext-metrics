@@ -2,16 +2,12 @@ package collector
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -25,19 +21,16 @@ import (
 // Счётчик сбрасывается в момент, когда накопленный батч забирается
 // report-воркером, — тогда на сервер уходит дельта, равная числу
 // опросов с прошлой отправки, а сервер накапливает её у себя.
-// Так же лучше тут разделить сборщик метрик, и отправитель. Пока оставил так.
 type MetricsCollector struct {
-	httpAgent *agent.HTTPAgent
 	logApp    logger.Logger
 	mu        sync.Mutex
 	metrics   []models.Metrics
 	pollCount int64
 }
 
-func New(httpAgent *agent.HTTPAgent, logApp logger.Logger) *MetricsCollector {
+func New(logApp logger.Logger) *MetricsCollector {
 	return &MetricsCollector{
-		httpAgent: httpAgent,
-		logApp:    logApp,
+		logApp: logApp,
 	}
 }
 
@@ -242,44 +235,4 @@ func (mc *MetricsCollector) RunReportWorker(ctx context.Context, interval time.D
 			}
 		}
 	}
-}
-
-// RunSenderWorker — читает батчи из jobs и шлёт их на сервер.
-func (mc *MetricsCollector) RunSenderWorker(ctx context.Context, id int, jobs <-chan []models.Metrics) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case metrics, ok := <-jobs:
-			if !ok {
-				return
-			}
-			if err := metricUpdateBatch(ctx, mc.httpAgent, metrics); err != nil {
-				mc.logApp.Error("metricUpdateBatch", "worker", id, "err", err)
-			}
-		}
-	}
-}
-
-func metricUpdateBatch(ctx context.Context, httpAgent *agent.HTTPAgent, metrics []models.Metrics) (err error) {
-
-	resp, err := httpAgent.Updates(ctx, metrics)
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			closeErr := resp.Body.Close()
-			err = errors.Join(err, closeErr)
-		}
-	}()
-	return handleUpdateResponse(resp, err, metrics)
-}
-
-func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err error) {
-	if errResp != nil {
-		return fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
-	}
-	_, err = io.Copy(io.Discard, resp.Body)
-	if err != nil {
-		return fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
-	}
-	return nil
 }
