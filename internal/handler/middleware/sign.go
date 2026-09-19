@@ -84,7 +84,7 @@ func newSignResponseWriter(w http.ResponseWriter, appContext *appcontext.AppCont
 	return &signResponseWriter{
 		ResponseWriter: w,
 		appContext:     appContext,
-		buf:            signPool.New().(*bytes.Buffer),
+		buf:            signPool.Get().(*bytes.Buffer),
 		statusCode:     http.StatusOK,
 	}
 }
