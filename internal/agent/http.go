@@ -8,41 +8,46 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/headers"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"
 	"github.com/go-resty/resty/v2"
 )
 
-// HttpAgent - http клиент для отправки метрик на сервер
-type HttpAgent struct {
+// HTTPAgent - http клиент для отправки метрик на сервер
+type HTTPAgent struct {
 	client *resty.Client
+	config agent.ConfigProvider
 }
 
-func New(client *resty.Client) *HttpAgent {
-	return &HttpAgent{
+func New(client *resty.Client, config agent.ConfigProvider) *HTTPAgent {
+	return &HTTPAgent{
 		client: client,
+		config: config,
 	}
 }
 
-func (a HttpAgent) Update(ctx context.Context, metric models.Metrics) (*http.Response, error) {
+func (a HTTPAgent) Update(ctx context.Context, metric models.Metrics) (*http.Response, error) {
 	url := "/update"
-	return a.sendPostJsonRetryLinear(ctx, url, metric)
+	return a.sendPostJSONRetryLinear(ctx, url, metric)
 
 }
 
-func (a HttpAgent) Updates(ctx context.Context, metrics []models.Metrics) (*http.Response, error) {
+func (a HTTPAgent) Updates(ctx context.Context, metrics []models.Metrics) (*http.Response, error) {
 	url := "/updates/"
 
-	return a.sendPostJsonRetryLinear(ctx, url, metrics)
+	return a.sendPostJSONRetryLinear(ctx, url, metrics)
 }
 
-func (a HttpAgent) sendPostJsonRetryLinear(ctx context.Context, url string, v any) (*http.Response, error) {
+func (a HTTPAgent) sendPostJSONRetryLinear(ctx context.Context, url string, v any) (*http.Response, error) {
 	return retryer.RetryLinear(ctx, func(ctx context.Context) (*http.Response, error) {
-		return a.sendPostJson(ctx, url, v)
+		return a.sendPostJSON(ctx, url, v)
 	}, 2, new(3))
 }
 
-func (a HttpAgent) sendPostJson(ctx context.Context, url string, v any) (*http.Response, error) {
+func (a HTTPAgent) sendPostJSON(ctx context.Context, url string, v any) (*http.Response, error) {
 	body, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -53,14 +58,19 @@ func (a HttpAgent) sendPostJson(ctx context.Context, url string, v any) (*http.R
 		return nil, err
 	}
 
-	resp, err := a.client.R().
+	req := a.client.R().
 		SetContext(ctx).
 		SetHeader("Content-Type", "application/json").
 		SetDoNotParseResponse(true).
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip").
-		SetBody(body).
-		Post(url)
+		SetBody(body)
+
+	if a.config.SignKey() != "" {
+		req.SetHeader(headers.HashHeader, sign.SHA256(body, a.config.SignKey()))
+	}
+
+	resp, err := req.Post(url)
 
 	if err != nil {
 		return nil, err

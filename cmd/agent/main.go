@@ -2,44 +2,41 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
-	"math/rand"
-	"net/http"
-	"runtime"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/agent"
 	configAgent "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/collector"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric/sender"
 	"github.com/go-resty/resty/v2"
 )
 
-type agentSettings struct {
-	ServerAddress  string
-	IntervalReport uint
-	IntervalPoll   uint
+type agentFlags struct {
+	IntervalReport *uint
+	IntervalPoll   *uint
+	SignKey        *string
+	RateLimit      *uint
 }
 
 func main() {
-	// runtimeMetrics - карта с метриками, которые будем обновлять и отправлять на сервер
-	var runtimeMetrics []models.Metrics
-
 	logApp := logger.New()
 
-	srvAddress := &agent.ServerAddress{
-		Host: "localhost",
-		Port: 8080,
-	}
-	_ = flag.Value(srvAddress)
+	srvAddress := &agent.ServerAddress{Host: "localhost", Port: 8080}
 
-	flag.Var(srvAddress, "a", `Server address pattern: "host:port without schema"`)
-	rInterval := flag.Uint("r", 10, `The frequency of sending metrics to the server in seconds`)
-	pInterval := flag.Uint("p", 2, `The frequency of metrics polling in seconds`)
+	agFlags := &agentFlags{}
+	flag.Var(srvAddress, "a", `Адрес сервера: "host:port" без схемы`)
+	agFlags.IntervalReport = flag.Uint("r", 10, `Частота в секундах для отправки метрик на сервер`)
+	agFlags.IntervalPoll = flag.Uint("p", 2, `Частота в секундах для сбора метрик`)
+	agFlags.SignKey = flag.String("k", "", `Ключ для подписи запроса`)
+	agFlags.RateLimit = flag.Uint("l", 10, `Количество одновременно исходящих запросов на сервер`)
 	flag.Parse()
 
 	configAgentEnv, err := configAgent.NewEnv()
@@ -49,169 +46,95 @@ func main() {
 	}
 
 	agentConfig := configAgent.New(configAgentEnv)
-
-	agSettings := settings(agentConfig, srvAddress.String(), rInterval, pInterval)
+	agentConfigUpdate(agentConfig, srvAddress.String(), agFlags)
 
 	httpClient := resty.New()
-	httpClient.SetBaseURL("http://" + agSettings.ServerAddress)
+	httpClient.SetBaseURL("http://" + agentConfig.Address())
+	httpAgent := agent.New(httpClient, agentConfig)
 
-	httpAgent := agent.New(httpClient)
-	var pollCount = int64(0)
+	// Контекст, который отменяется по SIGINT/SIGTERM.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
-	pollInterval := time.NewTicker(time.Duration(agSettings.IntervalPoll) * time.Second)
-	reportInterval := time.NewTicker(time.Duration(agSettings.IntervalReport) * time.Second)
+	pollInterval := time.Duration(agentConfig.PollInterval()) * time.Second
+	reportInterval := time.Duration(agentConfig.ReportInterval()) * time.Second
+	rateLimit := int(agentConfig.RateLimit())
+	if rateLimit < 1 {
+		rateLimit = 1
+	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	metricSender := sender.New(httpAgent, logApp)
+	// Общий буфер метрик, защищённый мьютексом.
+	metricCollector := collector.New(logApp)
 
-	defer func() {
-		pollInterval.Stop()
-		reportInterval.Stop()
-		cancel()
+	var wg sync.WaitGroup
+
+	// 1. Горутина сбора runtime-метрик.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		metricCollector.RunPollWorker(ctx, pollInterval)
 	}()
 
-	for {
-		select {
-		case <-pollInterval.C: // Обновлять метрики из пакета `runtime` с заданной частотой: `pollInterval` — 2 секунды.
-			pollCount++
-			runtimeMetrics = collectRuntimeMetrics(pollCount)
-		case <-reportInterval.C: // Отправлять метрики на сервер с заданной частотой: `reportInterval` — 10 секунд.
-			runtimeMetricSend(ctx, logApp, httpAgent, pollCount, runtimeMetrics)
-			pollCount = 0
-		}
-	}
-}
-
-func settings(agentConfig configAgent.ConfigProvider, srvAddress string, intervalReport *uint, intervalPoll *uint) agentSettings {
-
-	cfg := agentSettings{
-		ServerAddress:  srvAddress,
-		IntervalReport: *intervalReport,
-		IntervalPoll:   *intervalPoll,
-	}
-
-	if agentConfig.Address() != "" {
-		cfg.ServerAddress = agentConfig.Address()
-	}
-
-	if agentConfig.ReportInterval() > 0 {
-		cfg.IntervalReport = agentConfig.ReportInterval()
-	}
-	if agentConfig.PollInterval() > 0 {
-		cfg.IntervalPoll = agentConfig.PollInterval()
-	}
-
-	return cfg
-}
-
-func metricUpdateBatch(ctx context.Context, httpAgent *agent.HttpAgent, metrics []models.Metrics) error {
-
-	resp, err := httpAgent.Updates(ctx, metrics)
-	return handleUpdateResponse(resp, err, metrics)
-}
-
-func handleUpdateResponse(resp *http.Response, errResp error, metric any) (err error) {
-	if errResp != nil {
-		err = fmt.Errorf("error updating metric: %v, err: %w", metric, errResp)
-		return
-	}
-	defer func() {
-		closeErr := resp.Body.Close()
-		err = errors.Join(err, closeErr)
+	// 2. Горутина сбора gopsutil-метрик.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		metricCollector.RunPsutilWorker(ctx, pollInterval)
 	}()
 
-	// io.Discard выступает в качестве приёмника ненужных данных.
-	// Ведь надо всегда считывать тело сообщения, даже если оно не нужно?!
-	_, err = io.Copy(io.Discard, resp.Body)
-	if err != nil {
-		err = fmt.Errorf("error body reading for updating metric: %v, err: %w", metric, err)
-		return
+	// 3. Пул воркеров-отправителей.
+	jobs := make(chan []models.Metrics, rateLimit)
+	wg.Add(rateLimit)
+	for i := 0; i < rateLimit; i++ {
+		go func(id int) {
+			defer wg.Done()
+			metricSender.RunWorker(ctx, id, jobs)
+		}(i)
 	}
-	return nil
+
+	// 4. Горутина, которая раз в reportInterval забирает снапшот буфера
+	//    и кладёт его в jobs.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		metricCollector.RunReportWorker(ctx, reportInterval, jobs)
+	}()
+
+	// Ждём сигнал завершения.
+	<-ctx.Done()
+	logApp.Info("agent shutting down")
+
+	wg.Wait()
 }
 
-func runtimeMetricSend(ctx context.Context, logApp logger.Logger, httpAgent *agent.HttpAgent, pollCount int64, runtimeMetrics []models.Metrics) {
-	/*
-		Если интервал времени отправки метрик на сервер будет "чаще", чем интервал времени сбора метрик, то карта с метриками может быть еще "пустой".
-		Поэтому, метрики без данных не отправляем.
-	*/
-	if len(runtimeMetrics) == 0 || pollCount == 0 {
+func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFlags *agentFlags) {
+
+	if agentConfig == nil {
 		return
 	}
 
-	var err error
-
-	err = metricUpdateBatch(ctx, httpAgent, runtimeMetrics)
-	if err != nil {
-		logApp.Error("metricUpdateBatch", "err", err)
-	}
-}
-
-func collectRuntimeMetrics(pollCount int64) []models.Metrics {
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-
-	runtimeMetrics := map[string]any{
-		"Alloc":         ms.Alloc,
-		"BuckHashSys":   ms.BuckHashSys,
-		"Frees":         ms.Frees,
-		"GCCPUFraction": ms.GCCPUFraction,
-		"GCSys":         ms.GCSys,
-		"HeapAlloc":     ms.HeapAlloc,
-		"HeapIdle":      ms.HeapIdle,
-		"HeapInuse":     ms.HeapInuse,
-		"HeapObjects":   ms.HeapObjects,
-		"HeapReleased":  ms.HeapReleased,
-		"HeapSys":       ms.HeapSys,
-		"LastGC":        ms.LastGC,
-		"Lookups":       ms.Lookups,
-		"MCacheInuse":   ms.MCacheInuse,
-		"MCacheSys":     ms.MCacheSys,
-		"MSpanInuse":    ms.MSpanInuse,
-		"MSpanSys":      ms.MSpanSys,
-		"Mallocs":       ms.Mallocs,
-		"NextGC":        ms.NextGC,
-		"NumForcedGC":   ms.NumForcedGC,
-		"NumGC":         ms.NumGC,
-		"OtherSys":      ms.OtherSys,
-		"PauseTotalNs":  ms.PauseTotalNs,
-		"StackInuse":    ms.StackInuse,
-		"StackSys":      ms.StackSys,
-		"Sys":           ms.Sys,
-		"TotalAlloc":    ms.TotalAlloc,
+	if agentConfig.Address() == "" {
+		agentConfig.AddressSet(srvAddress)
 	}
 
-	metrics := make([]models.Metrics, 0, len(runtimeMetrics)+2)
-
-	for name, value := range runtimeMetrics {
-		v, errConvert := converter.ToFloat64(value)
-		if errConvert != nil {
-			continue
-		}
-		runtimeMetric := models.Metrics{
-			MType: models.Gauge,
-			ID:    name,
-			Value: &v,
-		}
-
-		metrics = append(metrics, runtimeMetric)
+	if agFlags == nil {
+		return
 	}
 
-	mRandomValue := models.Metrics{
-		MType: models.Gauge,
-		ID:    "RandomValue",
-		Value: (func(min, max float64) *float64 {
-			rnd := min + rand.Float64()*(max-min)
-			return &rnd
-		})(0, 1000),
+	if agentConfig.ReportInterval() == 0 && agFlags.IntervalReport != nil {
+		agentConfig.ReportIntervalSet(*agFlags.IntervalReport)
 	}
-	metrics = append(metrics, mRandomValue)
 
-	mPollCount := models.Metrics{
-		MType: models.Counter,
-		ID:    "PollCount",
-		Delta: &pollCount,
+	if agentConfig.PollInterval() == 0 && agFlags.IntervalPoll != nil {
+		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
 	}
-	metrics = append(metrics, mPollCount)
 
-	return metrics
+	if agentConfig.SignKey() == "" && agFlags.SignKey != nil {
+		agentConfig.SignKeySet(*agFlags.SignKey)
+	}
+
+	if agentConfig.RateLimit() == 0 && agFlags.RateLimit != nil {
+		agentConfig.RateLimitSet(*agFlags.RateLimit)
+	}
 }

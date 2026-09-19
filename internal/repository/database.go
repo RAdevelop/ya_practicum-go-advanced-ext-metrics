@@ -79,7 +79,7 @@ func (s *Storage) Metric(ctx context.Context, metric *models.Metrics) (*models.M
 
 func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.Metrics, error) {
 
-	metrics, err := s.baseStorage.MetricList(ctx, metricType)
+	_, err := s.baseStorage.MetricList(ctx, metricType)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (s *Storage) MetricList(ctx context.Context, metricType string) ([]models.M
 		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)
 	}
 
-	metrics, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Metrics])
+	metrics, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Metrics])
 
 	if err != nil {
 		return nil, fmt.Errorf("%w, %w", perrors.ErrMetricNotFound, err)

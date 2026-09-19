@@ -65,6 +65,13 @@ test-vc: ## Запустить тесты с подробным выводом �
 	@${GO_TEST} -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
+.PHONY: test-vr
+test-vr: ## Запустить тесты с подробным выводом без кэширования с проверкой race detection
+	@echo "$(GREEN)=== Running tests (race detection) ===$(NC)"
+	@${GO_GENERATE}
+	@${GO_TEST} -v -race
+	@echo "$(GREEN)✅ Tests completed$(NC)"
+
 .PHONY: test-iter
 test-iter: ## Запустить тесты практикума (make test-iter iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
@@ -84,7 +91,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test-iter10x
-test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter iter=номер_задания)
+test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter10x iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
 	@go build -o ./cmd/server/server ./cmd/server/*.go \
 	&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
@@ -95,6 +102,7 @@ test-iter10x: ## Запустить тесты практикума с 10 по 1
 		-agent-binary-path=cmd/agent/agent \
 		-binary-path=cmd/server/server \
 		-database-dsn=${DB_DSN} \
+		-key="$$TEMP_FILE" \
 		-server-port=$${SERVER_PORT} \
 		-source-path=. \
 		-test.failfast \

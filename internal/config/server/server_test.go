@@ -14,6 +14,7 @@ func TestConfig(t *testing.T) {
 		metricStoreInterval   *time.Duration
 		metricRestoreMock     *bool
 		metricFileStoragePath string
+		signKey               string
 	}
 
 	type want struct {
@@ -21,6 +22,7 @@ func TestConfig(t *testing.T) {
 		metricStoreInterval   *time.Duration
 		metricRestoreMock     *bool
 		metricFileStoragePath string
+		signKey               string
 	}
 
 	tests := []struct {
@@ -35,12 +37,14 @@ func TestConfig(t *testing.T) {
 				metricStoreInterval:   nil,
 				metricRestoreMock:     nil,
 				metricFileStoragePath: "",
+				signKey:               "",
 			},
 			want: want{
 				address:               "",
 				metricStoreInterval:   nil,
 				metricRestoreMock:     nil,
 				metricFileStoragePath: "",
+				signKey:               "",
 			},
 		},
 		{
@@ -50,12 +54,14 @@ func TestConfig(t *testing.T) {
 				metricStoreInterval:   new(time.Duration(0)),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(true),
+				signKey:               "signKey",
 			},
 			want: want{
 				address:               "127.0.0.1:9090",
 				metricStoreInterval:   new(time.Duration(0)),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(true),
+				signKey:               "signKey",
 			},
 		},
 		{
@@ -65,12 +71,14 @@ func TestConfig(t *testing.T) {
 				metricStoreInterval:   new(time.Duration(10) * time.Second),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
+				signKey:               "signKey",
 			},
 			want: want{
 				address:               "localhost:9090",
 				metricStoreInterval:   new(time.Duration(10) * time.Second),
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
+				signKey:               "signKey",
 			},
 		},
 	}
@@ -82,6 +90,7 @@ func TestConfig(t *testing.T) {
 			mockConfigProvider.EXPECT().Restore().Return(tt.given.metricRestoreMock)
 			mockConfigProvider.EXPECT().StoreInterval().Return(tt.given.metricStoreInterval)
 			mockConfigProvider.EXPECT().FileStoragePath().Return(tt.given.metricFileStoragePath)
+			mockConfigProvider.EXPECT().SignKey().Return(tt.given.signKey)
 
 			cfg := New(mockConfigProvider)
 
@@ -89,6 +98,7 @@ func TestConfig(t *testing.T) {
 			assert.Equal(t, tt.want.metricRestoreMock, cfg.Restore())
 			assert.Equal(t, tt.want.metricStoreInterval, cfg.StoreInterval())
 			assert.Equal(t, tt.want.metricFileStoragePath, cfg.FileStoragePath())
+			assert.Equal(t, tt.want.signKey, cfg.SignKey())
 
 			mockConfigProvider.AssertExpectations(t)
 		})

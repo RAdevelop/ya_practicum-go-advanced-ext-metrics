@@ -9,6 +9,7 @@ import (
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
 	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
@@ -25,6 +26,7 @@ type serverFlags struct {
 	restore          *bool
 	dbDSN            *string
 	useMemoryStorage bool
+	signKey          *string
 }
 
 func main() {
@@ -53,6 +55,7 @@ func main() {
 	srvFlags.fileStoragePath = flag.String("f", "dump/metrics/iter9.json", `путь до файла, куда сохраняются текущие значения`)
 	srvFlags.restore = flag.Bool("r", true, `булево значение (true/false), определяющее, следует ли загружать ранее сохранённые значения из указанного файла при старте сервера.`)
 	srvFlags.dbDSN = flag.String("d", "", `Строка с адресом подключения к БД`)
+	srvFlags.signKey = flag.String("k", "", `Ключ для проверки подписи запроса, и для подписи ответа`)
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,9 +73,6 @@ func main() {
 		metricStorage = repository.NewMemory()
 		srvFlags.useMemoryStorage = true
 	} else {
-		//Из задания на самом деле не понятно точно, допустим сохранять в файл не надо, но вот восстанавливать из файла надо или нет?
-		//serverConfig.RestoreSet(new(false))
-		//serverConfig.StoreIntervalSet(srvFlags.storeInterval)
 		db, err := database.NewDB(ctx, dbConfig, logApp)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
@@ -92,8 +92,12 @@ func main() {
 	}
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
-	h := handler.New(metricManager, logApp, serverConfig)
-	r := router.New(h, logApp)
+	appContext := &appcontext.AppContext{
+		Logger: logApp,
+		Config: serverConfig,
+	}
+	h := handler.New(metricManager, appContext)
+	r := router.New(h, appContext)
 
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)
@@ -137,18 +141,26 @@ func saver(ctx context.Context, metricManager service.MetricManagementAble, logg
 }
 
 func serverConfigUpdateByFlags(serverConfig *configServer.Config, srvFlags *serverFlags) {
-	if serverConfig.Address() == "" {
+
+	if serverConfig == nil || srvFlags == nil {
+		return
+	}
+
+	if serverConfig.Address() == "" && srvFlags.address != nil {
 		serverConfig.AddressSet(*srvFlags.address)
 	}
 
 	if serverConfig.StoreInterval() == nil {
 		serverConfig.StoreIntervalSet(srvFlags.storeInterval)
 	}
-	if serverConfig.FileStoragePath() == "" {
+	if serverConfig.FileStoragePath() == "" && srvFlags.fileStoragePath != nil {
 		serverConfig.FileStoragePathSet(*srvFlags.fileStoragePath)
 	}
 
 	if serverConfig.Restore() == nil {
 		serverConfig.RestoreSet(srvFlags.restore)
+	}
+	if serverConfig.SignKey() == "" && srvFlags.signKey != nil {
+		serverConfig.SignKeySet(*srvFlags.signKey)
 	}
 }
