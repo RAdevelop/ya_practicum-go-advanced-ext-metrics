@@ -21,7 +21,7 @@ func New(metricManager service.MetricManagementAble, serverContext *server.Conte
 	metric := NewMetric(metricManager, serverContext)
 
 	middlewares := []middleware.Middleware{
-		middleware.SingCheck,
+		middleware.SignCheck,
 		middleware.Decompression,
 		middleware.Compression,
 		middleware.SignAdd,

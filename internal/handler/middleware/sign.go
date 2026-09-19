@@ -11,8 +11,8 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"
 )
 
-// SingCheck - проверяет, есть ли заголовок "HashSHA256" со значением, если есть, то проверяет подпись
-func SingCheck(serverContext *server.Context, next http.Handler) http.Handler {
+// SignCheck - проверяет, есть ли заголовок "HashSHA256" со значением, если есть, то проверяет подпись
+func SignCheck(serverContext *server.Context, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		receivedHash := r.Header.Get(headers.HashHeader)

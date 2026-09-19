@@ -21,7 +21,7 @@ import (
 type agentFlags struct {
 	IntervalReport *uint
 	IntervalPoll   *uint
-	SingKey        *string
+	SignKey        *string
 	RateLimit      *uint
 }
 
@@ -35,7 +35,7 @@ func main() {
 	flag.Var(srvAddress, "a", `Адрес сервера: "host:port" без схемы`)
 	agFlags.IntervalReport = flag.Uint("r", 10, `Частота в секундах для отправки метрик на сервер`)
 	agFlags.IntervalPoll = flag.Uint("p", 2, `Частота в секундах для сбора метрик`)
-	agFlags.SingKey = flag.String("k", "", `Ключ для подписи запроса`)
+	agFlags.SignKey = flag.String("k", "", `Ключ для подписи запроса`)
 	agFlags.RateLimit = flag.Uint("l", 10, `Количество одновременно исходящих запросов на сервер`)
 	flag.Parse()
 
@@ -131,8 +131,8 @@ func agentConfigUpdate(agentConfig *configAgent.Config, srvAddress string, agFla
 		agentConfig.PollIntervalSet(*agFlags.IntervalPoll)
 	}
 
-	if agentConfig.SignKey() == "" && agFlags.SingKey != nil {
-		agentConfig.SignKeySet(*agFlags.SingKey)
+	if agentConfig.SignKey() == "" && agFlags.SignKey != nil {
+		agentConfig.SignKeySet(*agFlags.SignKey)
 	}
 
 	if agentConfig.RateLimit() == 0 && agFlags.RateLimit != nil {
