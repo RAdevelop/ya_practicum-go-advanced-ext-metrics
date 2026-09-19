@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/http/headers"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/headers"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"

@@ -9,7 +9,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
-	hServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
@@ -186,7 +186,7 @@ func TestHttpAgent_Update(t *testing.T) {
 				mockConfigProviderAgent.EXPECT().SignKey().Maybe().Return("")
 			}
 
-			serverContext := &hServer.Context{
+			serverContext := &appcontext.AppContext{
 				Logger: logApp,
 				Config: mockConfigProviderServer,
 			}

@@ -13,7 +13,7 @@ import (
 
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
-	hServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
@@ -65,8 +65,8 @@ func setupMockConfigProviderServer(t *testing.T) *server.MockConfigProvider {
 	return cfg
 }
 
-func setupServerContext(t *testing.T) *hServer.Context {
-	return &hServer.Context{
+func setupAppContext(t *testing.T) *appcontext.AppContext {
+	return &appcontext.AppContext{
 		Logger: setupMockLogger(t),
 		Config: setupMockConfigProviderServer(t),
 	}
@@ -254,7 +254,7 @@ func TestMetric_UpdateWithTextPlain(t *testing.T) {
 
 	var err error
 
-	serverContext := setupServerContext(t)
+	serverContext := setupAppContext(t)
 
 	memStorage := repository.NewMemory()
 
@@ -427,7 +427,7 @@ Use one of the supported metric types: [counter gauge]`,
 
 	var err error
 
-	serverContext := setupServerContext(t)
+	serverContext := setupAppContext(t)
 	memStorage := repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
@@ -586,7 +586,7 @@ Use one of the supported metric types: [counter gauge]
 		},
 	}
 
-	serverContext := setupServerContext(t)
+	serverContext := setupAppContext(t)
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
@@ -681,7 +681,7 @@ func TestMetric_GetWithJson(t *testing.T) {
 		},
 	}
 
-	serverContext := setupServerContext(t)
+	serverContext := setupAppContext(t)
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
@@ -786,7 +786,7 @@ func TestMetric_StoragePing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			serverContext := setupServerContext(t)
+			serverContext := setupAppContext(t)
 
 			metricSnapshot := snapshot.NewMockAble(t)
 			var metricManager = service.NewManager(tt.given.metricStorage, metricSnapshot)

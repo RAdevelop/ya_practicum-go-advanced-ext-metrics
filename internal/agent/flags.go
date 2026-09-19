@@ -18,18 +18,18 @@ func (sa *ServerAddress) String() string {
 func (sa *ServerAddress) Set(flagValue string) error {
 
 	if strings.Contains(flagValue, "//") {
-		return fmt.Errorf("invalid server address format: %s, set host:port without schema", flagValue)
+		return fmt.Errorf("invalid appcontext address format: %s, set host:port without schema", flagValue)
 	}
 
 	fValue := strings.Split(flagValue, ":")
 	if len(fValue) != 2 {
-		return fmt.Errorf("invalid server address format: %s, set host:port without schema", flagValue)
+		return fmt.Errorf("invalid appcontext address format: %s, set host:port without schema", flagValue)
 	}
 
 	var err error
 	sa.Port, err = strconv.Atoi(fValue[1])
 	if err != nil {
-		return fmt.Errorf("invalid server address port: %s", fValue[1])
+		return fmt.Errorf("invalid appcontext address port: %s", fValue[1])
 	}
 
 	if fValue[0] != "" {

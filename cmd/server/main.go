@@ -9,7 +9,7 @@ import (
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
 	configServer "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
@@ -92,12 +92,12 @@ func main() {
 	}
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 
-	serverContext := &server.Context{
+	appContext := &appcontext.AppContext{
 		Logger: logApp,
 		Config: serverConfig,
 	}
-	h := handler.New(metricManager, serverContext)
-	r := router.New(h, serverContext)
+	h := handler.New(metricManager, appContext)
+	r := router.New(h, appContext)
 
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)

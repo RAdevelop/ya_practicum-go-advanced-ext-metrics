@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/http/headers"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/headers"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/sign"
 )
 
 // SignCheck - проверяет, есть ли заголовок "HashSHA256" со значением, если есть, то проверяет подпись
-func SignCheck(serverContext *server.Context, next http.Handler) http.Handler {
+func SignCheck(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		receivedHash := r.Header.Get(headers.HashHeader)
@@ -23,12 +23,12 @@ func SignCheck(serverContext *server.Context, next http.Handler) http.Handler {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			serverContext.Logger.Error("cannot read body", "error", err)
+			appContext.Logger.Error("cannot read body", "error", err)
 			http.Error(w, "cannot read body", http.StatusBadRequest)
 			return
 		}
 
-		if !sign.SHA256Verify(body, serverContext.Config.SignKey(), receivedHash) {
+		if !sign.SHA256Verify(body, appContext.Config.SignKey(), receivedHash) {
 			http.Error(w, "cannot verify sign", http.StatusBadRequest)
 			return
 		}
@@ -39,7 +39,7 @@ func SignCheck(serverContext *server.Context, next http.Handler) http.Handler {
 }
 
 // SignAdd — middleware, который подписывает тело ответа HMAC-SHA256, если клиент прислал заголовок HashSHA256.
-func SignAdd(serverContext *server.Context, next http.Handler) http.Handler {
+func SignAdd(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Если клиент не просил подпись — работаем как обычно
 		if r.Header.Get(headers.HashHeader) == "" {
@@ -48,10 +48,10 @@ func SignAdd(serverContext *server.Context, next http.Handler) http.Handler {
 		}
 
 		// Оборачиваем ResponseWriter в буфер
-		sw := newSignResponseWriter(w, serverContext)
+		sw := newSignResponseWriter(w, appContext)
 		defer func() {
 			if err := sw.Close(); err != nil {
-				serverContext.Logger.Error("SignResponseWriter close", "err", err)
+				appContext.Logger.Error("SignResponseWriter close", "err", err)
 			}
 		}()
 
@@ -74,16 +74,16 @@ var signPool = sync.Pool{
 
 type signResponseWriter struct {
 	http.ResponseWriter
-	serverContext   *server.Context
+	appContext      *appcontext.AppContext
 	buf             *bytes.Buffer
 	statusCode      int
 	isHeaderWritten bool
 }
 
-func newSignResponseWriter(w http.ResponseWriter, serverContext *server.Context) *signResponseWriter {
+func newSignResponseWriter(w http.ResponseWriter, appContext *appcontext.AppContext) *signResponseWriter {
 	return &signResponseWriter{
 		ResponseWriter: w,
-		serverContext:  serverContext,
+		appContext:     appContext,
 		buf:            signPool.New().(*bytes.Buffer),
 		statusCode:     http.StatusOK,
 	}
@@ -108,7 +108,7 @@ func (s *signResponseWriter) Close() error {
 	body := s.buf.Bytes()
 
 	// Считаем подпись от всего тела
-	hash := sign.SHA256(body, s.serverContext.Config.SignKey())
+	hash := sign.SHA256(body, s.appContext.Config.SignKey())
 
 	// Устанавливаем заголовок (до WriteHeader!)
 	s.ResponseWriter.Header().Set(headers.HashHeader, hash)

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 )
 
 // responseData - структура для хранения сведений о запросе
@@ -25,7 +25,7 @@ type responseData struct {
 }
 
 // WithLogging - добавляет дополнительный код для регистрации сведений о запросе и возвращает новый http.Handler.
-func WithLogging(serverContext *server.Context, h http.Handler) http.Handler {
+func WithLogging(appContext *appcontext.AppContext, h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -59,7 +59,7 @@ func WithLogging(serverContext *server.Context, h http.Handler) http.Handler {
 			Headers: r.Header,
 		}
 
-		serverContext.Logger.Info(reqData.Method, "request", reqData, "response", respData)
+		appContext.Logger.Info(reqData.Method, "request", reqData, "response", respData)
 	}
 	return http.HandlerFunc(logFn)
 }

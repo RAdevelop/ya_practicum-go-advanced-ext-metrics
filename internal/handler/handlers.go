@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/middleware"
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
 )
 
@@ -16,9 +16,9 @@ type Handlers struct {
 	MetricStoragePing http.Handler
 }
 
-func New(metricManager service.MetricManagementAble, serverContext *server.Context) *Handlers {
+func New(metricManager service.MetricManagementAble, appContext *appcontext.AppContext) *Handlers {
 
-	metric := NewMetric(metricManager, serverContext)
+	metric := NewMetric(metricManager, appContext)
 
 	middlewares := []middleware.Middleware{
 		middleware.SignCheck,
@@ -28,11 +28,11 @@ func New(metricManager service.MetricManagementAble, serverContext *server.Conte
 		middleware.WithLogging,
 	}
 
-	var metricUpdate = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Update), middlewares...)
-	var metricUpdateBatch = middleware.PipeLine(serverContext, http.HandlerFunc(metric.UpdateBatch), middlewares...)
-	var metricGet = middleware.PipeLine(serverContext, http.HandlerFunc(metric.Get), middlewares...)
-	var metricList = middleware.PipeLine(serverContext, http.HandlerFunc(metric.List), middlewares...)
-	var metricStoragePing = middleware.PipeLine(serverContext, http.HandlerFunc(metric.StoragePing), middlewares...)
+	var metricUpdate = middleware.PipeLine(appContext, http.HandlerFunc(metric.Update), middlewares...)
+	var metricUpdateBatch = middleware.PipeLine(appContext, http.HandlerFunc(metric.UpdateBatch), middlewares...)
+	var metricGet = middleware.PipeLine(appContext, http.HandlerFunc(metric.Get), middlewares...)
+	var metricList = middleware.PipeLine(appContext, http.HandlerFunc(metric.List), middlewares...)
+	var metricStoragePing = middleware.PipeLine(appContext, http.HandlerFunc(metric.StoragePing), middlewares...)
 
 	return &Handlers{
 		MetricUpdate:      metricUpdate,

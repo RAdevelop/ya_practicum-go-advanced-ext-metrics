@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/server"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 )
 
@@ -27,7 +27,7 @@ var gzipPool = sync.Pool{
 }
 
 // Compression - если клиент поддерживает прием gzip данных, то сжимаем их перед ответом клиенту
-func Compression(serverContext *server.Context, next http.Handler) http.Handler {
+func Compression(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isClientAcceptGzip := strings.Contains(r.Header.Get("Accept-Encoding"), "gzip")
 
@@ -37,11 +37,11 @@ func Compression(serverContext *server.Context, next http.Handler) http.Handler 
 			return
 		}
 
-		gw := newGzipResponseWriter(isClientAcceptGzip, w, serverContext.Logger)
+		gw := newGzipResponseWriter(isClientAcceptGzip, w, appContext.Logger)
 		defer func() {
 			err := gw.Close()
 			if err != nil {
-				serverContext.Logger.Error("GzipResponseWriter", "err", err)
+				appContext.Logger.Error("GzipResponseWriter", "err", err)
 			}
 		}()
 
@@ -50,7 +50,7 @@ func Compression(serverContext *server.Context, next http.Handler) http.Handler 
 }
 
 // Decompression - распаковываем данные, если клиент прислал их запакованные в gzip
-func Decompression(serverContext *server.Context, next http.Handler) http.Handler {
+func Decompression(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !shouldDecompress(r) {
 			next.ServeHTTP(w, r)
@@ -59,21 +59,21 @@ func Decompression(serverContext *server.Context, next http.Handler) http.Handle
 
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
-			serverContext.Logger.Error("error create gzip reader", "error", err)
+			appContext.Logger.Error("error create gzip reader", "error", err)
 			next.ServeHTTP(w, r)
 			return
 		}
 		defer func() {
 			err := gz.Close()
 			if err != nil {
-				serverContext.Logger.Error("error closing gzip reader", "error", err)
+				appContext.Logger.Error("error closing gzip reader", "error", err)
 			}
 		}()
 
 		// Читаем распакованные данные
 		decompressedBody, err := io.ReadAll(gz)
 		if err != nil {
-			serverContext.Logger.Error("failed to read gzip data", "error", err)
+			appContext.Logger.Error("failed to read gzip data", "error", err)
 			http.Error(w, "Failed to read gzip data", http.StatusBadRequest)
 			return
 		}
@@ -81,7 +81,7 @@ func Decompression(serverContext *server.Context, next http.Handler) http.Handle
 		// Закрываем оригинальное тело
 		err = r.Body.Close()
 		if err != nil {
-			serverContext.Logger.Error("failed to close body", "error", err)
+			appContext.Logger.Error("failed to close body", "error", err)
 		}
 
 		// Подменяем тело на распакованные данные

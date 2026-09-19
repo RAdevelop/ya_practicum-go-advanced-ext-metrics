@@ -20,7 +20,7 @@ func TestEnv_Address(t *testing.T) {
 		want want
 	}{
 		{
-			name: "server address not empty",
+			name: "appcontext address not empty",
 			env: &env.Options{
 				Environment: map[string]string{
 					"ADDRESS": "localhost:8080",
@@ -32,7 +32,7 @@ func TestEnv_Address(t *testing.T) {
 			},
 		},
 		{
-			name: "server address is empty",
+			name: "appcontext address is empty",
 			env: &env.Options{
 				Environment: map[string]string{
 					"ADDRESS": "",
