@@ -191,7 +191,7 @@ func (mc *MetricsCollector) RunPsutilWorker(ctx context.Context, interval time.D
 	if err != nil || numCPU < 1 {
 		numCPU = 1
 	}
-
+	_, _ = cpu.Percent(0, true)
 	for {
 		select {
 		case <-ctx.Done():
@@ -202,6 +202,7 @@ func (mc *MetricsCollector) RunPsutilWorker(ctx context.Context, interval time.D
 				mc.logApp.Error("collectPsutilMetrics", "err", err)
 				continue
 			}
+			mc.incPollCount()
 			mc.add(metrics...)
 		}
 	}
@@ -212,6 +213,8 @@ func (mc *MetricsCollector) RunPsutilWorker(ctx context.Context, interval time.D
 // PollCount добавляется сюда: значение Delta = числу опросов с прошлой
 // отправки. Так сервер накапливает counter корректно.
 func (mc *MetricsCollector) RunReportWorker(ctx context.Context, interval time.Duration, jobs chan<- []models.Metrics) {
+	defer close(jobs)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 

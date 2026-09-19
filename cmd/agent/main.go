@@ -104,8 +104,6 @@ func main() {
 	<-ctx.Done()
 	logApp.Info("agent shutting down")
 
-	// Закрываем jobs, чтобы воркеры дочитали и вышли.
-	close(jobs)
 	wg.Wait()
 }
 
