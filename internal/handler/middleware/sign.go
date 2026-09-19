@@ -15,9 +15,14 @@ import (
 func SignCheck(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		if appContext.Config.SignKey() == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		receivedHash := r.Header.Get(headers.HashHeader)
 		if receivedHash == "" {
-			next.ServeHTTP(w, r)
+			http.Error(w, "missing sign header", http.StatusBadRequest)
 			return
 		}
 
@@ -41,8 +46,8 @@ func SignCheck(appContext *appcontext.AppContext, next http.Handler) http.Handle
 // SignAdd — middleware, который подписывает тело ответа HMAC-SHA256, если клиент прислал заголовок HashSHA256.
 func SignAdd(appContext *appcontext.AppContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Если клиент не просил подпись — работаем как обычно
-		if r.Header.Get(headers.HashHeader) == "" {
+
+		if appContext.Config.SignKey() == "" {
 			next.ServeHTTP(w, r)
 			return
 		}

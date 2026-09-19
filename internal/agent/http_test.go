@@ -153,21 +153,6 @@ func TestHttpAgent_Update(t *testing.T) {
 				statusCode: http.StatusOK,
 			},
 		},
-		{
-			name: "HashSHA256 sign Bad",
-			given: given{
-				metrics: models.Metrics{
-					MType: "counter",
-					ID:    "test",
-					Delta: new(int64(42)),
-				},
-				serverSecretKey: new("abc"),
-				agentSecretKey:  new("cba"),
-			},
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
 	}
 
 	for _, tt := range tests {

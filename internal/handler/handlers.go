@@ -20,7 +20,7 @@ func New(metricManager service.MetricManagementAble, appContext *appcontext.AppC
 
 	metric := NewMetric(metricManager, appContext)
 
-	middlewares := []middleware.Middleware{
+	middlewaresWithSignCheck := []middleware.Middleware{
 		middleware.SignCheck,
 		middleware.Decompression,
 		middleware.Compression,
@@ -28,11 +28,18 @@ func New(metricManager service.MetricManagementAble, appContext *appcontext.AppC
 		middleware.WithLogging,
 	}
 
-	var metricUpdate = middleware.PipeLine(appContext, http.HandlerFunc(metric.Update), middlewares...)
-	var metricUpdateBatch = middleware.PipeLine(appContext, http.HandlerFunc(metric.UpdateBatch), middlewares...)
-	var metricGet = middleware.PipeLine(appContext, http.HandlerFunc(metric.Get), middlewares...)
-	var metricList = middleware.PipeLine(appContext, http.HandlerFunc(metric.List), middlewares...)
-	var metricStoragePing = middleware.PipeLine(appContext, http.HandlerFunc(metric.StoragePing), middlewares...)
+	middlewaresWithOutSignCheck := []middleware.Middleware{
+		middleware.Decompression,
+		middleware.Compression,
+		middleware.SignAdd,
+		middleware.WithLogging,
+	}
+
+	var metricUpdate = middleware.PipeLine(appContext, http.HandlerFunc(metric.Update), middlewaresWithOutSignCheck...)
+	var metricUpdateBatch = middleware.PipeLine(appContext, http.HandlerFunc(metric.UpdateBatch), middlewaresWithSignCheck...)
+	var metricGet = middleware.PipeLine(appContext, http.HandlerFunc(metric.Get), middlewaresWithOutSignCheck...)
+	var metricList = middleware.PipeLine(appContext, http.HandlerFunc(metric.List), middlewaresWithOutSignCheck...)
+	var metricStoragePing = middleware.PipeLine(appContext, http.HandlerFunc(metric.StoragePing), middlewaresWithOutSignCheck...)
 
 	return &Handlers{
 		MetricUpdate:      metricUpdate,

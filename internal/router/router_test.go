@@ -61,6 +61,7 @@ func setupMockConfigProviderServer(t *testing.T) *server.MockConfigProvider {
 	cfg.EXPECT().Address().Maybe().Return("localhost:8080")
 	cfg.EXPECT().StoreInterval().Maybe().Return(nil)
 	cfg.EXPECT().Restore().Maybe().Return(nil)
+	cfg.EXPECT().SignKey().Maybe().Return("")
 
 	return cfg
 }
