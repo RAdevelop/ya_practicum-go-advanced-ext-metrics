@@ -29,7 +29,6 @@ func main() {
 	logApp := logger.New()
 
 	srvAddress := &agent.ServerAddress{Host: "localhost", Port: 8080}
-	_ = flag.Value(srvAddress)
 
 	agFlags := &agentFlags{}
 	flag.Var(srvAddress, "a", `Адрес сервера: "host:port" без схемы`)
