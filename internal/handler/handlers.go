@@ -29,6 +29,7 @@ func New(metricManager service.MetricManagementAble, appContext *appcontext.AppC
 	}
 
 	middlewaresWithOutSignCheck := []middleware.Middleware{
+		middleware.SignCheck,
 		middleware.Decompression,
 		middleware.SignAdd,
 		middleware.Compression,
