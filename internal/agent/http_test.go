@@ -6,8 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/agent"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/server"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository"
@@ -31,7 +33,7 @@ func setupMockLogger(t *testing.T) *logger.MockLogger {
 	return logMe
 }
 
-func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
+func setupMockConfigProviderServer(t *testing.T) *server.MockConfigProvider {
 	cfg := server.NewMockConfigProvider(t)
 
 	cfg.EXPECT().FileStoragePath().Maybe().Return("mock.file")
@@ -41,42 +43,47 @@ func setupMockConfigProvider(t *testing.T) *server.MockConfigProvider {
 
 	return cfg
 }
+func setupMockConfigProviderAgent(t *testing.T) *agent.MockConfigProvider {
+	cfg := agent.NewMockConfigProvider(t)
+
+	cfg.EXPECT().Address().Maybe().Return("localhost:8080")
+	cfg.EXPECT().ReportInterval().Maybe().Return(10)
+	cfg.EXPECT().PollInterval().Maybe().Return(2)
+
+	return cfg
+}
 
 // Тестирование агента (код теста помог написать ИИ)
 func TestHttpAgent_Update(t *testing.T) {
-
-	mockConfigProvider := setupMockConfigProvider(t)
 
 	var metricStorage = repository.NewMemory()
 
 	metricSnapshot := snapshot.NewMockAble(t)
 	var metricManager = service.NewManager(metricStorage, metricSnapshot)
 	logApp := setupMockLogger(t)
-	h := handler.New(metricManager, logApp, mockConfigProvider)
-	r := router.New(h, logApp)
-	mockServer := httptest.NewServer(r)
-	defer mockServer.Close()
 
-	// Создаем resty-клиент с тестовым URL
-	client := resty.New()
-	client.SetBaseURL(mockServer.URL)
-	agent := New(client)
-
+	type given struct {
+		metrics         models.Metrics
+		agentSecretKey  *string
+		serverSecretKey *string
+	}
 	type want struct {
 		statusCode int
 	}
 
 	tests := []struct {
 		name  string
-		given models.Metrics
+		given given
 		want  want
 	}{
 		{
 			name: "gauge StatusOK",
-			given: models.Metrics{
-				MType: "gauge",
-				ID:    "test",
-				Value: new(42.42),
+			given: given{
+				metrics: models.Metrics{
+					MType: "gauge",
+					ID:    "test",
+					Value: new(42.42),
+				},
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -84,10 +91,12 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter StatusOK",
-			given: models.Metrics{
-				MType: "counter",
-				ID:    "test",
-				Delta: new(int64(42)),
+			given: given{
+				metrics: models.Metrics{
+					MType: "counter",
+					ID:    "test",
+					Delta: new(int64(42)),
+				},
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -95,9 +104,11 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "gauge WrongType StatusBadRequest",
-			given: models.Metrics{
-				MType: "gaugeWrongType",
-				ID:    "test",
+			given: given{
+				metrics: models.Metrics{
+					MType: "gaugeWrongType",
+					ID:    "test",
+				},
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -105,9 +116,11 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongType StatusBadRequest",
-			given: models.Metrics{
-				MType: "counterWrongType",
-				ID:    "test",
+			given: given{
+				metrics: models.Metrics{
+					MType: "counterWrongType",
+					ID:    "test",
+				},
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -115,19 +128,65 @@ func TestHttpAgent_Update(t *testing.T) {
 		},
 		{
 			name: "counter WrongName StatusBadRequest",
-			given: models.Metrics{
-				MType: "counterWrongType",
-				ID:    "12WrongName",
+			given: given{
+				metrics: models.Metrics{
+					MType: "counterWrongType",
+					ID:    "12WrongName",
+				},
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "HashSHA256 sign Ok",
+			given: given{
+				metrics: models.Metrics{
+					MType: "counter",
+					ID:    "test",
+					Delta: new(int64(42)),
+				},
+				serverSecretKey: new("abc"),
+				agentSecretKey:  new("abc"),
+			},
+			want: want{
+				statusCode: http.StatusOK,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := agent.Update(t.Context(), tt.given)
+			mockConfigProviderServer := setupMockConfigProviderServer(t)
+			mockConfigProviderAgent := setupMockConfigProviderAgent(t)
+			if tt.given.serverSecretKey != nil {
+				mockConfigProviderServer.EXPECT().SignKey().Return(*tt.given.serverSecretKey)
+			} else {
+				mockConfigProviderServer.EXPECT().SignKey().Maybe().Return("")
+			}
+
+			if tt.given.agentSecretKey != nil {
+				mockConfigProviderAgent.EXPECT().SignKey().Return(*tt.given.agentSecretKey)
+			} else {
+				mockConfigProviderAgent.EXPECT().SignKey().Maybe().Return("")
+			}
+
+			serverContext := &appcontext.AppContext{
+				Logger: logApp,
+				Config: mockConfigProviderServer,
+			}
+
+			h := handler.New(metricManager, serverContext)
+			r := router.New(h, serverContext)
+			mockServer := httptest.NewServer(r)
+			defer mockServer.Close()
+
+			// Создаем resty-клиент с тестовым URL
+			client := resty.New()
+			client.SetBaseURL(mockServer.URL)
+			httpAgent := New(client, mockConfigProviderAgent)
+
+			resp, err := httpAgent.Update(t.Context(), tt.given.metrics)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 

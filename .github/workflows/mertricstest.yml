@@ -32,6 +32,16 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+      postgres-test:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praktikum_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -65,9 +75,10 @@ jobs:
       - name: Run migrations
         run: |
           migrate -path ./migrations -database 'postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' up
-          echo "DB_DSN_TEST=postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable" >> $GITHUB_ENV
+          migrate -path ./migrations -database 'postgres://postgres:postgres@postgres-test:5432/praktikum_test?sslmode=disable' up
+          echo "DB_DSN_TEST=postgres://postgres:postgres@postgres-test:5432/praktikum_test?sslmode=disable" >> $GITHUB_ENV
 
-      - name: Build server binary
+      - name: Build appcontext binary
         run: |
           cd cmd/server
           go build -buildvcs=false -o server
@@ -343,7 +354,8 @@ jobs:
       - name: "Code increment #14"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter14'
+          github.head_ref == 'iter14' ||
+          github.head_ref == 'iter15'
         run: |
           SERVER_PORT=$(random unused-port)
           ADDRESS="localhost:${SERVER_PORT}"
@@ -359,6 +371,7 @@ jobs:
       - name: "Code increment #14 (race detection)"
         if: |
           github.ref == 'refs/heads/main' ||
-          github.head_ref == 'iter14'
+          github.head_ref == 'iter14' ||
+          github.head_ref == 'iter15'
         run: |
           go test -v -race ./...

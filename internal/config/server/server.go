@@ -10,6 +10,7 @@ type ConfigProvider interface {
 	StoreInterval() *time.Duration
 	FileStoragePath() string
 	Restore() *bool
+	SignKey() string
 }
 
 // Config - настройки для сервера
@@ -18,6 +19,7 @@ type Config struct {
 	metricStoreInterval   *time.Duration
 	metricFileStoragePath string
 	metricRestore         *bool
+	signKey               string
 }
 
 func New(cfg ConfigProvider) *Config {
@@ -33,6 +35,7 @@ func New(cfg ConfigProvider) *Config {
 
 	conf.FileStoragePathSet(cfg.FileStoragePath())
 	conf.RestoreSet(cfg.Restore())
+	conf.SignKeySet(cfg.SignKey())
 
 	return conf
 }
@@ -73,5 +76,14 @@ func (c *Config) Restore() *bool {
 func (c *Config) RestoreSet(metricRestore *bool) {
 	if metricRestore != nil {
 		c.metricRestore = metricRestore
+	}
+}
+
+func (c *Config) SignKey() string {
+	return c.signKey
+}
+func (c *Config) SignKeySet(signKey string) {
+	if signKey != "" {
+		c.signKey = signKey
 	}
 }

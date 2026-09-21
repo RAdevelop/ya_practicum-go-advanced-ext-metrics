@@ -13,6 +13,7 @@ func TestEnv(t *testing.T) {
 		addr           string
 		intervalReport uint
 		intervalPoll   uint
+		key            string
 		hasErr         bool
 	}
 
@@ -28,12 +29,14 @@ func TestEnv(t *testing.T) {
 					"ADDRESS":         "localhost:8080",
 					"REPORT_INTERVAL": "10",
 					"POLL_INTERVAL":   "2",
+					"KEY":             "key",
 				},
 			},
 			want: want{
 				addr:           "localhost:8080",
 				intervalReport: 10,
 				intervalPoll:   2,
+				key:            "key",
 				hasErr:         false,
 			},
 		},
@@ -44,6 +47,7 @@ func TestEnv(t *testing.T) {
 					"ADDRESS":         "localhost:8080",
 					"REPORT_INTERVAL": "-10",
 					"POLL_INTERVAL":   "2",
+					"KEY":             "key",
 				},
 			},
 			want: want{
@@ -57,6 +61,22 @@ func TestEnv(t *testing.T) {
 					"ADDRESS":         "localhost:8080",
 					"REPORT_INTERVAL": "10",
 					"POLL_INTERVAL":   "-2",
+					"KEY":             "key",
+				},
+			},
+			want: want{
+				hasErr: true,
+			},
+		},
+		{
+			name: "env with error for RATE_LIMIT",
+			env: &env.Options{
+				Environment: map[string]string{
+					"ADDRESS":         "localhost:8080",
+					"REPORT_INTERVAL": "10",
+					"POLL_INTERVAL":   "2",
+					"KEY":             "key",
+					"RATE_LIMIT":      "-2",
 				},
 			},
 			want: want{
@@ -70,12 +90,15 @@ func TestEnv(t *testing.T) {
 					"ADDRESS":         "",
 					"REPORT_INTERVAL": "",
 					"POLL_INTERVAL":   "",
+					"KEY":             "",
+					"RATE_LIMIT":      "",
 				},
 			},
 			want: want{
 				addr:           "",
 				intervalReport: 0,
 				intervalPoll:   0,
+				key:            "",
 				hasErr:         false,
 			},
 		},
@@ -91,6 +114,7 @@ func TestEnv(t *testing.T) {
 				assert.Equal(t, tt.want.addr, cfgEnv.Address())
 				assert.Equal(t, tt.want.intervalPoll, cfgEnv.PollInterval())
 				assert.Equal(t, tt.want.intervalReport, cfgEnv.ReportInterval())
+				assert.Equal(t, tt.want.key, cfgEnv.SignKey())
 			}
 		})
 	}

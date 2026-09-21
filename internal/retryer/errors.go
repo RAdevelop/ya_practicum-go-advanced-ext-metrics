@@ -79,7 +79,7 @@ var pgErrCode = map[string]errorClassification{
 func isRetriableNetworkError(err error) errorClassification {
 
 	if netErr, ok := errors.AsType[net.Error](err); ok {
-		if netErr.Temporary() || netErr.Timeout() {
+		if netErr.Timeout() {
 			return retriable
 		}
 	}
