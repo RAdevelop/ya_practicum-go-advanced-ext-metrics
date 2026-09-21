@@ -22,7 +22,24 @@ func SignCheck(appContext *appcontext.AppContext, next http.Handler) http.Handle
 
 		receivedHash := r.Header.Get(headers.HashHeader)
 		if receivedHash == "" {
-			http.Error(w, "missing sign header", http.StatusBadRequest)
+			/*
+					Почему не: http.Error(w, "missing sign header", http.StatusBadRequest)
+					В первом замечании было предложено возвращать 400 и при отсутствии заголовка, и при неверной подписи. Я попробовал строгий вариант, но он конфликтует с автотестами Практикума.
+					Поэтому тут сделал компромиссное решение.
+
+				В задании инкремента 14 написано, в частности: "- При несовпадении сервер должен отбрасывать полученные данные и возвращать http.StatusBadRequest."
+				Но не сказано, что при наличии ключа на сервере, и при отсутствии ключа в заголовках...
+				Мой анализ логов тестов:
+
+				TestIteration14 шлёт POST /update/ и POST /value/ без заголовка HashSHA256 (в логе видно Hash: none) и ожидает 200. Со строгим SignCheck сервер отвечает 400, и тест падает:
+
+				text
+				expected: 200
+				actual  : 400
+				в хендлере "POST": "http://localhost:45181/update/"
+				Подпись при этом реально передаёт только агент на /updates/ — в его запросах есть заголовок Hashsha256, и сервер их успешно проверяет.
+			*/
+			next.ServeHTTP(w, r)
 			return
 		}
 
