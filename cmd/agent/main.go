@@ -50,6 +50,7 @@ func main() {
 
 	httpClient := resty.New()
 	httpClient.SetBaseURL("http://" + agentConfig.Address())
+	httpClient.SetTimeout(5 * time.Second)
 	httpAgent := agent.New(httpClient, agentConfig)
 
 	// Контекст, который отменяется по SIGINT/SIGTERM.
