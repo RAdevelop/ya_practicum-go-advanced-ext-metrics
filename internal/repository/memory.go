@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/perrors"
@@ -13,6 +14,7 @@ type MemStorage struct {
 	gaugeMap   map[string]float64
 	counterMap map[string]int64
 	baseStorage
+	mu sync.RWMutex
 }
 
 /*
@@ -32,6 +34,9 @@ func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) 
 	if err != nil {
 		return nil, err
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, metric := range metrics {
 
@@ -101,11 +106,15 @@ func (s *MemStorage) MetricList(ctx context.Context, metricType string) ([]model
 
 func (s *MemStorage) gaugeUpdate(ctx context.Context, metric models.Metrics) {
 	_ = ctx
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.gaugeMap[metric.ID] = *metric.Value
 }
 
 func (s *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metrics, error) {
 	_ = ctx
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if value, ok := s.gaugeMap[mID]; ok {
 		return &models.Metrics{
 			ID:    mID,
@@ -119,6 +128,8 @@ func (s *MemStorage) gaugeByName(ctx context.Context, mID string) (*models.Metri
 
 func (s *MemStorage) gauges(ctx context.Context) []models.Metrics {
 	_ = ctx
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	metrics := make([]models.Metrics, 0, len(s.gaugeMap))
 	for mID, value := range s.gaugeMap {
@@ -146,6 +157,8 @@ func (s *MemStorage) update(ctx context.Context, metric models.Metrics) {
 
 func (s *MemStorage) counters(ctx context.Context) []models.Metrics {
 	_ = ctx
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	metrics := make([]models.Metrics, 0, len(s.counterMap))
 	for mID, value := range s.counterMap {
 		metrics = append(metrics, models.Metrics{
@@ -160,6 +173,8 @@ func (s *MemStorage) counters(ctx context.Context) []models.Metrics {
 
 func (s *MemStorage) counterByName(ctx context.Context, mID string) (*models.Metrics, error) {
 	_ = ctx
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if value, ok := s.counterMap[mID]; ok {
 		return &models.Metrics{
 			ID:    mID,
