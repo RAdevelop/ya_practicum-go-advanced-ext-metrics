@@ -26,10 +26,18 @@ func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) [
 		return metrics
 	}
 
-	cleanMetrics := make(map[string]models.Metrics, len(metrics))
+	type metricKey struct {
+		ID    string
+		MType string
+	}
+	cleanMetrics := make(map[metricKey]models.Metrics, len(metrics))
 
 	for _, m := range metrics {
-		key := fmt.Sprintf("%s|%s", m.ID, m.MType)
+
+		key := metricKey{
+			ID:    m.ID,
+			MType: m.MType,
+		}
 
 		// не будем сохранять метрики с неизвестным типом
 		if !s.IsTypeAvailable(m.MType) {
@@ -51,7 +59,6 @@ func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) [
 	}
 
 	if len(cleanMetrics) == 0 {
-		metrics = nil
 		return nil
 	}
 
@@ -60,7 +67,7 @@ func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) [
 	for _, m := range cleanMetrics {
 		summarizedMetrics = append(summarizedMetrics, m)
 	}
-	cleanMetrics = nil
+
 	return summarizedMetrics
 }
 

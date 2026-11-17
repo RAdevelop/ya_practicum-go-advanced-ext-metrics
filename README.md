@@ -53,3 +53,31 @@ make help
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+
+
+## Инкремент 17
+
+Запуск агента:
+```shell
+go run ./cmd/agent -r 1 -p 1 -l 50
+```
+
+Запуск сервера:
+```shell
+go run ./cmd/server/main.go
+```
+
+После 1 минуты ожидания, снимаем профиль:
+
+сервера:
+```shell
+curl -o profiles/base.pprof http://localhost:6060/debug/pprof/heap
+```
+
+
+смотрим профили в браузере:
+
+```shell
+go tool pprof -http=:9090 profiles/base.pprof
+```
+

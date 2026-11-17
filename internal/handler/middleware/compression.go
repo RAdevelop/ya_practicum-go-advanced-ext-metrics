@@ -12,6 +12,10 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/logger"
 )
 
+// minSizeToCompress — минимальный размер ответа, при котором имеет смысл сжимать.
+// Меньшие ответы сжимать невыгодно: overhead gzip больше выигрыша.
+const minSizeToCompress = 1400
+
 /*
 gzipPool - для экономии выделяемой памяти на каждом http запросе при использовании данной middleware
   - Хранит временные объекты для переиспользования
@@ -113,38 +117,60 @@ type gzipResponseWriter struct {
 	logger             logger.Logger
 	isClientAcceptGzip bool
 	isHeaderWritten    bool
+
+	buf           []byte // буфер для накопления до minSizeToCompress
+	decided       bool   // решили ли: сжимать или нет
+	pendingStatus int    // отложенный WriteHeader, пока не решили
 }
 
 func newGzipResponseWriter(isClientAcceptGzip bool, w http.ResponseWriter, logger logger.Logger) *gzipResponseWriter {
 	return &gzipResponseWriter{
 		ResponseWriter:     w,
-		gz:                 nil,
 		logger:             logger,
 		isClientAcceptGzip: isClientAcceptGzip,
-		isHeaderWritten:    false,
 	}
 }
 
 func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
-	if gw.shouldCompress() {
-		gw.initGzipWriter()
-		gw.setHeaderContentEncoding()
-
-		//сжимаем
-		return gw.gz.Write(b)
+	if !gw.shouldCompress() {
+		return gw.ResponseWriter.Write(b)
 	}
 
-	return gw.ResponseWriter.Write(b)
+	if !gw.decided {
+		gw.buf = append(gw.buf, b...)
+		if len(gw.buf) < minSizeToCompress {
+			return len(b), nil
+		}
+
+		// накопили достаточно — сжимаем
+		gw.decided = true
+		gw.initGzipWriter()
+		gw.setHeaderContentEncoding()
+		if gw.pendingStatus != 0 {
+			gw.ResponseWriter.WriteHeader(gw.pendingStatus)
+			gw.pendingStatus = 0
+		}
+		_, err := gw.gz.Write(gw.buf)
+		gw.buf = nil
+		return len(b), err
+	}
+
+	return gw.gz.Write(b)
 }
 
-// WriteHeader переопределяем, чтобы установить Content-Length после сжатия
+// WriteHeader переопределяем, чтобы установить Content-Encoding до отправки заголовка.
+// Если ещё не решили, сжимать или нет — откладываем.
 func (gw *gzipResponseWriter) WriteHeader(statusCode int) {
-	gw.setHeaderContentEncoding()
-	gw.ResponseWriter.WriteHeader(statusCode)
+	if gw.decided {
+		gw.setHeaderContentEncoding()
+		gw.ResponseWriter.WriteHeader(statusCode)
+		return
+	}
+	gw.pendingStatus = statusCode
 }
 
 func (gw *gzipResponseWriter) Close() error {
-	if gw.gz != nil {
+	if gw.decided && gw.gz != nil {
 		// Сначала сбрасываем данные
 		if err := gw.gz.Flush(); err != nil {
 			return err
@@ -155,9 +181,20 @@ func (gw *gzipResponseWriter) Close() error {
 			return err
 		}
 
+		gw.gz.Reset(io.Discard) // сброс ссылки на ResponseWriter
 		gzipPool.Put(gw.gz)
 		gw.gz = nil
 		return nil
+	}
+
+	// не сжимали — пишем сырые данные
+	if gw.pendingStatus != 0 {
+		gw.ResponseWriter.WriteHeader(gw.pendingStatus)
+	}
+	if len(gw.buf) > 0 {
+		_, err := gw.ResponseWriter.Write(gw.buf)
+		gw.buf = nil
+		return err
 	}
 	return nil
 }
