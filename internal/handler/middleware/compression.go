@@ -14,7 +14,7 @@ import (
 
 // minSizeToCompress — минимальный размер ответа, при котором имеет смысл сжимать.
 // Меньшие ответы сжимать невыгодно: overhead gzip больше выигрыша.
-const minSizeToCompress = 1400
+const minSizeToCompress = 3_000
 
 /*
 gzipPool - для экономии выделяемой памяти на каждом http запросе при использовании данной middleware
