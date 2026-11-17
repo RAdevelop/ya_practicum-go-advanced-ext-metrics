@@ -116,7 +116,11 @@ type gzipResponseWriter struct {
 	gz                 *gzip.Writer
 	logger             logger.Logger
 	isClientAcceptGzip bool
-	isHeaderWritten    bool
+
+	// isHeaderWritten — заголовки уже отправлены в реальный ResponseWriter.
+	// Выставляется во всех путях, где происходит первый WriteHeader/Write в underlying writer:
+	// и при сжатии (перед этим добавляется Content-Encoding), и при прямом проксировании ответа.
+	isHeaderWritten bool
 
 	buf           []byte // буфер для накопления до minSizeToCompress
 	decided       bool   // решили ли: сжимать или нет
@@ -131,8 +135,27 @@ func newGzipResponseWriter(isClientAcceptGzip bool, w http.ResponseWriter, logge
 	}
 }
 
+// writeThroughHeader отправляет статус в реальный ResponseWriter ровно один раз.
+// Все пути (сжимаемый и несжимаемый) идут через него, чтобы исключить двойной WriteHeader.
+func (gw *gzipResponseWriter) writeThroughHeader(code int) {
+	if gw.isHeaderWritten {
+		return
+	}
+	gw.isHeaderWritten = true
+	gw.ResponseWriter.WriteHeader(code)
+}
+
 func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
 	if !gw.shouldCompress() {
+		// Несжимаемый ответ: если статус был отложен — отправляем его перед записью тела,
+		// иначе net/http неявно отправит 200 и ошибка клиента превратится в 200.
+		if gw.pendingStatus != 0 {
+			st := gw.pendingStatus
+			gw.pendingStatus = 0
+			gw.writeThroughHeader(st)
+		}
+		// Запись в underlying writer неявно отправляет заголовки
+		gw.isHeaderWritten = true
 		return gw.ResponseWriter.Write(b)
 	}
 
@@ -147,8 +170,9 @@ func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
 		gw.initGzipWriter()
 		gw.setHeaderContentEncoding()
 		if gw.pendingStatus != 0 {
-			gw.ResponseWriter.WriteHeader(gw.pendingStatus)
+			st := gw.pendingStatus
 			gw.pendingStatus = 0
+			gw.writeThroughHeader(st)
 		}
 		_, err := gw.gz.Write(gw.buf)
 		gw.buf = nil
@@ -161,9 +185,12 @@ func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
 // WriteHeader переопределяем, чтобы установить Content-Encoding до отправки заголовка.
 // Если ещё не решили, сжимать или нет — откладываем.
 func (gw *gzipResponseWriter) WriteHeader(statusCode int) {
+	if gw.isHeaderWritten {
+		return // защита от повторного вызова ("superfluous response.WriteHeader call")
+	}
 	if gw.decided {
 		gw.setHeaderContentEncoding()
-		gw.ResponseWriter.WriteHeader(statusCode)
+		gw.writeThroughHeader(statusCode)
 		return
 	}
 	gw.pendingStatus = statusCode
@@ -187,11 +214,15 @@ func (gw *gzipResponseWriter) Close() error {
 		return nil
 	}
 
-	// не сжимали — пишем сырые данные
+	// не сжимали — если статус ещё не отправлен, отправляем отложенный
 	if gw.pendingStatus != 0 {
-		gw.ResponseWriter.WriteHeader(gw.pendingStatus)
+		st := gw.pendingStatus
+		gw.pendingStatus = 0
+		gw.writeThroughHeader(st)
 	}
+	// пишем сырые данные, если они ещё не ушли
 	if len(gw.buf) > 0 {
+		gw.isHeaderWritten = true // запись отправит заголовки неявно
 		_, err := gw.ResponseWriter.Write(gw.buf)
 		gw.buf = nil
 		return err
