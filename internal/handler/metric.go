@@ -18,11 +18,19 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
 
+// Metric — набор HTTP-обработчиков для работы с метриками.
+//
+// Поддерживает типы counter и gauge и два формата обмена:
+// text/plain (URL-параметры) и application/json.
 type Metric struct {
 	metricManager service.MetricManagementAble
 	appContext    *appcontext.AppContext
 }
 
+// NewMetric — конструктор обработчика метрик.
+//
+// Принимает менеджер метрик (сервисный слой) и контекст приложения
+// (логгер, конфигурация). Возвращает обработчик, готовый к регистрации в роутере.
 func NewMetric(metricManager service.MetricManagementAble, appContext *appcontext.AppContext) *Metric {
 	return &Metric{
 		metricManager: metricManager,
@@ -30,19 +38,23 @@ func NewMetric(metricManager service.MetricManagementAble, appContext *appcontex
 	}
 }
 
-/*
-Update - обновляем данные по метрикам
-
-Формат GET:
-- "Content-Type": "text/plain"
-- url: /update/{metric_type}/{metric_name}/{metric_value}
-Формат POST:
-- "Content-Type": "application/json"
-- url: /update
-- body:
-  - counter: {"id": "metricName","type": "counter","value": 123}
-  - gauge: {"id": "metricName","type": "gauge","value": 123.123}
-*/
+// Update — обработчик обновления одной метрики.
+//
+// Поддерживает два формата запроса.
+//
+// Формат text/plain (URL-параметры):
+//
+//	POST /update/{metric_type}/{metric_name}/{metric_value}
+//	Пример: /update/gauge/Alloc/123.45 или /update/counter/PollCount/10
+//
+// Формат application/json:
+//
+//	POST /update
+//	{"id":"PollCount","type":"counter","value":10}
+//	{"id":"Alloc","type":"gauge","value":123.123}
+//
+// Ответ: 200 OK; для JSON-запроса возвращает обновлённую метрику в теле.
+// Ошибки: 400 — невалидный запрос или ошибка сохранения, 500 — ошибка записи ответа.
 func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
@@ -101,7 +113,15 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UpdateBatch - обновляем метрики пачкой
+// UpdateBatch — обработчик пакетного обновления метрик.
+//
+//	POST /updates/
+//	Content-Type: application/json
+//	Тело: массив метрик [{"id":"A","type":"counter","value":1}, ...]
+//
+// Все метрики валидируются до сохранения; при любой ошибке валидации
+// батч целиком отклоняется с кодом 400.
+// Ответ: 200 OK со списком обновлённых метрик (для JSON-запроса).
 func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
@@ -157,6 +177,19 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Get — обработчик получения значения метрики.
+//
+// Формат text/plain:
+//
+//	POST|GET /value/{metric_type}/{metric_name}
+//
+// Формат application/json:
+//
+//	POST /value
+//	{"id":"PollCount","type":"counter"}
+//
+// Ответ: 200 OK со значением метрики (JSON или строка).
+// Ошибки: 404 — метрика не найдена, 400 — невалидный запрос.
 func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
@@ -203,6 +236,11 @@ func (m *Metric) Get(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// List — обработчик списка всех метрик.
+//
+//	GET /
+//
+// Возвращает HTML-страницу со списком gauge- и counter-метрик.
 func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 
 	defer m.requestBodyClose(r)
@@ -237,6 +275,11 @@ func (m *Metric) List(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StoragePing — обработчик проверки доступности хранилища.
+//
+//	GET /ping
+//
+// Ответ: 200 OK, если соединение установлено; 500 — если недоступно.
 func (m *Metric) StoragePing(w http.ResponseWriter, r *http.Request) {
 	defer m.requestBodyClose(r)
 
@@ -251,6 +294,10 @@ func (m *Metric) StoragePing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// metricsGetFromRequest извлекает метрики из запроса.
+//
+// Поддерживает JSON (одна метрика или массив) и URL-параметры
+// /{metric_type}/{metric_name}/{metric_value}.
 func (m *Metric) metricListRender(sb *strings.Builder, title string, metricType string, metricList []models.Metrics) {
 	sb.WriteString("<li><strong>" + title + ":</strong>")
 

@@ -17,12 +17,22 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-// HTTPAgent - http клиент для отправки метрик на сервер
+// HTTPAgent — HTTP-клиент агента для отправки метрик на сервер.
+//
+// Использует resty, сжимает тело запроса в gzip
+// и повторяет отправку при временных ошибках.
+//
+// Внутренние поля:
+//
+//	client — настроенный resty.Client (base URL, таймауты, ретраи на уровне транспорта);
+//	config — провайдер конфигурации агента: адрес сервера и ключ подписи
 type HTTPAgent struct {
 	client *resty.Client
 	config agent.ConfigProvider
 }
 
+// New — конструктор агента. Принимает настроенный resty.Client
+// и провайдер конфигурации (адрес сервера, ключ подписи).
 func New(client *resty.Client, config agent.ConfigProvider) *HTTPAgent {
 	return &HTTPAgent{
 		client: client,
@@ -30,12 +40,14 @@ func New(client *resty.Client, config agent.ConfigProvider) *HTTPAgent {
 	}
 }
 
+// Update — отправляет одну метрику на сервер: POST /update (JSON, gzip, ретраи).
 func (a HTTPAgent) Update(ctx context.Context, metric models.Metrics) (*http.Response, error) {
 	url := "/update"
 	return a.sendPostJSONRetryLinear(ctx, url, metric)
 
 }
 
+// Updates — отправляет пакет метрик на сервер: POST /updates/ (JSON, gzip, ретраи).
 func (a HTTPAgent) Updates(ctx context.Context, metrics []models.Metrics) (*http.Response, error) {
 	url := "/updates/"
 
@@ -80,7 +92,8 @@ func (a HTTPAgent) sendPostJSON(ctx context.Context, url string, v any) (*http.R
 	return resp.RawResponse, nil
 }
 
-// gzipPool - Пул для gzip.Writer() (сжимает данные)
+// gzipPool — пул gzip.Writer для переиспользования между запросами
+// и снижения количества аллокаций.
 var gzipPool = sync.Pool{
 	New: func() interface{} {
 		gz, _ := gzip.NewWriterLevel(nil, gzip.DefaultCompression)
@@ -88,14 +101,14 @@ var gzipPool = sync.Pool{
 	},
 }
 
-// bufferPool - Пул для bytes.Buffer() (хранит сжатые данные)
+// bufferPool — пул bytes.Buffer для накопления сжатых данных.
 var bufferPool = sync.Pool{
 	New: func() interface{} {
 		return &bytes.Buffer{}
 	},
 }
 
-// Compress - сжимает данные с использованием пулов
+// compress — сжимает данные gzip с использованием пулов writer'ов и буферов.
 func compress(data []byte) ([]byte, error) {
 	// Берем буфер из пула
 	buf := bufferPool.Get().(*bytes.Buffer)
