@@ -7,7 +7,7 @@ package metric
 import (
 	"context"
 
-	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
+	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	mock "github.com/stretchr/testify/mock"
 )
 
