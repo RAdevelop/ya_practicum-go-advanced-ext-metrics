@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
@@ -117,6 +118,14 @@ func main() {
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)
 	}
+
+	// pprof на отдельном порту, только для профилирования
+	go func() {
+		const pprofAddr = "localhost:6060"
+		if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+			logApp.Error("pprof server", "err", err)
+		}
+	}()
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
