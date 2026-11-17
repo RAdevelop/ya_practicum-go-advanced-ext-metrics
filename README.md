@@ -57,27 +57,33 @@ make help
 
 ## Инкремент 17
 
-Запуск агента:
+Запуск агентов и сервера (своя нагрузка):
+- 50 агентов c параметрами запуска:
+  - `-r 1 -p 1 -l 5`
+- 1 сервер
+
+До изменений:
 ```shell
-go run ./cmd/agent -r 1 -p 1 -l 50
+./load.sh profiles/base.pprof
+```
+После:
+```shell
+./load.sh profiles/result.pprof
 ```
 
-Запуск сервера:
-```shell
-go run ./cmd/server/main.go
-```
+### Результаты оптимизации
 
-После 1 минуты ожидания, снимаем профиль:
-
-сервера:
-```shell
-curl -o profiles/base.pprof http://localhost:6060/debug/pprof/heap
-```
+| Метрика | base | result | diff |
+|---|---|---|---|
+| `inuse_space` | 10.6 MB | 4.1 MB | -6.5 MB (61.5%) |
+| `alloc_space` | 1048 MB | 295 MB | -753 MB (72%) |
 
 
-смотрим профили в браузере:
+### Что сделано
 
-```shell
-go tool pprof -http=:9090 profiles/base.pprof
-```
+1. **Порог сжатия** добавлен `minSizeToCompress`: **3000** байт.
+   Анализ логов: 78% ответов имеют размер 2600–2620 байт. При пороге 1400 они сжимались — overhead `gzip.NewWriter` (~250 KB на вызов) не окупал выигрыш трафика. При 3000 — не сжимаются.
 
+2. **`metricKey`** (struct) вместо `fmt.Sprintf` в `AddValuesForDeduplicateMetrics` — без аллокации строк.
+
+3. **`sync.RWMutex`** в `MemStorage` — устранена `concurrent map writes` при нагрузке.
