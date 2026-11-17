@@ -7,6 +7,7 @@ DURATION=60
 SERVER_URL="http://localhost:8080"
 PPROF_URL="http://localhost:6060/debug/pprof/heap"
 PROFILE_OUT="${1:-profiles/base.pprof}"
+SERVER_DSN="${SERVER_DSN:-}"   # DSN из env, пусто → in-memory
 
 AGENT_BIN="./cmd/agent/agent"
 SERVER_BIN="./cmd/server/server"
@@ -39,12 +40,14 @@ free_ports() {
 # ── очистка при выходе ────────────────────────────────────────────────────
 cleanup() {
     echo "→ остановка агентов..."
+
+    # защита от unbound variable для пустого массива в bash 3.2
+    if [[ ${#AGENT_PIDS[@]} -gt 0 ]]; then
     for pid in "${AGENT_PIDS[@]}"; do
         kill -TERM "$pid" 2>/dev/null || true
     done
 
-    # ждём до 5 секунд, потом SIGKILL
-    for i in {1..50}; do
+        for _ in {1..50}; do
         alive=0
         for pid in "${AGENT_PIDS[@]}"; do
             kill -0 "$pid" 2>/dev/null && alive=$((alive + 1))
@@ -56,11 +59,12 @@ cleanup() {
     for pid in "${AGENT_PIDS[@]}"; do
         kill -KILL "$pid" 2>/dev/null || true
     done
+    fi
 
     if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
         echo "→ остановка сервера..."
         kill -TERM "$SERVER_PID" 2>/dev/null || true
-        for i in {1..50}; do
+        for _ in {1..50}; do
             kill -0 "$SERVER_PID" 2>/dev/null || break
             sleep 0.1
         done
@@ -107,8 +111,13 @@ rm -f "$SERVER_LOG"
 rm -f "$AGENT_LOG_DIR"/*.log
 
 # ── запуск сервера ────────────────────────────────────────────────────────
-echo "→ запуск сервера (лог: $SERVER_LOG)..."
+if [[ -n "$SERVER_DSN" ]]; then
+    echo "→ запуск сервера с БД (DSN задан), лог: $SERVER_LOG"
+    "$SERVER_BIN" -d "$SERVER_DSN" > "$SERVER_LOG" 2>&1 &
+else
+    echo "→ запуск сервера in-memory (DSN не задан), лог: $SERVER_LOG"
 "$SERVER_BIN" > "$SERVER_LOG" 2>&1 &
+fi
 SERVER_PID=$!
 
 # ждём, пока pprof-порт откроется
@@ -159,7 +168,7 @@ echo "→ снятие профиля в $PROFILE_OUT ..."
 curl -sf -o "$PROFILE_OUT" "$PPROF_URL"
 
 if [[ -s "$PROFILE_OUT" ]]; then
-    echo "✓ профиль сохранён: $PROFILE_OUT ($(du -h "$PROFILE_OUT" | cut -f1))"
+    echo "✓ профиль сохранён: $PROFILE_OUT ($(ls -lh "$PROFILE_OUT" | awk '{print $5}'))"
 else
     echo "✗ профиль пустой" >&2
     exit 1
