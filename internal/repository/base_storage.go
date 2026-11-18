@@ -18,11 +18,12 @@ var availableMetricTypes = map[string]bool{
 	models.Counter: true,
 }
 
-// AddValuesForDeduplicateMetrics - если в `metrics` если несколько "Counter" метрик с одинаковым ID, то их значения суммируются.
+// AddValuesForDeduplicateMetrics - если в `metrics` есть несколько "Counter" метрик с одинаковым ID, то их значения суммируются.
 // А если несколько "Gauge" метрик с одинаковым ID, то остается последняя.
+//
+// Работает in place: результат разделяет память с входным слайсом.
 func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) []models.Metrics {
-
-	if len(metrics) == 0 {
+	if len(metrics) < 2 {
 		return metrics
 	}
 
@@ -30,45 +31,41 @@ func (s *baseStorage) AddValuesForDeduplicateMetrics(metrics []models.Metrics) [
 		ID    string
 		MType string
 	}
-	cleanMetrics := make(map[metricKey]models.Metrics, len(metrics))
+	// значение карты — индекс первого вхождения, а не копия структуры:
+	// экономит и память карты, и аллокации
+	pos := make(map[metricKey]int, len(metrics))
 
-	for _, m := range metrics {
-
-		key := metricKey{
-			ID:    m.ID,
-			MType: m.MType,
-		}
-
-		// не будем сохранять метрики с неизвестным типом
+	// фаза 1: сворачиваем дубликаты в первые вхождения
+	for i, m := range metrics {
 		if !s.IsTypeAvailable(m.MType) {
 			continue
 		}
-
-		if _, ok := cleanMetrics[key]; !ok {
-			cleanMetrics[key] = m
+		key := metricKey{ID: m.ID, MType: m.MType}
+		j, ok := pos[key]
+		if !ok {
+			pos[key] = i
 			continue
 		}
 
 		switch m.MType {
 		case models.Gauge:
 			// берем последнее значение, так как Gauge обновляется, а не суммируется
-			cleanMetrics[key] = m
+			metrics[j] = m
 		case models.Counter:
-			*cleanMetrics[key].Delta += *m.Delta
+			*metrics[j].Delta += *m.Delta
 		}
 	}
 
-	if len(cleanMetrics) == 0 {
-		return nil
+	// фаза 2: без аллокации — переиспользуем входной слайс
+	out := metrics[:0]
+	for i, m := range metrics {
+		key := metricKey{ID: m.ID, MType: m.MType}
+		if j, ok := pos[key]; ok && j == i {
+			out = append(out, m)
+		}
 	}
 
-	summarizedMetrics := make([]models.Metrics, 0, len(cleanMetrics))
-
-	for _, m := range cleanMetrics {
-		summarizedMetrics = append(summarizedMetrics, m)
-	}
-
-	return summarizedMetrics
+	return out
 }
 
 func (s *baseStorage) IsTypeAvailable(mType string) bool {

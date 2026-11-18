@@ -44,13 +44,17 @@ func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) 
 			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyID, metric)
 		}
 
-		if metric.StrValue() == "" {
-			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyValue, metric)
-		}
-
 		switch metric.MType {
-		case models.Counter, models.Gauge:
-			s.update(ctx, metric)
+		case models.Gauge:
+			if metric.Value == nil {
+				return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyValue, metric)
+			}
+			s.gaugeMap[metric.ID] = *metric.Value
+		case models.Counter:
+			if metric.Delta == nil {
+				return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricEmptyValue, metric)
+			}
+			s.counterMap[metric.ID] += *metric.Delta
 		default:
 			return nil, fmt.Errorf("%w, metric: %+v", perrors.ErrMetricUnknownType, metric)
 		}
