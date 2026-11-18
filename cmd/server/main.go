@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"path/filepath"
 	"time"
 
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
@@ -15,6 +18,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/repository/database"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/router"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/audit"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/metric"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/snapshot"
 )
@@ -27,6 +31,8 @@ type serverFlags struct {
 	dbDSN            *string
 	useMemoryStorage bool
 	signKey          *string
+	auditFile        *string
+	auditURL         *string
 }
 
 func main() {
@@ -56,6 +62,8 @@ func main() {
 	srvFlags.restore = flag.Bool("r", true, `булево значение (true/false), определяющее, следует ли загружать ранее сохранённые значения из указанного файла при старте сервера.`)
 	srvFlags.dbDSN = flag.String("d", "", `Строка с адресом подключения к БД`)
 	srvFlags.signKey = flag.String("k", "", `Ключ для проверки подписи запроса, и для подписи ответа`)
+	srvFlags.auditFile = flag.String("audit-file", "dump/audit/metric.json", `Путь к файлу, в который сохраняются логи аудита. Если параметр не передан, аудит должен быть отключён.`)
+	srvFlags.auditURL = flag.String("audit-url", "", `Полный URL, по которому отправляются логи аудита. Если параметр не передан, аудит должен быть отключён.`)
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,7 +98,15 @@ func main() {
 		logApp.Error("snapshot.NewFiler", "err", err)
 		return
 	}
-	var metricManager = service.NewManager(metricStorage, metricSnapshot)
+
+	serviceManager := service.NewManager(metricStorage, metricSnapshot)
+	var metricManager service.MetricManagementAble = serviceManager
+
+	auditors := initAuditorSubscribers(serverConfig, logApp)
+	if len(auditors) > 0 {
+		publisher := audit.NewPublisher(logApp, auditors...)
+		metricManager = audit.NewDecorator(serviceManager, publisher)
+	}
 
 	appContext := &appcontext.AppContext{
 		Logger: logApp,
@@ -102,6 +118,14 @@ func main() {
 	if srvFlags.useMemoryStorage {
 		metricSnapshotTask(ctx, metricManager, logApp, serverConfig)
 	}
+
+	// pprof на отдельном порту, только для профилирования
+	go func() {
+		const pprofAddr = "localhost:6060"
+		if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+			logApp.Error("pprof server", "err", err)
+		}
+	}()
 
 	err = http.ListenAndServe(serverConfig.Address(), r)
 	if err != nil {
@@ -146,14 +170,14 @@ func serverConfigUpdateByFlags(serverConfig *configServer.Config, srvFlags *serv
 		return
 	}
 
-	if serverConfig.Address() == "" && srvFlags.address != nil {
+	if serverConfig.Address() == "" && srvFlags.address != nil && *srvFlags.address != "" {
 		serverConfig.AddressSet(*srvFlags.address)
 	}
 
 	if serverConfig.StoreInterval() == nil {
 		serverConfig.StoreIntervalSet(srvFlags.storeInterval)
 	}
-	if serverConfig.FileStoragePath() == "" && srvFlags.fileStoragePath != nil {
+	if serverConfig.FileStoragePath() == "" && srvFlags.fileStoragePath != nil && *srvFlags.fileStoragePath != "" {
 		serverConfig.FileStoragePathSet(*srvFlags.fileStoragePath)
 	}
 
@@ -163,4 +187,31 @@ func serverConfigUpdateByFlags(serverConfig *configServer.Config, srvFlags *serv
 	if serverConfig.SignKey() == "" && srvFlags.signKey != nil {
 		serverConfig.SignKeySet(*srvFlags.signKey)
 	}
+	if serverConfig.AuditFile() == "" && srvFlags.auditFile != nil && *srvFlags.auditFile != "" {
+
+		cwd, _ := os.Getwd()
+		serverConfig.AuditFileSet(filepath.Join(cwd, *srvFlags.auditFile))
+	}
+	if serverConfig.AuditURL() == "" && srvFlags.auditURL != nil && *srvFlags.auditURL != "" {
+		serverConfig.AuditURLSet(*srvFlags.auditURL)
+	}
+}
+
+// initAuditorSubscribers - формируем список аудиторов-подписчиков для сбора аудита метрик
+func initAuditorSubscribers(serverConfig *configServer.Config, logger logger.Logger) []audit.Auditor {
+
+	var auditors []audit.Auditor
+	if serverConfig.AuditFile() != "" {
+		fileAuditor, err := audit.NewFileAuditor(serverConfig.AuditFile())
+		if err != nil {
+			logger.Error("audit.NewFileAuditor", "err", err)
+		} else {
+			auditors = append(auditors, fileAuditor)
+		}
+	}
+	if serverConfig.AuditURL() != "" {
+		auditors = append(auditors, audit.NewHTTPAuditor(serverConfig.AuditURL()))
+	}
+
+	return auditors
 }

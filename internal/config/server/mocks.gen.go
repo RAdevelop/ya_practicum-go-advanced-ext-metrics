@@ -81,6 +81,94 @@ func (_c *MockConfigProvider_Address_Call) RunAndReturn(run func() string) *Mock
 	return _c
 }
 
+// AuditFile provides a mock function for the type MockConfigProvider
+func (_mock *MockConfigProvider) AuditFile() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for AuditFile")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockConfigProvider_AuditFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AuditFile'
+type MockConfigProvider_AuditFile_Call struct {
+	*mock.Call
+}
+
+// AuditFile is a helper method to define mock.On call
+func (_e *MockConfigProvider_Expecter) AuditFile() *MockConfigProvider_AuditFile_Call {
+	return &MockConfigProvider_AuditFile_Call{Call: _e.mock.On("AuditFile")}
+}
+
+func (_c *MockConfigProvider_AuditFile_Call) Run(run func()) *MockConfigProvider_AuditFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockConfigProvider_AuditFile_Call) Return(s string) *MockConfigProvider_AuditFile_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockConfigProvider_AuditFile_Call) RunAndReturn(run func() string) *MockConfigProvider_AuditFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AuditURL provides a mock function for the type MockConfigProvider
+func (_mock *MockConfigProvider) AuditURL() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for AuditURL")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockConfigProvider_AuditURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AuditURL'
+type MockConfigProvider_AuditURL_Call struct {
+	*mock.Call
+}
+
+// AuditURL is a helper method to define mock.On call
+func (_e *MockConfigProvider_Expecter) AuditURL() *MockConfigProvider_AuditURL_Call {
+	return &MockConfigProvider_AuditURL_Call{Call: _e.mock.On("AuditURL")}
+}
+
+func (_c *MockConfigProvider_AuditURL_Call) Run(run func()) *MockConfigProvider_AuditURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockConfigProvider_AuditURL_Call) Return(s string) *MockConfigProvider_AuditURL_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockConfigProvider_AuditURL_Call) RunAndReturn(run func() string) *MockConfigProvider_AuditURL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FileStoragePath provides a mock function for the type MockConfigProvider
 func (_mock *MockConfigProvider) FileStoragePath() string {
 	ret := _mock.Called()

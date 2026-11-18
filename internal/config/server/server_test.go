@@ -15,6 +15,8 @@ func TestConfig(t *testing.T) {
 		metricRestoreMock     *bool
 		metricFileStoragePath string
 		signKey               string
+		auditURL              string
+		auditFile             string
 	}
 
 	type want struct {
@@ -23,6 +25,8 @@ func TestConfig(t *testing.T) {
 		metricRestoreMock     *bool
 		metricFileStoragePath string
 		signKey               string
+		auditURL              string
+		auditFile             string
 	}
 
 	tests := []struct {
@@ -38,6 +42,8 @@ func TestConfig(t *testing.T) {
 				metricRestoreMock:     nil,
 				metricFileStoragePath: "",
 				signKey:               "",
+				auditFile:             "",
+				auditURL:              "",
 			},
 			want: want{
 				address:               "",
@@ -45,6 +51,8 @@ func TestConfig(t *testing.T) {
 				metricRestoreMock:     nil,
 				metricFileStoragePath: "",
 				signKey:               "",
+				auditFile:             "",
+				auditURL:              "",
 			},
 		},
 		{
@@ -55,6 +63,8 @@ func TestConfig(t *testing.T) {
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(true),
 				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "",
 			},
 			want: want{
 				address:               "127.0.0.1:9090",
@@ -62,6 +72,8 @@ func TestConfig(t *testing.T) {
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(true),
 				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "",
 			},
 		},
 		{
@@ -72,6 +84,8 @@ func TestConfig(t *testing.T) {
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
 				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "",
 			},
 			want: want{
 				address:               "localhost:9090",
@@ -79,6 +93,50 @@ func TestConfig(t *testing.T) {
 				metricFileStoragePath: "path",
 				metricRestoreMock:     new(false),
 				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "",
+			},
+		},
+		{
+			name: "auditFile",
+			given: given{
+				address:               "localhost:9090",
+				metricStoreInterval:   new(time.Duration(10) * time.Second),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(false),
+				signKey:               "signKey",
+				auditFile:             "auditFile",
+				auditURL:              "",
+			},
+			want: want{
+				address:               "localhost:9090",
+				metricStoreInterval:   new(time.Duration(10) * time.Second),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(false),
+				signKey:               "signKey",
+				auditFile:             "auditFile",
+				auditURL:              "",
+			},
+		},
+		{
+			name: "auditURL",
+			given: given{
+				address:               "localhost:9090",
+				metricStoreInterval:   new(time.Duration(10) * time.Second),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(false),
+				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "auditURL",
+			},
+			want: want{
+				address:               "localhost:9090",
+				metricStoreInterval:   new(time.Duration(10) * time.Second),
+				metricFileStoragePath: "path",
+				metricRestoreMock:     new(false),
+				signKey:               "signKey",
+				auditFile:             "",
+				auditURL:              "auditURL",
 			},
 		},
 	}
@@ -91,6 +149,8 @@ func TestConfig(t *testing.T) {
 			mockConfigProvider.EXPECT().StoreInterval().Return(tt.given.metricStoreInterval)
 			mockConfigProvider.EXPECT().FileStoragePath().Return(tt.given.metricFileStoragePath)
 			mockConfigProvider.EXPECT().SignKey().Return(tt.given.signKey)
+			mockConfigProvider.EXPECT().AuditFile().Return(tt.given.auditFile)
+			mockConfigProvider.EXPECT().AuditURL().Return(tt.given.auditURL)
 
 			cfg := New(mockConfigProvider)
 
@@ -99,6 +159,8 @@ func TestConfig(t *testing.T) {
 			assert.Equal(t, tt.want.metricStoreInterval, cfg.StoreInterval())
 			assert.Equal(t, tt.want.metricFileStoragePath, cfg.FileStoragePath())
 			assert.Equal(t, tt.want.signKey, cfg.SignKey())
+			assert.Equal(t, tt.want.auditFile, cfg.AuditFile())
+			assert.Equal(t, tt.want.auditURL, cfg.AuditURL())
 
 			mockConfigProvider.AssertExpectations(t)
 		})

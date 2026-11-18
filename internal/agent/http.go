@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
 
@@ -105,6 +106,9 @@ func compress(data []byte) ([]byte, error) {
 	gz := gzipPool.Get().(*gzip.Writer)
 	gz.Reset(buf) // Направляем вывод в буфер
 	defer func() {
+		// Сбрасываем ссылку на внешний writer (io.Discard — безопасная заглушка).
+		// Внутренние буферы gzip сохраняются для переиспользования из пула.
+		gz.Reset(io.Discard)
 		gzipPool.Put(gz) // Возвращаем в пул
 	}()
 
