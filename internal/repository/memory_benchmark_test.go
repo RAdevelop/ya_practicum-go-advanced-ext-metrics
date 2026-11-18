@@ -106,12 +106,11 @@ func BenchmarkMemStorage_UpdateBatchCounterAccumulate(b *testing.B) {
 // baseStorage.AddValuesForDeduplicateMetrics должен их схлопнуть,
 // а MemStorage — обработать уже короткую пачку.
 func BenchmarkMemStorage_UpdateBatchHeavyDedup(b *testing.B) {
-	n := 1000
-	metrics := makeBatch(n, false) // все с ID="PollCount"
+	const n = 10_000 // количество метрик с одинаковым ID = "PollCount"
 
 	// Увеличиваем количество дублей: каждый ID встречается много раз
 	// (в makeBatch уже false, но здесь мы делаем ещё более экстремальный кейс)
-	metrics = makeBatch(10*n, false)
+	metrics := makeBatch(n, false)
 
 	storage := NewMemory()
 	ctx := context.Background()
