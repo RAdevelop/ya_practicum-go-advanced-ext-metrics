@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/handler/appcontext"
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service"
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/service/audit"
 	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/validator"
 )
 
@@ -71,14 +73,16 @@ func (m *Metric) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = m.metricManager.MetricUpdateBatch(r.Context(), []models.Metrics{*metric}); err != nil {
+	ctx := audit.WithIP(r.Context(), clientIP(r))
+
+	if _, err = m.metricManager.MetricUpdateBatch(ctx, []models.Metrics{*metric}); err != nil {
 		m.appContext.Logger.Warn("HandlerMetricUpdate", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
 	}
 
 	if m.appContext.Config.StoreInterval() != nil && *m.appContext.Config.StoreInterval() == 0 {
-		err = m.metricManager.MetricSnapshotSave(r.Context())
+		err = m.metricManager.MetricSnapshotSave(ctx)
 		if err != nil {
 			m.appContext.Logger.Error("HandlerMetricUpdate", "err", err)
 		}
@@ -132,7 +136,9 @@ func (m *Metric) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if metrics, err = m.metricManager.MetricUpdateBatch(r.Context(), metrics); err != nil {
+	ctx := audit.WithIP(r.Context(), clientIP(r))
+
+	if metrics, err = m.metricManager.MetricUpdateBatch(ctx, metrics); err != nil {
 		m.appContext.Logger.Error("HandlerMetricUpdateBatch", "err", err)
 		http.Error(w, "Can't update metric", http.StatusBadRequest)
 		return
@@ -327,4 +333,12 @@ func (m *Metric) requestBodyClose(r *http.Request) {
 	if err != nil {
 		m.appContext.Logger.Error("error", "err", err)
 	}
+}
+
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
