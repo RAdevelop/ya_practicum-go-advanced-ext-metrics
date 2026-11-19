@@ -53,3 +53,37 @@ make help
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+
+
+## Инкремент 17
+
+Запуск агентов и сервера (своя нагрузка):
+- 50 агентов c параметрами запуска:
+  - `-r 1 -p 1 -l 5`
+- 1 сервер
+
+До изменений:
+```shell
+./load.sh profiles/base.pprof
+```
+После:
+```shell
+./load.sh profiles/result.pprof
+```
+
+### Результаты оптимизации
+
+| Метрика | base | result | diff |
+|---|---|---|---|
+| `inuse_space` | 10.6 MB | 4.1 MB | -6.5 MB (61.5%) |
+| `alloc_space` | 1048 MB | 295 MB | -753 MB (72%) |
+
+
+### Что сделано
+
+1. **Порог сжатия** добавлен `minSizeToCompress`: **3000** байт.
+   Анализ логов: 78% ответов имеют размер 2600–2620 байт. При пороге 1400 они сжимались — overhead `gzip.NewWriter` (~250 KB на вызов) не окупал выигрыш трафика. При 3000 — не сжимаются.
+
+2. **`metricKey`** (struct) вместо `fmt.Sprintf` в `AddValuesForDeduplicateMetrics` — без аллокации строк.
+
+3. **`sync.RWMutex`** в `MemStorage` — устранена `concurrent map writes` при нагрузке.

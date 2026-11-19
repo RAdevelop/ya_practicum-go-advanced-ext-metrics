@@ -16,6 +16,8 @@ type envCfg struct {
 	MetricFileStoragePath string `env:"FILE_STORAGE_PATH"`
 	MetricRestore         *bool  `env:"RESTORE"`
 	Key                   string `env:"KEY"`
+	AuditFile             string `env:"AUDIT_FILE"`
+	AuditURL              string `env:"AUDIT_URL"`
 }
 
 func NewEnv() (*Env, error) {
@@ -60,4 +62,10 @@ func (env *Env) Restore() *bool {
 }
 func (env *Env) SignKey() string {
 	return env.cfg.Key
+}
+func (env *Env) AuditFile() string {
+	return env.cfg.AuditFile
+}
+func (env *Env) AuditURL() string {
+	return env.cfg.AuditURL
 }

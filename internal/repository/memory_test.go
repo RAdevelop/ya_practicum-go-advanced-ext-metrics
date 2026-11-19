@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"testing"
 
 	models "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/model"
@@ -156,7 +155,7 @@ func TestMemStorage_Metric(t *testing.T) {
 			},
 		},
 	}
-	ctx := context.TODO()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -166,7 +165,7 @@ func TestMemStorage_Metric(t *testing.T) {
 			}
 			cleanupStorage(t, storage)
 
-			metric, err := storage.Metric(ctx, tt.given.metric)
+			metric, err := storage.Metric(t.Context(), tt.given.metric)
 			if tt.want.hasError {
 				assert.Error(t, err)
 			} else {
@@ -376,7 +375,7 @@ func TestMemStorage_UpdateBatch(t *testing.T) {
 			},
 		},
 	}
-	ctx := context.TODO()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := &MemStorage{
@@ -386,14 +385,14 @@ func TestMemStorage_UpdateBatch(t *testing.T) {
 
 			cleanupStorage(t, storage)
 
-			_, err := storage.UpdateBatch(ctx, []models.Metrics{*tt.given.metric})
+			_, err := storage.UpdateBatch(t.Context(), []models.Metrics{*tt.given.metric})
 			if tt.want.hasError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 
-			metric, err := storage.Metric(ctx, tt.given.metric)
+			metric, err := storage.Metric(t.Context(), tt.given.metric)
 			if tt.want.hasError {
 				assert.Error(t, err)
 			} else {
@@ -580,8 +579,8 @@ func TestMemStorage_MetricList(t *testing.T) {
 				counterMap: tt.given.initCounterMap,
 			}
 			cleanupStorage(t, storage)
-			ctx := context.TODO()
-			metrics, er := storage.MetricList(ctx, tt.given.mType)
+
+			metrics, er := storage.MetricList(t.Context(), tt.given.mType)
 			if tt.want.hasError {
 				assert.Error(t, er)
 			} else {
@@ -596,6 +595,6 @@ func TestMemStorage_MetricList(t *testing.T) {
 func TestMemStorage_Ping(t *testing.T) {
 	t.Run("ping is nil", func(t *testing.T) {
 		memStorage := NewMemory()
-		assert.NoError(t, memStorage.Ping(context.TODO()))
+		assert.NoError(t, memStorage.Ping(t.Context()))
 	})
 }
