@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	configDB "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/config/db"
@@ -38,6 +41,7 @@ type serverFlags struct {
 func main() {
 
 	logApp := logger.New()
+	logApp.Info("service starting")
 
 	configServerEnv, err := configServer.NewEnv()
 	if err != nil {
@@ -66,8 +70,8 @@ func main() {
 	srvFlags.auditURL = flag.String("audit-url", "", `Полный URL, по которому отправляются логи аудита. Если параметр не передан, аудит должен быть отключён.`)
 	flag.Parse()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	serverConfigUpdateByFlags(serverConfig, srvFlags)
 
@@ -102,11 +106,13 @@ func main() {
 	serviceManager := service.NewManager(metricStorage, metricSnapshot)
 	var metricManager service.MetricManagementAble = serviceManager
 
+	var publisher *audit.Publisher
 	auditors := initAuditorSubscribers(serverConfig, logApp)
 	if len(auditors) > 0 {
-		publisher := audit.NewPublisher(logApp, auditors...)
+		publisher = audit.NewPublisher(logApp, auditors...)
 		metricManager = audit.NewDecorator(serviceManager, publisher)
 	}
+	// Закрываем аудиторы при любом выходе из main: и по ошибке, и после graceful shutdown.
 	defer closeAuditorSubscribers(auditors, logApp)
 
 	appContext := &appcontext.AppContext{
@@ -128,10 +134,52 @@ func main() {
 		}
 	}()
 
-	err = http.ListenAndServe(serverConfig.Address(), r)
-	if err != nil {
-		logApp.Error("ListenAndServe", "err", err)
+	srv := &http.Server{
+		Addr:    serverConfig.Address(),
+		Handler: r,
 	}
+
+	// по сигналу останавливаем HTTP-сервер
+	go func() {
+		<-ctx.Done()
+		logApp.Info("shutdown signal received, stopping HTTP server")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logApp.Error("server shutdown", "err", err)
+		}
+		logApp.Info("HTTP server stopped")
+	}()
+
+	err = srv.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logApp.Error("ListenAndServe", "err", err)
+		return
+	}
+
+	logApp.Info("HTTP server shut down, starting graceful shutdown")
+
+	// Сервер остановлен — новые события аудита не появляются.
+	// Финальный снапшот: тик-горутина уже не сработает по отменённому контексту.
+	if srvFlags.useMemoryStorage {
+		if err := metricManager.MetricSnapshotSave(context.Background()); err != nil {
+			logApp.Error("final MetricSnapshotSave", "err", err)
+		} else {
+			logApp.Info("final metric snapshot saved")
+		}
+	}
+
+	// дожидаемся, пока воркеры допишут всё из буферов каналов
+	if publisher != nil {
+		publisher.Stop()
+		logApp.Info("audit publisher stopped, all buffered events flushed")
+	}
+
+	// После Stop ни одна Save не идёт — аудиторы можно закрывать.
+	// defer вызовет это ещё раз, повторный Close безопасен.
+	closeAuditorSubscribers(auditors, logApp)
+
+	logApp.Info("service stopped")
 }
 
 func metricSnapshotTask(ctx context.Context, metricManager service.MetricManagementAble, logger logger.Logger, config configServer.ConfigProvider) {
@@ -158,6 +206,7 @@ func saver(ctx context.Context, metricManager service.MetricManagementAble, logg
 	for {
 		select {
 		case <-ctx.Done():
+			logger.Info("saver goroutine stopped")
 			return
 		case <-metricStoreIntervalTicker.C:
 			err := metricManager.MetricSnapshotSave(ctx)
@@ -210,10 +259,12 @@ func initAuditorSubscribers(serverConfig *configServer.Config, logger logger.Log
 		if err != nil {
 			logger.Error("audit.NewFileAuditor", "err", err)
 		} else {
+			logger.Info("file auditor initialized", "path", serverConfig.AuditFile())
 			auditors = append(auditors, fileAuditor)
 		}
 	}
 	if serverConfig.AuditURL() != "" {
+		logger.Info("http auditor initialized", "url", serverConfig.AuditURL())
 		auditors = append(auditors, audit.NewHTTPAuditor(serverConfig.AuditURL()))
 	}
 
@@ -227,5 +278,8 @@ func closeAuditorSubscribers(auditors []audit.Auditor, logger logger.Logger) {
 		if err != nil {
 			logger.Error("auditor.Close", "err", err)
 		}
+	}
+	if len(auditors) > 0 {
+		logger.Info("auditors closed")
 	}
 }
