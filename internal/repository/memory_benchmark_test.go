@@ -52,8 +52,7 @@ func BenchmarkMemStorage_UpdateBatch(b *testing.B) {
 				ctx := context.Background()
 
 				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if _, err := storage.UpdateBatch(ctx, metrics); err != nil {
 						b.Fatalf("UpdateBatch: %v", err)
 					}
@@ -74,7 +73,6 @@ func BenchmarkMemStorage_UpdateBatchParallel(b *testing.B) {
 			ctx := context.Background()
 
 			b.ReportAllocs()
-			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					if _, err := storage.UpdateBatch(ctx, metrics); err != nil {
@@ -94,8 +92,7 @@ func BenchmarkMemStorage_UpdateBatchCounterAccumulate(b *testing.B) {
 	metrics := []models.Metrics{counterMetric("PollCount", 1)}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := storage.UpdateBatch(ctx, metrics); err != nil {
 			b.Fatalf("UpdateBatch: %v", err)
 		}
@@ -116,8 +113,7 @@ func BenchmarkMemStorage_UpdateBatchHeavyDedup(b *testing.B) {
 	ctx := context.Background()
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := storage.UpdateBatch(ctx, metrics); err != nil {
 			b.Fatalf("UpdateBatch: %v", err)
 		}
@@ -133,8 +129,7 @@ func BenchmarkMemStorage_UpdateBatchErrorPath(b *testing.B) {
 	metrics[0] = models.Metrics{ID: "", MType: models.Gauge}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := storage.UpdateBatch(ctx, metrics); err == nil {
 			b.Fatal("expected error, got nil")
 		}

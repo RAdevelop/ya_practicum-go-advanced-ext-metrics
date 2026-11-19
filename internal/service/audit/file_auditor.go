@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,8 +12,8 @@ import (
 
 // FileAuditor — дописывает каждое событие в файл на новой строке.
 type FileAuditor struct {
-	path string
-	mu   sync.Mutex
+	f  *os.File
+	mu sync.Mutex
 }
 
 func NewFileAuditor(path string) (*FileAuditor, error) {
@@ -25,12 +26,27 @@ func NewFileAuditor(path string) (*FileAuditor, error) {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return &FileAuditor{path: path}, nil
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("open audit file: %w", err)
+	}
+
+	return &FileAuditor{f: f}, nil
 }
 
-func (s *FileAuditor) Save(ctx context.Context, event Event) error {
+// Close - закрывает файловый дескриптор.
+// Вызывать один раз при штатном завершении сервиса (в Shutdown-пути приложения).
+func (a *FileAuditor) Close() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.f == nil {
+		return nil
+	}
+	defer func() { a.f = nil }()
+	return a.f.Close()
+}
 
-	_ = ctx
+func (a *FileAuditor) Save(_ context.Context, event Event) error {
 
 	data, err := json.Marshal(event)
 	if err != nil {
@@ -38,16 +54,14 @@ func (s *FileAuditor) Save(ctx context.Context, event Event) error {
 	}
 	data = append(data, '\n')
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
-	f, err := os.OpenFile(s.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("open audit file: %w", err)
+	if a.f == nil {
+		return errors.New("audit file is closed")
 	}
-	defer f.Close()
 
-	if _, err := f.Write(data); err != nil {
+	if _, err = a.f.Write(data); err != nil {
 		return fmt.Errorf("write audit file: %w", err)
 	}
 

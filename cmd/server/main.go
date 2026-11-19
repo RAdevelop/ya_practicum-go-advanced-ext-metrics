@@ -107,6 +107,7 @@ func main() {
 		publisher := audit.NewPublisher(logApp, auditors...)
 		metricManager = audit.NewDecorator(serviceManager, publisher)
 	}
+	defer closeAuditorSubscribers(auditors, logApp)
 
 	appContext := &appcontext.AppContext{
 		Logger: logApp,
@@ -152,14 +153,17 @@ func saver(ctx context.Context, metricManager service.MetricManagementAble, logg
 	}
 
 	metricStoreIntervalTicker := time.NewTicker(*config.StoreInterval())
-	defer func() {
-		metricStoreIntervalTicker.Stop()
-	}()
+	defer metricStoreIntervalTicker.Stop()
 
-	for range metricStoreIntervalTicker.C {
-		err := metricManager.MetricSnapshotSave(ctx)
-		if err != nil {
-			logger.Error("MetricInitializer", "err", err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-metricStoreIntervalTicker.C:
+			err := metricManager.MetricSnapshotSave(ctx)
+			if err != nil {
+				logger.Error("MetricInitializer", "err", err)
+			}
 		}
 	}
 }
@@ -214,4 +218,14 @@ func initAuditorSubscribers(serverConfig *configServer.Config, logger logger.Log
 	}
 
 	return auditors
+}
+
+// closeAuditorSubscribers - выполняем закрытие аудиторов (файловые дескрипторы, http соединения и тп.)
+func closeAuditorSubscribers(auditors []audit.Auditor, logger logger.Logger) {
+	for _, auditor := range auditors {
+		err := auditor.Close()
+		if err != nil {
+			logger.Error("auditor.Close", "err", err)
+		}
+	}
 }

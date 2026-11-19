@@ -125,7 +125,7 @@ func ExampleMetric_Update() {
 
 // ExampleMetric_update демонстрирует обновление метрики в текстовом формате:
 // POST /update/{metric_type}/{metric_name}/{metric_value}.
-func ExampleMetric_update() {
+func ExampleMetric_Update_text() {
 	srv := newTestServer()
 	defer srv.Close()
 

@@ -22,19 +22,25 @@ func NewHTTPAuditor(url string) *HTTPAuditor {
 	}
 }
 
-func (s *HTTPAuditor) Save(ctx context.Context, event Event) error {
+// Close - освобождает ресурсы HTTP-клиента (закрывает idle-соединения).
+func (a *HTTPAuditor) Close() error {
+	a.client.CloseIdleConnections()
+	return nil
+}
+
+func (a *HTTPAuditor) Save(ctx context.Context, event Event) error {
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal audit event: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create audit request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := s.client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("send audit request: %w", err)
 	}
