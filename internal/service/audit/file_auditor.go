@@ -34,18 +34,7 @@ func NewFileAuditor(path string) (*FileAuditor, error) {
 	return &FileAuditor{f: f}, nil
 }
 
-// Close - закрывает файловый дескриптор.
-// Вызывать один раз при штатном завершении сервиса (в Shutdown-пути приложения).
-func (a *FileAuditor) Close() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.f == nil {
-		return nil
-	}
-	defer func() { a.f = nil }()
-	return a.f.Close()
-}
-
+// Save - сохраняет данные о событии в источник хранения данных аудитора
 func (a *FileAuditor) Save(_ context.Context, event Event) error {
 
 	data, err := json.Marshal(event)
@@ -66,4 +55,16 @@ func (a *FileAuditor) Save(_ context.Context, event Event) error {
 	}
 
 	return nil
+}
+
+// Close - закрывает файловый дескриптор.
+// Вызывать один раз при штатном завершении сервиса (в Shutdown-пути приложения).
+func (a *FileAuditor) Close() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.f == nil {
+		return nil
+	}
+	defer func() { a.f = nil }()
+	return a.f.Close()
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/retryer"
 )
 
 // HTTPAuditor — отправляет событие POST-запросом на указанный URL.
@@ -22,13 +24,24 @@ func NewHTTPAuditor(url string) *HTTPAuditor {
 	}
 }
 
+// Save - сохраняет данные о событии в источник хранения данных аудитора
+func (a *HTTPAuditor) Save(ctx context.Context, event Event) error {
+
+	_, err := retryer.RetryLinear(ctx, func(ctx context.Context) (struct{}, error) {
+		err := a.sendEvent(ctx, event)
+		return struct{}{}, err
+	}, 2, new(3))
+	return err
+
+}
+
 // Close - освобождает ресурсы HTTP-клиента (закрывает idle-соединения).
 func (a *HTTPAuditor) Close() error {
 	a.client.CloseIdleConnections()
 	return nil
 }
 
-func (a *HTTPAuditor) Save(ctx context.Context, event Event) error {
+func (a *HTTPAuditor) sendEvent(ctx context.Context, event Event) error {
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal audit event: %w", err)
