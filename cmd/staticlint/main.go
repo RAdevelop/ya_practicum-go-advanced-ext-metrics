@@ -1,10 +1,11 @@
+// Package main - анализаторы кода
 package main
 
 import (
+	"github.com/gostaticanalysis/nilerr"
+	"github.com/timakin/bodyclose/passes/bodyclose"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
-
-	// 1. Стандартные анализаторы x/tools
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
 	"golang.org/x/tools/go/analysis/passes/atomic"
@@ -29,16 +30,8 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unreachable"
 	"golang.org/x/tools/go/analysis/passes/unsafeptr"
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
-
-	// 2. Все анализаторы класса SA из staticcheck
 	"honnef.co/go/tools/staticcheck"
-
-	// 3. Один анализатор другого класса staticcheck — ST (stylecheck)
 	"honnef.co/go/tools/stylecheck"
-
-	// 4. Публичные анализаторы на выбор
-	"github.com/gostaticanalysis/nilerr"            // nilerr
-	"github.com/timakin/bodyclose/passes/bodyclose" // bodyclose
 )
 
 func main() {
@@ -89,5 +82,7 @@ func main() {
 		bodyclose.Analyzer,
 	)
 
+	// 5. собственный анализатор
+	analyzers = append(analyzers, noExitAnalyzer)
 	multichecker.Main(analyzers...)
 }
