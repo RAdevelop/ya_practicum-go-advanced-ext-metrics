@@ -1,3 +1,4 @@
+// Package router - маршрутизация обработки запросов
 package router
 
 import (

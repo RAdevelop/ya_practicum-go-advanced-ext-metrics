@@ -1,3 +1,4 @@
+// Package snapshot - сервис по сохранению промежуточных данных с метриками.
 package snapshot
 
 import "context"

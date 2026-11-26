@@ -1,3 +1,4 @@
+// Package logger - логирование информации.
 package logger
 
 import (

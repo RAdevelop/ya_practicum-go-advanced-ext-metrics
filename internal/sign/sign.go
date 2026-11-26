@@ -1,3 +1,4 @@
+// Package sign - формирование и проверка подписи SHA256.
 package sign
 
 import (

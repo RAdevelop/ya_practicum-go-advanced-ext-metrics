@@ -1,3 +1,4 @@
+// Package audit - аудит получаемых метрик.
 package audit
 
 import "context"

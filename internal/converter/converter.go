@@ -1,3 +1,4 @@
+// Package converter - конвертация одного типа в другой.
 package converter
 
 import (

@@ -1,3 +1,4 @@
+// Package metric - сервис по работе с метриками.
 package metric
 
 import (

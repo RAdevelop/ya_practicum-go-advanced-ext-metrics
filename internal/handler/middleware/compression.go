@@ -68,7 +68,7 @@ func Decompression(appContext *appcontext.AppContext, next http.Handler) http.Ha
 			return
 		}
 		defer func() {
-			err := gz.Close()
+			err = gz.Close()
 			if err != nil {
 				appContext.Logger.Error("error closing gzip reader", "error", err)
 			}

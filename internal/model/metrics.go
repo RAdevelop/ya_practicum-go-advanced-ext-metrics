@@ -1,3 +1,4 @@
+// Package models - представление метрики.
 package models
 
 import "github.com/RAdevelop/ya_practicum-go-advanced-ext-metrics/internal/converter"

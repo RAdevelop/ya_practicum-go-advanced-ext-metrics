@@ -719,7 +719,8 @@ func TestMetric_GetWithJson(t *testing.T) {
 
 			var body []byte
 			if result.RawResponse.Header.Get("Content-Encoding") == "gzip" {
-				reader, err := gzip.NewReader(result.RawResponse.Body)
+				var reader *gzip.Reader
+				reader, err = gzip.NewReader(result.RawResponse.Body)
 				assert.NoError(t, err)
 				defer assert.NoError(t, reader.Close())
 
