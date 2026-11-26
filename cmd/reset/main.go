@@ -157,8 +157,8 @@ func hasResetMarker(gen *ast.GenDecl, ts *ast.TypeSpec) bool {
 
 func writeReset(buf *bytes.Buffer, name string, st *ast.StructType) {
 	recv := strings.ToLower(name[:1])
-	fmt.Fprintf(buf, "func (%s *%s) Reset() {\n", recv, name)
-	fmt.Fprintf(buf, "if %s == nil {\nreturn\n}\n", recv)
+	_, _ = fmt.Fprintf(buf, "func (%s *%s) Reset() {\n", recv, name)
+	_, _ = fmt.Fprintf(buf, "if %s == nil {\nreturn\n}\n", recv)
 
 	for _, field := range st.Fields.List {
 		if len(field.Names) == 0 {
@@ -183,44 +183,44 @@ func writeFieldReset(buf *bytes.Buffer, recv, fieldName string, typ ast.Expr) {
 			"uint", "uint8", "uint16", "uint32", "uint64", "uintptr",
 			"float32", "float64", "complex64", "complex128",
 			"byte", "rune":
-			fmt.Fprintf(buf, "%s = 0\n", access)
+			_, _ = fmt.Fprintf(buf, "%s = 0\n", access)
 		case "string":
-			fmt.Fprintf(buf, "%s = \"\"\n", access)
+			_, _ = fmt.Fprintf(buf, "%s = \"\"\n", access)
 		case "bool":
-			fmt.Fprintf(buf, "%s = false\n", access)
+			_, _ = fmt.Fprintf(buf, "%s = false\n", access)
 		default:
 			// возможно, это именованный тип с методом Reset
-			fmt.Fprintf(buf, "if resetter, ok := any(&%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n", access)
+			_, _ = fmt.Fprintf(buf, "if resetter, ok := any(&%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n", access)
 		}
 
 	case *ast.StarExpr:
 		// указатель
 		if isPrimitive(t.X) {
 			// *int, *string, *bool
-			fmt.Fprintf(buf, "if %s != nil {\n*%s = %s\n}\n", access, access, derefZero(t.X))
+			_, _ = fmt.Fprintf(buf, "if %s != nil {\n*%s = %s\n}\n", access, access, derefZero(t.X))
 		} else {
 			// *struct, *named type — вызываем Reset у значения
-			fmt.Fprintf(buf, "if %s != nil {\nif resetter, ok := any(%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n}\n", access, access)
+			_, _ = fmt.Fprintf(buf, "if %s != nil {\nif resetter, ok := any(%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n}\n", access, access)
 		}
 
 	case *ast.ArrayType:
 		// слайс: обрезаем по длине
-		fmt.Fprintf(buf, "%s = %s[:0]\n", access, access)
+		_, _ = fmt.Fprintf(buf, "%s = %s[:0]\n", access, access)
 
 	case *ast.MapType:
 		// мапа: очищаем
-		fmt.Fprintf(buf, "clear(%s)\n", access)
+		_, _ = fmt.Fprintf(buf, "clear(%s)\n", access)
 
 	case *ast.StructType:
 		// анонимная структура: Reset через адрес
-		fmt.Fprintf(buf, "if resetter, ok := any(&%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n", access)
+		_, _ = fmt.Fprintf(buf, "if resetter, ok := any(&%s).(interface{ Reset() }); ok {\nresetter.Reset()\n}\n", access)
 
 	case *ast.InterfaceType:
 		// интерфейс: Reset у значения, если не nil
-		fmt.Fprintf(buf, "if resetter, ok := %s.(interface{ Reset() }); ok && %s != nil {\nresetter.Reset()\n}\n", access, access)
+		_, _ = fmt.Fprintf(buf, "if resetter, ok := %s.(interface{ Reset() }); ok && %s != nil {\nresetter.Reset()\n}\n", access, access)
 
 	default:
-		fmt.Fprintf(buf, "// TODO: unknown type %T for field %s\n", typ, fieldName)
+		_, _ = fmt.Fprintf(buf, "// TODO: unknown type %T for field %s\n", typ, fieldName)
 	}
 }
 
