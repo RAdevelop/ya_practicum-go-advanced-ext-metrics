@@ -1,3 +1,4 @@
+// Package validator - валидация значения полученных метрик.
 package validator
 
 import (

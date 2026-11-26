@@ -1,3 +1,4 @@
+// Package database - работа с базой данных PG
 package database
 
 import (

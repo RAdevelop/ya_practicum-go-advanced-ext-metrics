@@ -1,3 +1,4 @@
+// Package middleware - промежуточное ПО для обработки запросов.
 package middleware
 
 import (

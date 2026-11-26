@@ -15,6 +15,7 @@ DB_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTG
 DOCKER_COMPOSE := docker-compose
 GO_GENERATE := go generate ./internal/...
 GO_TEST := go test ./internal/...
+BUILD_RESET := go build -o ./cmd/reset/reset ./cmd/reset
 
 #номер инкремента
 iter ?=
@@ -34,12 +35,14 @@ help: ## Показать справку
 .PHONY: test-cover
 test-cover: ## Запустить проверку покрытия тестами
 	@echo "$(GREEN)=== Running tests ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_TEST} -cover
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 .PHONY: test
 test: ## Запустить локальные тесты
 	@echo "$(GREEN)=== Running tests ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_GENERATE}
 	@${GO_TEST}
 	@echo "$(GREEN)✅ Tests completed$(NC)"
@@ -47,6 +50,7 @@ test: ## Запустить локальные тесты
 .PHONY: test-c
 test-c: ## Запустить тесты без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_GENERATE}
 	@${GO_TEST} -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
@@ -54,6 +58,7 @@ test-c: ## Запустить тесты без кэширования
 .PHONY: test-v
 test-v: ## Запустить тесты с подробным выводом
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_GENERATE}
 	@${GO_TEST} -v
 	@echo "$(GREEN)✅ Tests completed$(NC)"
@@ -61,6 +66,7 @@ test-v: ## Запустить тесты с подробным выводом
 .PHONY: test-vс
 test-vc: ## Запустить тесты с подробным выводом без кэширования
 	@echo "$(GREEN)=== Running tests (verbose) ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_GENERATE}
 	@${GO_TEST} -v -count=1
 	@echo "$(GREEN)✅ Tests completed$(NC)"
@@ -68,6 +74,7 @@ test-vc: ## Запустить тесты с подробным выводом �
 .PHONY: test-vr
 test-vr: ## Запустить тесты с подробным выводом без кэширования с проверкой race detection
 	@echo "$(GREEN)=== Running tests (race detection) ===$(NC)"
+	@${BUILD_RESET}
 	@${GO_GENERATE}
 	@${GO_TEST} -v -race
 	@echo "$(GREEN)✅ Tests completed$(NC)"
@@ -75,6 +82,7 @@ test-vr: ## Запустить тесты с подробным выводом �
 .PHONY: test-iter
 test-iter: ## Запустить тесты практикума (make test-iter iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
+	@${BUILD_RESET}
 	@go build -o ./cmd/server/server ./cmd/server/*.go \
 	&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
 	&& SERVER_PORT=8080 \
@@ -93,6 +101,7 @@ test-iter: ## Запустить тесты практикума (make test-iter
 .PHONY: test-iter10x
 test-iter10x: ## Запустить тесты практикума с 10 по 14 задание, они идут с БД (make test-iter10x iter=номер_задания)
 	@echo "$(GREEN)=== Running tests (practicum) ===$(NC)"
+	@${BUILD_RESET}
 	@go build -o ./cmd/server/server ./cmd/server/*.go \
 	&& go build -o ./cmd/agent/agent ./cmd/agent/*.go \
 	&& SERVER_PORT=8080 \

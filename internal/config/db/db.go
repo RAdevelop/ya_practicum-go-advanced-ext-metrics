@@ -1,3 +1,4 @@
+// Package db - конфигурация базы данных.
 package db
 
 import "time"

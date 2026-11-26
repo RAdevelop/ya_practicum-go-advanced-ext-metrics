@@ -85,7 +85,8 @@ func main() {
 		metricStorage = repository.NewMemory()
 		srvFlags.useMemoryStorage = true
 	} else {
-		db, err := database.NewDB(ctx, dbConfig, logApp)
+		var db *database.DB
+		db, err = database.NewDB(ctx, dbConfig, logApp)
 		if err != nil {
 			srvFlags.useMemoryStorage = true
 			logApp.Error("db", "err", err)
@@ -129,7 +130,7 @@ func main() {
 	// pprof на отдельном порту, только для профилирования
 	go func() {
 		const pprofAddr = "localhost:6060"
-		if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+		if err = http.ListenAndServe(pprofAddr, nil); err != nil {
 			logApp.Error("pprof server", "err", err)
 		}
 	}()
@@ -145,7 +146,7 @@ func main() {
 		logApp.Info("shutdown signal received, stopping HTTP server")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := srv.Shutdown(shutdownCtx); err != nil {
+		if err = srv.Shutdown(shutdownCtx); err != nil {
 			logApp.Error("server shutdown", "err", err)
 		}
 		logApp.Info("HTTP server stopped")

@@ -1,3 +1,4 @@
+// Package service - сервис по обработке данных для получаемых метрик.
 package service
 
 import (

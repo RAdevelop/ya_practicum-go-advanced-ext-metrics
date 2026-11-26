@@ -1,3 +1,4 @@
+// Package handler - обработчики запросов при выполнении запросов маршрутизации
 package handler
 
 import (
