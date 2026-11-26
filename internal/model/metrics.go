@@ -17,6 +17,10 @@ const (
 // Metrics — модель метрики в формате обмена с агентом.
 // Delta и Value объявлены указателями, чтобы отличать заданное значение "0"
 // от незаданного и не кодировать пустые поля в JSON.
+//
+// generate:reset
+//
+//go:generate go run ../../cmd/reset ../..
 type Metrics struct {
 	ID    string   `json:"id" db:"metric_id"`
 	MType string   `json:"type" db:"m_type"`
