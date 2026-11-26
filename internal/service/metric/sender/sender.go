@@ -1,3 +1,4 @@
+// Package sender - сервис отправки данных по метрикам на сервер.
 package sender
 
 import (

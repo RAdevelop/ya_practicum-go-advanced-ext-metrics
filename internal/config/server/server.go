@@ -1,3 +1,4 @@
+// Package server - конфигурация сервера.
 package server
 
 import (

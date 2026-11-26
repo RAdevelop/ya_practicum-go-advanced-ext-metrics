@@ -1,3 +1,4 @@
+// Package repository - базовые методы для организации работы с хранилищем
 package repository
 
 import (

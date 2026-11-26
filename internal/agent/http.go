@@ -1,3 +1,4 @@
+// Package agent - http агент отправки данных по метрикам на сервер.
 package agent
 
 import (

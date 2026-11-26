@@ -1,3 +1,4 @@
+// Package collector - сервис сбора данных по метрикам для отправки на сервер.
 package collector
 
 import (

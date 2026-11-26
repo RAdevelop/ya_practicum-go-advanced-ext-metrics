@@ -1,3 +1,4 @@
+// Package repository - хранилище метрик в базе данных
 package repository
 
 import (
