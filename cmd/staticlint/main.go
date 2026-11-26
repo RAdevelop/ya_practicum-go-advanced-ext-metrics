@@ -1,4 +1,3 @@
-// Package main - анализаторы кода
 package main
 
 import (
